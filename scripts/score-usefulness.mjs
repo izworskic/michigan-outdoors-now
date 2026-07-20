@@ -73,7 +73,7 @@ const categories = [
     name: "Discoverability and measurement",
     checks: [
       [3, has("src/app/layout.tsx", "Metadata", "application/ld+json") && has("src/app/page.tsx", "WebApplication", "FAQPage")],
-      [3, has("src/app/explore/page.tsx", "DestinationExplorer", "Quick answer") && has("src/app/places/[place]/page.tsx", "PlaceConditions", "nearbyDestinations")],
+      [3, has("src/app/explore/page.tsx", "DestinationExplorer", "What can this Michigan outdoor map help me decide?") && has("src/app/places/[place]/page.tsx", "PlaceConditions", "nearbyDestinations")],
       [2, has("src/app/layout.tsx", "<Analytics", "<SpeedInsights") && has("src/components/planner.tsx", "planner_completed")],
       [2, has("src/app/layout.tsx", "Chris Izworski", "chrisizworski.com")],
     ],

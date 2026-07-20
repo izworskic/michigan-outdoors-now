@@ -12,6 +12,7 @@ const paths = [
   "src/components/result-comparison.tsx",
   "src/components/trip-decision.tsx",
   "src/components/destination-explorer.tsx",
+  "src/components/michigan-destination-map.tsx",
   "src/components/place-conditions.tsx",
   "src/app/page.tsx",
   "src/app/layout.tsx",
@@ -62,7 +63,9 @@ const usefulness = calculate([
   {
     name: "Destination discovery",
     checks: [
-      [10, has("src/components/destination-explorer.tsx", "michigan-map", "explorer_filter_changed", "Practical needs")],
+      [10,
+        has("src/components/michigan-destination-map.tsx", "maplibre-gl", "tiles.openfreemap.org", "fitBounds", "destination-pin") &&
+        has("src/components/destination-explorer.tsx", "explorer_filter_changed", "Find places near me", "Family, dog & access")],
       [8, destinations.length >= 28 && has("src/app/sitemap.ts", "destinations.map", "/places/${destination.id}")],
       [7, has("src/components/place-conditions.tsx", "Rain chance", "Peak gusts", "Air quality")],
       [5, has("src/app/places/[place]/page.tsx", "nearbyDestinations", "NEARBY ALTERNATIVES")],
@@ -87,7 +90,9 @@ const usefulness = calculate([
       [8, destinations.every((destination) => destination.accessNote.length >= 80) && has("src/app/places/[place]/page.tsx", "Practical fit before the drive")],
       [8, has("src/app/places/[place]/page.tsx", '"@type": "Place"', "GeoCoordinates", "sameAs")],
       [8, has("src/components/destination-explorer.tsx", "aria-live", "aria-pressed") && has("src/components/planner.tsx", "<fieldset", "aria-live")],
-      [7, has("src/app/globals.css", "@media (max-width: 560px)", "prefers-reduced-motion", "michigan-map")],
+      [7,
+        has("src/app/globals.css", "@media (max-width: 560px)", "prefers-reduced-motion", "destination-map") &&
+        has("src/components/destination-explorer.tsx", "data-mobile-view", "Choose map or list view")],
       [8, has("src/app/places/[place]/page.tsx", "relatedGuides") && has("src/lib/planner.ts", "relatedToolFor")],
     ],
   },
@@ -109,7 +114,7 @@ const search = calculate([
     name: "Demand and intent coverage",
     checks: [
       [10, guides.length >= 10],
-      [8, has("src/app/explore/page.tsx", "Michigan Outdoor Map and Destination Finder", "Quick answer")],
+      [8, has("src/app/explore/page.tsx", "Interactive Michigan Outdoor Map and Destination Finder", "What can this Michigan outdoor map help me decide?")],
       [8, destinations.length >= 28 && has("src/app/places/[place]/page.tsx", "generateStaticParams", "generateMetadata")],
       [7, has("src/app/from/[origin]/page.tsx", "generateStaticParams", "Michigan Day Trips from")],
       [7, has("src/components/destination-explorer.tsx", "activityIds", "regionIds", "Family fit")],

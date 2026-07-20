@@ -32,6 +32,10 @@ try {
   const homeHtml = await home.text();
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
+  assert.ok(
+    homeHtml.indexOf('id="planner"') < homeHtml.indexOf('class="persona-section'),
+    "The planner should appear before editorial trip-guide content on the homepage.",
+  );
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
   assert.equal(home.headers.get("x-powered-by"), null);
   assert.equal(home.headers.get("x-frame-options"), "DENY");
@@ -53,7 +57,10 @@ try {
 
   const explorer = await fetch(`${origin}/explore`);
   assert.equal(explorer.status, 200);
-  assert.match(await explorer.text(), /Interactive Michigan finder/);
+  const explorerHtml = await explorer.text();
+  assert.match(explorerHtml, /Michigan destination finder/);
+  assert.match(explorerHtml, /Find places near me/);
+  assert.match(explorerHtml, /Choose map or list view/);
 
   const placePage = await fetch(`${origin}/places/tawas-point`);
   assert.equal(placePage.status, 200);

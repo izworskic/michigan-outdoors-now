@@ -102,8 +102,11 @@ assert.match(await readFile(guideIndex, "utf8"), /Ten ways into one useful decis
 const exploreIndex = htmlFiles.find((file) => file.endsWith("/explore.html"));
 assert.ok(exploreIndex, "built destination explorer missing");
 const exploreHtml = await readFile(exploreIndex, "utf8");
-assert.match(exploreHtml, /Interactive Michigan finder/);
-assert.match(exploreHtml, /curated places match/);
+assert.match(exploreHtml, /Michigan destination finder/);
+assert.match(exploreHtml, /Find places near me/);
+assert.match(exploreHtml, /<strong>28<\/strong> matching/);
+assert.match(exploreHtml, /Zoomable map of matching Michigan outdoor destinations/);
+assert.equal((exploreHtml.match(/class="result-map-number"/g) ?? []).length, 28);
 assert.match(exploreHtml, /CollectionPage/);
 
 for (const slug of guideSlugs) {

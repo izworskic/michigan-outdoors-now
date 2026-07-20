@@ -14,7 +14,7 @@ It uses a curated set of 28 destinations, deterministic ranking, Open-Meteo data
 
 The site also includes ten substantial, server-rendered planning guides for distinct search intents: outdoors today, family days, beaches, hiking, birding, paddling, dark skies, freighters, dog-friendly trips, and lower-barrier access. Each guide includes unique decision help, relevant curated examples, official links, FAQs, structured data, and a preconfigured planner.
 
-The impact-readiness release adds a filterable, no-key Michigan map at `/explore` and 28 server-rendered destination decision pages at `/places/[place]`. Each destination page combines a unique direct answer, live planning signals, activity and access context, official and map links, nearby alternatives, related guides, structured place data, and the interactive planner.
+The impact-readiness release adds a real zoomable, filterable Michigan map at `/explore` and 28 server-rendered destination decision pages at `/places/[place]`. The map uses MapLibre with OpenFreeMap/OpenStreetMap data, needs no account or API key, shows numbered pins matched to the result list, and can privately rank matches from a visitor's one-time device location. Each destination page combines a unique direct answer, live planning signals, activity and access context, official and map links, nearby alternatives, related guides, structured place data, and the interactive planner.
 
 ## Local development
 
@@ -43,4 +43,4 @@ Set `NEXT_PUBLIC_SITE_URL` to the approved canonical production origin before en
 
 ## Data and limits
 
-Forecast, wind, and air quality come from [Open-Meteo](https://open-meteo.com/). Drive times are rough estimates, not live traffic. Trip-fit scores are not safety ratings. Visitors should confirm official closures, hazards, water, weather, road, trail, and access conditions before travel.
+Forecast, wind, and air quality come from [Open-Meteo](https://open-meteo.com/). Map tiles come from [OpenFreeMap](https://openfreemap.org/) with OpenStreetMap data and visible attribution. Drive times are rough estimates, not live traffic. Trip-fit scores are not safety ratings. Visitors should confirm official closures, hazards, water, weather, road, trail, and access conditions before travel.

@@ -5,18 +5,18 @@ import { destinations } from "../../data/destinations";
 import { jsonLd, personSchema, siteUrl } from "../../lib/site";
 
 export const metadata: Metadata = {
-  title: "Michigan Outdoor Map and Destination Finder",
+  title: "Interactive Michigan Outdoor Map and Destination Finder",
   description:
-    "Explore a filterable Michigan outdoor map. Find curated beaches, hikes, paddling, birding, dark skies, freighters, family options, dog-compatible places, and lower-barrier access.",
+    "Use a real interactive Michigan map to find outdoor places near you. Filter beaches, hikes, paddling, birding, dark skies, freighters, family options, dogs, and access.",
   alternates: { canonical: "/explore" },
   openGraph: {
-    title: "Michigan Outdoor Map and Destination Finder",
-    description: "Filter 28 curated Michigan outdoor places by activity, region, family fit, dogs, and lower-barrier access.",
+    title: "Interactive Michigan Outdoor Map and Destination Finder",
+    description: "See 28 Michigan outdoor places on a real map, filter them, or rank them from your location.",
     url: "/explore",
   },
   twitter: {
-    title: "Michigan Outdoor Map and Destination Finder",
-    description: "Filter 28 curated Michigan outdoor places by activity, region, family fit, dogs, and lower-barrier access.",
+    title: "Interactive Michigan Outdoor Map and Destination Finder",
+    description: "See 28 Michigan outdoor places on a real map, filter them, or rank them from your location.",
   },
 };
 
@@ -59,37 +59,37 @@ export default function ExplorePage() {
 
   return (
     <>
-      <header className="explore-hero">
+      <header className="explore-hero explore-hero-compact">
         <div className="content-wrap explore-hero-grid">
           <div>
             <nav className="breadcrumb" aria-label="Breadcrumb"><Link href="/">Home</Link><span>/</span><span>Explore</span></nav>
-            <p className="eyebrow eyebrow-light">A map that starts with your needs</p>
-            <h1>Find your kind of Michigan outside.</h1>
+            <p className="eyebrow eyebrow-light">Real map · useful filters · no account</p>
+            <h1>Find a Michigan outdoor place. <span>Fast.</span></h1>
           </div>
           <div>
-            <p>Not every park is the right park today. Filter a deliberately small Michigan collection by what you want to do and who needs the plan to work.</p>
-            <a className="hero-button" href="#destination-finder">Open the finder <span aria-hidden="true">↓</span></a>
+            <p>See all 28 places at once, tap a numbered pin, or use your location to put the closest matches first.</p>
+            <a className="hero-button" href="#destination-finder">Open the map <span aria-hidden="true">↓</span></a>
           </div>
         </div>
       </header>
 
-      <section className="explore-answer content-wrap" aria-labelledby="explore-answer-title">
-        <p className="eyebrow">Quick answer</p>
-        <h2 id="explore-answer-title">How do I find an outdoor place in Michigan?</h2>
-        <p>
-          Start with the activity and Michigan region, then filter for family fit, dog-compatible access,
-          or lower-barrier possibilities. Open a destination to see today’s broad forecast signals,
-          practical access context, nearby alternatives, the official source, and a live trip planner.
-        </p>
-        <aside>
-          <strong>What makes this different</strong>
-          <span>This finder connects discovery to a real decision. It does not try to replace Michigan’s complete official park, trail, campground, or accessibility directories.</span>
-        </aside>
-      </section>
-
       <div className="content-wrap" id="destination-finder">
         <DestinationExplorer />
       </div>
+
+      <section className="explore-answer content-wrap" aria-labelledby="explore-answer-title">
+        <p className="eyebrow">From browsing to a decision</p>
+        <h2 id="explore-answer-title">What can this Michigan outdoor map help me decide?</h2>
+        <p>
+          Use the map to understand where every place is, narrow the collection by activity or region,
+          and rank matches from your location. Each destination page adds current broad conditions,
+          practical access context, nearby alternatives, official details, and the trip planner.
+        </p>
+        <aside>
+          <strong>A focused collection</strong>
+          <span>These 28 places are decision-ready starting points—not a claim to be Michigan’s complete park, trail, campground, or accessibility directory.</span>
+        </aside>
+      </section>
 
       <section className="explore-next">
         <div className="content-wrap explore-next-grid">

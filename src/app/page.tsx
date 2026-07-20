@@ -97,6 +97,10 @@ export default function Home() {
         <span><i>04</i> Shareable decision</span>
       </div>
 
+      <div className="content-wrap planner-wrap planner-wrap-primary">
+        <Planner />
+      </div>
+
       <section className="persona-section content-wrap" aria-labelledby="persona-title">
         <div className="section-kicker"><span>START WITH YOU</span><i /></div>
         <div className="persona-heading">
@@ -115,10 +119,6 @@ export default function Home() {
         <Link className="text-link persona-all" href="/ideas">See all Michigan trip guides →</Link>
         <Link className="text-link persona-all" href="/explore">Or filter the interactive Michigan map →</Link>
       </section>
-
-      <div className="content-wrap planner-wrap">
-        <Planner />
-      </div>
 
       <section className="method-section">
         <div className="content-wrap">

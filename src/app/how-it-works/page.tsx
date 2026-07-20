@@ -5,7 +5,7 @@ import { destinationCount } from "../../data/destinations";
 export const metadata: Metadata = {
   title: "How the Michigan Outdoor Planner Works",
   description:
-    "See how Michigan Outdoors Now uses curated destinations, rough drive estimates, weather, wind, and air quality—and understand its privacy and safety limits.",
+    "See how Michigan Outdoors Now uses a real destination map, curated places, rough drive estimates, weather, wind, and air quality—and understand its privacy and safety limits.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -42,6 +42,10 @@ export default function HowItWorksPage() {
         </section>
         <section>
           <span className="prose-number">06</span>
+          <div><h2>A real map with a list fallback</h2><p>The <Link href="/explore">Michigan destination map</Link> uses MapLibre with OpenFreeMap and OpenStreetMap data, visible attribution, and no API key. Numbered pins match the readable destination list. If you explicitly use device location, it ranks nearby matches for that visit and keeps the coordinates out of URLs and analytics.</p></div>
+        </section>
+        <section>
+          <span className="prose-number">07</span>
           <div><h2>Guides answer a real planning need</h2><p>The <Link href="/ideas">Michigan trip guides</Link> are organized around people and decisions—family days, beaches, trails, birding, paddling, night skies, freighters, dogs, and lower-barrier access. Each page contains visible guidance, curated examples, official links, limitations, and a preconfigured planner. They are not automatically generated city-and-keyword pages.</p></div>
         </section>
         <aside className="prose-callout">

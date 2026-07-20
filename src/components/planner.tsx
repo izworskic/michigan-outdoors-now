@@ -410,27 +410,32 @@ export function Planner({
           </div>
         </fieldset>
 
-        <fieldset className="choice-group needs-group">
-          <legend>Who needs to fit the plan?</legend>
-          <div className="toggle-row">
-            <label className="toggle-choice">
-              <input type="checkbox" checked={kids} onChange={(event) => { setKids(event.target.checked); setActivePreset(""); }} />
-              <span>Good with kids</span>
-            </label>
-            <label className="toggle-choice">
-              <input type="checkbox" checked={dog} onChange={(event) => { setDog(event.target.checked); setActivePreset(""); }} />
-              <span>Dog allowed</span>
-            </label>
-            <label className="toggle-choice">
-              <input
-                type="checkbox"
-                checked={accessible}
-                onChange={(event) => { setAccessible(event.target.checked); setActivePreset(""); }}
-              />
-              <span>Lower-barrier access</span>
-            </label>
-          </div>
-        </fieldset>
+        <details className="planner-more" open={kids || dog || accessible || undefined}>
+          <summary>
+            Family, dog & access needs <span>Optional{(kids || dog || accessible) ? " · filters on" : ""}</span>
+          </summary>
+          <fieldset className="choice-group needs-group">
+            <legend>Who needs to fit the plan?</legend>
+            <div className="toggle-row">
+              <label className="toggle-choice">
+                <input type="checkbox" checked={kids} onChange={(event) => { setKids(event.target.checked); setActivePreset(""); }} />
+                <span>Good with kids</span>
+              </label>
+              <label className="toggle-choice">
+                <input type="checkbox" checked={dog} onChange={(event) => { setDog(event.target.checked); setActivePreset(""); }} />
+                <span>Dog allowed</span>
+              </label>
+              <label className="toggle-choice">
+                <input
+                  type="checkbox"
+                  checked={accessible}
+                  onChange={(event) => { setAccessible(event.target.checked); setActivePreset(""); }}
+                />
+                <span>Lower-barrier access</span>
+              </label>
+            </div>
+          </fieldset>
+        </details>
 
         <div className="planner-brief" data-usefulness="planner-brief">
           <span>Your brief</span>
