@@ -10,7 +10,12 @@ export const siteUrl = (() => {
   }
 })();
 
-export const allowIndexing = process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true";
+const indexingDisabled = process.env.NEXT_PUBLIC_DISABLE_INDEXING === "true";
+
+export const allowIndexing =
+  !indexingDisabled &&
+  (process.env.NEXT_PUBLIC_ALLOW_INDEXING === "true" ||
+    process.env.VERCEL_ENV === "production");
 
 export const personSchema = {
   "@type": "Person",
