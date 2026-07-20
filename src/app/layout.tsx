@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { allowIndexing, jsonLd, personSchema, siteUrl } from "../lib/site";
 import "./globals.css";
 
@@ -93,6 +95,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <p className="fine-print">Conditions change. Confirm weather, closures, water, trail, and road conditions with official sources before travel.</p>
         </footer>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(identityGraph) }} />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

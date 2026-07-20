@@ -53,7 +53,7 @@ export function estimateDriveHours(distanceMiles: number) {
   return Math.max(0.2, distanceMiles / 50 + 0.18);
 }
 
-function weatherAdjustment(weather: WeatherSnapshot | undefined) {
+function weatherAdjustment(weather: WeatherSnapshot | undefined, selected: Set<ActivityId>) {
   if (!weather) return 0;
 
   let adjustment = 0;
@@ -86,10 +86,26 @@ function weatherAdjustment(weather: WeatherSnapshot | undefined) {
     adjustment -= 12;
   }
 
+  const waterDay = selected.has("paddling") || selected.has("beaches");
+  if (waterDay && weather.windGust !== null) {
+    if (weather.windGust >= 35) adjustment -= 12;
+    else if (weather.windGust >= 25) adjustment -= 7;
+  }
+
+  if (selected.has("dark-sky") && weather.cloudCover !== null) {
+    if (weather.cloudCover <= 25) adjustment += 8;
+    else if (weather.cloudCover >= 70) adjustment -= 12;
+    else if (weather.cloudCover >= 50) adjustment -= 5;
+  }
+
+  if ((selected.has("hiking") || selected.has("birding")) && weather.precipitationProbability !== null) {
+    if (weather.precipitationProbability >= 70) adjustment -= 5;
+  }
+
   return adjustment;
 }
 
-function weatherReason(weather: WeatherSnapshot) {
+function weatherReason(weather: WeatherSnapshot, selected: Set<ActivityId>) {
   const parts: string[] = [];
 
   if (weather.high !== null) parts.push(`high near ${Math.round(weather.high)}°F`);
@@ -97,11 +113,15 @@ function weatherReason(weather: WeatherSnapshot) {
     parts.push(`${Math.round(weather.precipitationProbability)}% rain chance`);
   }
   if (weather.windGust !== null) parts.push(`gusts near ${Math.round(weather.windGust)} mph`);
+  if (selected.has("dark-sky") && weather.cloudCover !== null) {
+    parts.push(`${Math.round(weather.cloudCover)}% average cloud cover`);
+  }
+  if (weather.aqi !== null) parts.push(`AQI near ${Math.round(weather.aqi)}`);
 
   return parts.length ? `Forecast: ${parts.join(", ")}.` : "Current forecast data is limited.";
 }
 
-function weatherCautions(weather: WeatherSnapshot | undefined) {
+function weatherCautions(weather: WeatherSnapshot | undefined, selected: Set<ActivityId>) {
   if (!weather) return ["Live conditions were unavailable; verify weather before leaving."];
 
   const cautions: string[] = [];
@@ -116,6 +136,15 @@ function weatherCautions(weather: WeatherSnapshot | undefined) {
   }
   if ((weather.weatherCode ?? 0) >= 95) {
     cautions.push("Thunderstorms are in the forecast; avoid exposed water and overlooks.");
+  }
+  if (
+    (selected.has("paddling") || selected.has("beaches")) &&
+    (weather.windGust ?? 0) >= 25
+  ) {
+    cautions.push("The selected water activities are wind-sensitive; check the local marine forecast and waves.");
+  }
+  if (selected.has("dark-sky") && (weather.cloudCover ?? 0) >= 60) {
+    cautions.push("Cloud cover may limit stargazing or aurora visibility.");
   }
   return cautions;
 }
@@ -172,7 +201,7 @@ export function rankDestinations(input: RankInput): Plan[] {
         ? matchingActivities.length / selected.size
         : 0.5;
       const rawScore =
-        42 + distanceFit * 28 + activityFit * 20 + weatherAdjustment(weather) +
+        42 + distanceFit * 28 + activityFit * 20 + weatherAdjustment(weather, selected) +
         (input.accessible && destination.accessibleFriendly ? 3 : 0);
 
       const reasons = [
@@ -182,7 +211,7 @@ export function rankDestinations(input: RankInput): Plan[] {
         `About ${formatDriveTime(driveHours)} away (${Math.round(distanceMiles)} rough miles).`,
       ];
 
-      if (weather) reasons.push(weatherReason(weather));
+      if (weather) reasons.push(weatherReason(weather, selected));
       if (input.kids) reasons.push("Included because it works well for a family outing.");
       if (input.accessible) reasons.push("Included for its lower-barrier access options.");
 
@@ -201,7 +230,7 @@ export function rankDestinations(input: RankInput): Plan[] {
         distanceMiles: Math.round(distanceMiles),
         driveHours: Number(driveHours.toFixed(1)),
         reasons,
-        cautions: weatherCautions(weather),
+        cautions: weatherCautions(weather, selected),
         weather: weather ?? null,
         conditionsStatus: weather ? ("live" as const) : ("estimated" as const),
         mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${destination.name}, ${destination.area}, Michigan`)}`,

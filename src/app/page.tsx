@@ -80,7 +80,7 @@ export default function Home() {
         <span><i>01</i> Michigan-only</span>
         <span><i>02</i> Conditions-aware</span>
         <span><i>03</i> No account</span>
-        <span><i>04</i> Clear limitations</span>
+        <span><i>04</i> Shareable decision</span>
       </div>
 
       <div className="content-wrap planner-wrap">

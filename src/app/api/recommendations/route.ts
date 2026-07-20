@@ -105,5 +105,17 @@ export async function POST(request: Request) {
       : "Live forecast data was unavailable, so these are distance-and-fit suggestions. Check conditions and official closures before leaving.",
   };
 
+  console.info(
+    JSON.stringify({
+      event: "planner_completed",
+      target: body.date,
+      driveHours: body.maxDriveHours,
+      activityCount: body.activities.length,
+      needsCount: Number(body.kids) + Number(body.dog) + Number(body.accessible),
+      planCount: plans.length,
+      conditionsStatus: response.conditionsStatus,
+    }),
+  );
+
   return NextResponse.json(response, { headers: responseHeaders });
 }
