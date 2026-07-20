@@ -348,7 +348,7 @@ export function Planner({
             <small>Optional and one-time. Coordinates stay out of the page URL and analytics.</small>
             <datalist id="michigan-origins">
               {origins.map((item) => (
-                <option key={item.slug} value={item.name}>{`${item.name} — ${item.zip}`}</option>
+                <option key={item.slug} value={item.name}>{`${item.name}, ${item.zip}`}</option>
               ))}
             </datalist>
           </label>
@@ -514,7 +514,7 @@ export function Planner({
                       <div className="result-facts">
                         <span>{formatDriveTime(plan.driveHours)}</span>
                         <span>{plan.distanceMiles} rough miles</span>
-                        {plan.weather?.high !== null && plan.weather?.high !== undefined && <span>{Math.round(plan.weather.high)}° high / {plan.weather.low === null ? "—" : `${Math.round(plan.weather.low)}° low`}</span>}
+                        {plan.weather?.high !== null && plan.weather?.high !== undefined && <span>{Math.round(plan.weather.high)}° high / {plan.weather.low === null ? "n/a" : `${Math.round(plan.weather.low)}° low`}</span>}
                         {plan.weather?.precipitationProbability !== null && plan.weather?.precipitationProbability !== undefined && <span>{Math.round(plan.weather.precipitationProbability)}% rain</span>}
                         {plan.weather?.windGust !== null && plan.weather?.windGust !== undefined && <span>{Math.round(plan.weather.windGust)} mph gusts</span>}
                         {plan.weather?.aqi !== null && plan.weather?.aqi !== undefined && <span>AQI {Math.round(plan.weather.aqi)}</span>}

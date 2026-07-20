@@ -18,7 +18,7 @@ type PlaceConditionsProps = {
 };
 
 function metric(value: number | null | undefined, suffix = "") {
-  return value === null || value === undefined ? "—" : `${Math.round(value)}${suffix}`;
+  return value === null || value === undefined ? "n/a" : `${Math.round(value)}${suffix}`;
 }
 
 function conditionsNote(

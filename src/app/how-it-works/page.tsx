@@ -5,7 +5,7 @@ import { destinationCount } from "../../data/destinations";
 export const metadata: Metadata = {
   title: "How the Michigan Outdoor Planner Works",
   description:
-    "See how Michigan Outdoors Now uses a real destination map, curated places, rough drive estimates, weather, wind, and air quality—and understand its privacy and safety limits.",
+    "See how Michigan Outdoors Now uses a real destination map, curated places, rough drive estimates, weather, wind, and air quality, plus its privacy and safety limits.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -26,7 +26,7 @@ export default function HowItWorksPage() {
         </section>
         <section>
           <span className="prose-number">02</span>
-          <div><h2>Hard requirements first</h2><p>Your maximum drive time and selected activities remove poor fits. Kids, dogs, and access selections act as requirements—not small score boosts. Drive times are rough geographic estimates and do not include traffic, ferries, construction, or winter roads.</p></div>
+          <div><h2>Hard requirements first</h2><p>Your maximum drive time and selected activities remove poor fits. Kids, dogs, and access selections act as requirements, not small score boosts. Drive times are rough geographic estimates and do not include traffic, ferries, construction, or winter roads.</p></div>
         </section>
         <section>
           <span className="prose-number">03</span>
@@ -46,7 +46,7 @@ export default function HowItWorksPage() {
         </section>
         <section>
           <span className="prose-number">07</span>
-          <div><h2>Guides answer a real planning need</h2><p>The <Link href="/ideas">Michigan trip guides</Link> are organized around people and decisions—family days, beaches, trails, birding, paddling, night skies, freighters, dogs, and lower-barrier access. Each page contains visible guidance, curated examples, official links, limitations, and a preconfigured planner. They are not automatically generated city-and-keyword pages.</p></div>
+          <div><h2>Guides answer a real planning need</h2><p>The <Link href="/ideas">Michigan trip guides</Link> are organized around people and decisions: family days, beaches, trails, birding, paddling, night skies, freighters, dogs, and lower-barrier access. Each page contains visible guidance, curated examples, official links, limitations, and a preconfigured planner. They are not automatically generated city-and-keyword pages.</p></div>
         </section>
         <aside className="prose-callout">
           <p className="eyebrow">Before leaving</p>

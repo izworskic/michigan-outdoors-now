@@ -12,7 +12,7 @@ type ResultComparisonProps = {
 };
 
 function metric(value: number | null | undefined, suffix: string, digits = 0) {
-  return value === null || value === undefined ? "—" : `${value.toFixed(digits)}${suffix}`;
+  return value === null || value === undefined ? "n/a" : `${value.toFixed(digits)}${suffix}`;
 }
 
 export function ResultComparison({

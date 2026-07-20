@@ -84,7 +84,7 @@ const score = results.reduce((sum, result) => sum + result.score, 0);
 console.log(`Search-readiness baseline: ${baseline.baselineScore}/100`);
 for (const result of results) console.log(`${result.name}: ${result.score}/${result.possible}`);
 console.log(`Preview source score: ${score}/100 (release target: ${baseline.releaseTarget})`);
-console.log(`Production crawl/index gate: ${baseline.productionVerified ? "verified" : "pending — intentionally separate from source readiness"}`);
+console.log(`Production crawl/index gate: ${baseline.productionVerified ? "verified" : "pending, intentionally separate from source readiness"}`);
 
 if (score < baseline.releaseTarget) {
   console.error("Search-readiness release gate failed.");

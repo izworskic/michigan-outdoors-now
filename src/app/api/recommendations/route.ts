@@ -127,7 +127,7 @@ export async function POST(request: Request) {
     conditionsStatus: hasLiveConditions ? "live" : "estimated",
     plans,
     note: hasLiveConditions
-      ? "Forecasts help rank options, but this is planning guidance—not a safety rating. Check official closures and local conditions before leaving."
+      ? "Forecasts help rank options, but this is planning guidance, not a safety rating. Check official closures and local conditions before leaving."
       : "Live forecast data was unavailable, so these are distance-and-fit suggestions. Check conditions and official closures before leaving.",
   };
 
