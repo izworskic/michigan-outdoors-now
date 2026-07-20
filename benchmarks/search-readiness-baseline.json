@@ -1,0 +1,21 @@
+{
+  "recordedAt": "2026-07-20",
+  "baselineScore": 42,
+  "releaseTarget": 85,
+  "productionVerified": false,
+  "categories": [
+    { "name": "Search intent and personas", "weight": 20, "baseline": 6 },
+    { "name": "People-first content depth", "weight": 20, "baseline": 8 },
+    { "name": "Crawl paths and internal links", "weight": 15, "baseline": 7 },
+    { "name": "Metadata and structured meaning", "weight": 15, "baseline": 9 },
+    { "name": "AI answerability and entity clarity", "weight": 15, "baseline": 5 },
+    { "name": "Measurement and release safety", "weight": 15, "baseline": 7 }
+  ],
+  "outcomeTargets": {
+    "indexCoverage": "All canonical guide and origin pages eligible and submitted after the standalone production domain is verified",
+    "organicPlannerCompletion": ">= 25% of organic guide sessions",
+    "organicOutboundAction": ">= 30% of organic completed plans",
+    "organicShareRate": ">= 5% of organic completed plans",
+    "longTermGoal": "10x qualified organic entries versus the first stable 28-day post-indexing baseline, without increasing 404s or thin pages"
+  }
+}

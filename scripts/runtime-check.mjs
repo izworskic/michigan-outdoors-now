@@ -44,6 +44,17 @@ try {
   const missingPage = await fetch(`${origin}/from/not-a-city`);
   assert.equal(missingPage.status, 404);
 
+  const guidePage = await fetch(`${origin}/ideas/family-day-trips`);
+  assert.equal(guidePage.status, 200);
+  assert.match(await guidePage.text(), /Michigan Outdoor Day Trips for Families/);
+
+  const missingGuide = await fetch(`${origin}/ideas/not-a-guide`);
+  assert.equal(missingGuide.status, 404);
+
+  const llmsFull = await fetch(`${origin}/llms-full.txt`);
+  assert.equal(llmsFull.status, 200);
+  assert.match(await llmsFull.text(), /expanded reference/);
+
   const robots = await fetch(`${origin}/robots.txt`);
   assert.equal(robots.status, 200);
   assert.match(await robots.text(), /Disallow: \//);
@@ -89,7 +100,7 @@ try {
   assert.ok(payload.plans.every((plan) => plan.destination.activities.includes("hiking") || plan.destination.activities.includes("birding")));
 
   console.log(
-    `Runtime check passed: home, local page, protected 404, validation, and ${payload.conditionsStatus} planner response (${payload.plans.length} plans).`,
+    `Runtime check passed: home, local and guide pages, protected 404s, AI-readable reference, validation, and ${payload.conditionsStatus} planner response (${payload.plans.length} plans).`,
   );
 } finally {
   server.kill("SIGTERM");

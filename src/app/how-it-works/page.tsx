@@ -30,7 +30,7 @@ export default function HowItWorksPage() {
         </section>
         <section>
           <span className="prose-number">03</span>
-          <div><h2>Current data adjusts the order</h2><p>The remaining choices are compared with daily forecast data, including temperature, rain chance, and gusts. U.S. Air Quality Index data is included when available. Data comes from <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> and can be delayed, incomplete, or unavailable.</p></div>
+          <div><h2>Current data adjusts the order</h2><p>The remaining choices are compared with daily forecast data, including temperature, rain chance, precipitation, gusts, sunshine, and cloud cover. U.S. Air Quality Index data is included when available. Wind receives extra weight for selected water activities and cloud cover matters more for dark-sky plans. Data comes from <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> and can be delayed, incomplete, or unavailable.</p></div>
         </section>
         <section>
           <span className="prose-number">04</span>
@@ -39,6 +39,10 @@ export default function HowItWorksPage() {
         <section>
           <span className="prose-number">05</span>
           <div><h2>Minimal data by design</h2><p>The planner does not request device location and does not require an account. You enter a city or ZIP. A request is processed to generate the response; this application does not save a personal trip profile or sell planner entries.</p></div>
+        </section>
+        <section>
+          <span className="prose-number">06</span>
+          <div><h2>Guides answer a real planning need</h2><p>The <Link href="/ideas">Michigan trip guides</Link> are organized around people and decisions—family days, beaches, trails, birding, paddling, night skies, freighters, dogs, and lower-barrier access. Each page contains visible guidance, curated examples, official links, limitations, and a preconfigured planner. They are not automatically generated city-and-keyword pages.</p></div>
         </section>
         <aside className="prose-callout">
           <p className="eyebrow">Before leaving</p>

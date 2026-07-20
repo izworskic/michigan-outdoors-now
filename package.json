@@ -11,7 +11,8 @@
     "check:seo": "node scripts/check-seo.mjs",
     "check:runtime": "node scripts/runtime-check.mjs",
     "score:usefulness": "node scripts/score-usefulness.mjs",
-    "check": "npm run lint && npm run test && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness"
+    "score:search": "node --import tsx scripts/score-search-readiness.ts",
+    "check": "npm run lint && npm run test && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

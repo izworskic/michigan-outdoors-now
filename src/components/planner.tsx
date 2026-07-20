@@ -40,6 +40,12 @@ const presets: Array<{
 type PlannerProps = {
   defaultOrigin?: string;
   compactIntro?: boolean;
+  initialDate?: DateChoice;
+  initialMaxDriveHours?: number;
+  initialActivities?: ActivityId[];
+  initialKids?: boolean;
+  initialDog?: boolean;
+  initialAccessible?: boolean;
 };
 
 function safeTrack(name: string, properties?: Record<string, string | number | boolean>) {
@@ -50,14 +56,23 @@ function safeTrack(name: string, properties?: Record<string, string | number | b
   }
 }
 
-export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: PlannerProps) {
+export function Planner({
+  defaultOrigin = "Bay City",
+  compactIntro = false,
+  initialDate = "weekend",
+  initialMaxDriveHours = 2,
+  initialActivities = ["hiking", "scenic"],
+  initialKids = false,
+  initialDog = false,
+  initialAccessible = false,
+}: PlannerProps) {
   const [origin, setOrigin] = useState(defaultOrigin);
-  const [date, setDate] = useState<DateChoice>("weekend");
-  const [maxDriveHours, setMaxDriveHours] = useState(2);
-  const [activities, setActivities] = useState<ActivityId[]>(["hiking", "scenic"]);
-  const [kids, setKids] = useState(false);
-  const [dog, setDog] = useState(false);
-  const [accessible, setAccessible] = useState(false);
+  const [date, setDate] = useState<DateChoice>(initialDate);
+  const [maxDriveHours, setMaxDriveHours] = useState(initialMaxDriveHours);
+  const [activities, setActivities] = useState<ActivityId[]>(() => [...initialActivities]);
+  const [kids, setKids] = useState(initialKids);
+  const [dog, setDog] = useState(initialDog);
+  const [accessible, setAccessible] = useState(initialAccessible);
   const [activePreset, setActivePreset] = useState("");
   const [response, setResponse] = useState<PlannerResponse | null>(null);
   const [primaryId, setPrimaryId] = useState("");

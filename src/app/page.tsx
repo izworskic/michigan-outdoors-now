@@ -2,6 +2,7 @@ import Link from "next/link";
 import { destinationCount } from "../data/destinations";
 import { origins } from "../data/origins";
 import { Planner } from "../components/planner";
+import { featuredGuideSlugs, guidesBySlug } from "../data/guides";
 import { jsonLd, personSchema, siteUrl } from "../lib/site";
 
 const frequentlyAsked = [
@@ -23,6 +24,9 @@ const frequentlyAsked = [
 ];
 
 export default function Home() {
+  const featuredGuides = featuredGuideSlugs
+    .map((slug) => guidesBySlug.get(slug))
+    .filter((guide) => guide !== undefined);
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -36,6 +40,13 @@ export default function Home() {
         browserRequirements: "Requires JavaScript",
         description:
           "A live-condition-aware Michigan day and weekend planner using drive time, interests, forecast, wind, and air quality.",
+        featureList: [
+          "Michigan day-trip recommendations",
+          "Drive-window filtering",
+          "Forecast, wind, and air-quality context",
+          "Primary and weather-backup decisions",
+          "Shareable planner setups",
+        ],
         author: { "@id": personSchema["@id"] },
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       },
@@ -82,6 +93,24 @@ export default function Home() {
         <span><i>03</i> No account</span>
         <span><i>04</i> Shareable decision</span>
       </div>
+
+      <section className="persona-section content-wrap" aria-labelledby="persona-title">
+        <div className="section-kicker"><span>START WITH YOU</span><i /></div>
+        <div className="persona-heading">
+          <h2 id="persona-title">Which sentence sounds most like your day?</h2>
+          <p>Choose a plain-English starting point. Each guide gives you the important details and opens a planner already shaped for that kind of trip.</p>
+        </div>
+        <div className="persona-grid">
+          {featuredGuides.map((guide, index) => (
+            <Link className="persona-card" href={`/ideas/${guide.slug}`} key={guide.slug}>
+              <span>{String(index + 1).padStart(2, "0")}</span>
+              <h3>{guide.entryLabel}</h3>
+              <p>{guide.entryDetail}</p>
+            </Link>
+          ))}
+        </div>
+        <Link className="text-link persona-all" href="/ideas">See all Michigan trip guides →</Link>
+      </section>
 
       <div className="content-wrap planner-wrap">
         <Planner />

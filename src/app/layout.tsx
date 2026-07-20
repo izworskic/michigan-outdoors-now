@@ -57,6 +57,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         name: "Michigan Outdoors Now",
         description: "A Michigan outdoor day and weekend planner by Chris Izworski.",
         creator: { "@id": "https://chrisizworski.com/#chris-izworski" },
+        publisher: { "@id": "https://chrisizworski.com/#chris-izworski" },
         inLanguage: "en-US",
       },
     ],
@@ -74,6 +75,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </Link>
             <nav aria-label="Main navigation">
               <Link href="/#planner">Build a plan</Link>
+              <Link href="/ideas">Trip ideas</Link>
               <Link href="/how-it-works">How it works</Link>
               <a href="https://chrisizworski.com/tools">More tools</a>
             </nav>
@@ -87,6 +89,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <p>A focused Michigan planning tool built by <a href="https://chrisizworski.com/">Chris Izworski</a>.</p>
             </div>
             <div className="footer-links">
+              <Link href="/ideas">Trip guides</Link>
               <Link href="/how-it-works">Method & privacy</Link>
               <a href="https://chrisizworski.com/tools">All tools</a>
               <a href="https://github.com/izworskic/michigan-outdoors-now">Source</a>

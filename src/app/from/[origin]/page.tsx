@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Planner } from "../../../components/planner";
 import { destinations } from "../../../data/destinations";
+import { guidesBySlug } from "../../../data/guides";
 import { origins, originsBySlug } from "../../../data/origins";
 import { haversineMiles } from "../../../lib/planner";
 import { jsonLd, siteUrl } from "../../../lib/site";
@@ -62,6 +63,9 @@ export default async function OriginPage({ params }: { params: Promise<{ origin:
       },
     ],
   };
+  const localGuides = ["outdoors-today", "family-day-trips", "hiking-day-trips"]
+    .map((guideSlug) => guidesBySlug.get(guideSlug))
+    .filter((guide) => guide !== undefined);
 
   return (
     <>
@@ -102,8 +106,17 @@ export default async function OriginPage({ params }: { params: Promise<{ origin:
             </article>
           ))}
         </div>
-        <Link className="text-link" href="/">See every starting city →</Link>
+        <Link className="text-link" href="/ideas">Explore Michigan trip guides →</Link>
       </section>
+
+      <nav className="related-guides content-wrap local-guide-links" aria-label={`Popular outdoor guides from ${origin.name}`}>
+        <p className="eyebrow">Choose the kind of day</p>
+        <div>
+          {localGuides.map((guide) => (
+            <Link href={`/ideas/${guide.slug}`} key={guide.slug}>{guide.shortTitle}<span>→</span></Link>
+          ))}
+        </div>
+      </nav>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }} />
     </>
   );

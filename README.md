@@ -12,6 +12,8 @@ The planner returns up to three explainable destination matches based on:
 
 It uses a curated set of 28 destinations, deterministic ranking, Open-Meteo data, and a distance-and-fit fallback. It requires no API key, account, device location, database, or LLM.
 
+The site also includes ten substantial, server-rendered planning guides for distinct search intents: outdoors today, family days, beaches, hiking, birding, paddling, dark skies, freighters, dog-friendly trips, and lower-barrier access. Each guide includes unique decision help, relevant curated examples, official links, FAQs, structured data, and a preconfigured planner.
+
 ## Local development
 
 ```bash
@@ -27,7 +29,9 @@ Open `http://localhost:3000`.
 npm run check
 ```
 
-This runs linting, deterministic planner tests, the production build, generated SEO checks, and a production-server request check.
+This runs linting, deterministic planner and guide-quality tests, the production build, generated SEO and structured-data checks, a live production-server request check, and both usefulness and search-readiness release gates.
+
+The scorecard methodology lives in `docs/usefulness-scorecard.md` and `docs/search-growth-plan.md`. Scores measure release readiness, not guaranteed rankings or traffic.
 
 ## Safe indexing gate
 

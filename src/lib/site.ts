@@ -23,6 +23,12 @@ export const personSchema = {
     "Great Lakes conditions",
     "Michigan fishing",
     "Michigan travel planning",
+    "Michigan day trips",
+    "Michigan beaches",
+    "Michigan hiking",
+    "Michigan birding",
+    "Great Lakes freighters",
+    "Michigan dark skies",
     "Web development",
   ],
 };
