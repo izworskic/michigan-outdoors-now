@@ -19,7 +19,7 @@ const frequentlyAsked = [
   {
     question: "Does the planner track my location?",
     answer:
-      "No. You type a Michigan city or ZIP code. The tool does not request device location, require an account, or save a trip profile.",
+      "Only if you tap Use my location. That optional browser permission supplies coordinates for one planner request; the tool keeps them out of the shared URL and analytics and does not save a trip profile. You can always type a Michigan city or ZIP instead.",
   },
 ];
 
@@ -73,7 +73,10 @@ export default function Home() {
               Tell us where you are, how far you will drive, and what sounds good. Get three
               Michigan plans shaped by current conditions—not a wall of generic listings.
             </p>
-            <a className="hero-button" href="#planner">Build my plan <span aria-hidden="true">↓</span></a>
+            <div className="hero-actions">
+              <a className="hero-button" href="#planner">Build my plan <span aria-hidden="true">↓</span></a>
+              <Link className="hero-secondary" href="/explore">Explore all 28 places →</Link>
+            </div>
             <p className="byline">Designed and built by <a href="https://chrisizworski.com/">Chris Izworski</a></p>
           </div>
           <div className="hero-map" aria-label="Michigan destination coverage illustration">
@@ -110,6 +113,7 @@ export default function Home() {
           ))}
         </div>
         <Link className="text-link persona-all" href="/ideas">See all Michigan trip guides →</Link>
+        <Link className="text-link persona-all" href="/explore">Or filter the interactive Michigan map →</Link>
       </section>
 
       <div className="content-wrap planner-wrap">

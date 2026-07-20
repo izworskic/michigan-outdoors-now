@@ -12,7 +12,8 @@
     "check:runtime": "node scripts/runtime-check.mjs",
     "score:usefulness": "node scripts/score-usefulness.mjs",
     "score:search": "node --import tsx scripts/score-search-readiness.ts",
-    "check": "npm run lint && npm run test && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search"
+    "score:impact": "node --import tsx scripts/score-impact-readiness.ts",
+    "check": "npm run lint && npm run test && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

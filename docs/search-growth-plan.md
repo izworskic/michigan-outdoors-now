@@ -27,6 +27,8 @@ Every indexable guide must have a unique intent, direct answer, named audience, 
 
 City pages remain limited to the eleven curated starting points. The project will not create activity × city pages unless real search performance and enough unique local information justify each page.
 
+The v2 release adds one statewide discovery page for the distinct “Michigan outdoor map/finder” job and one decision page for each of the 28 manually curated destinations. Those destination pages are not keyword swaps: each exposes the destination’s unique setting, supported activities, access note, family/dog/lower-barrier flags, live condition panel, official source, map, nearby alternatives, related guides, and planner. Automated tests reject unknown destinations, duplicate direct answers, broken nearby sets, missing static routes, and mismatched place schema.
+
 ## Google and AI search approach
 
 Google states that AI Overviews and AI Mode do not require special AI markup. The same fundamentals apply: crawlable pages, visible textual answers, internal links, a strong page experience, and structured data that matches the page. The guide architecture follows that guidance. `llms.txt` and `llms-full.txt` provide an additional concise reference for systems that voluntarily use those files, but they are not treated as a Google ranking shortcut.
@@ -40,6 +42,6 @@ Primary guidance:
 
 ## Measurement
 
-Search Console is the search source of truth: indexed canonical URLs, non-brand impressions, clicks, click-through rate, average position, query clusters, and guide-page landing traffic. Vercel Analytics measures what happens after the click: planner completions, primary/backup decisions, shares, maps, and official-detail opens.
+Search Console is the search source of truth: indexed canonical URLs, non-brand impressions, clicks, click-through rate, average position, query clusters, and guide-, explorer-, and destination-page landing traffic. Vercel Analytics measures what happens after the click: explorer filtering, planner starts and completions, primary/backup decisions, shares, maps, and official-detail opens.
 
 The first stable 28 days after indexing establish the organic baseline. Initial quality targets are at least 25% planner completion from organic guide sessions, at least 30% outbound action after an organic completion, and at least 5% sharing. The long-term goal is 10x qualified organic entries compared with that baseline, without increasing thin pages, 404s, indexing errors, or Core Web Vitals regressions. Rankings and AI citations cannot be guaranteed.

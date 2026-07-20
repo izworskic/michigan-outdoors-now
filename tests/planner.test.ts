@@ -6,6 +6,7 @@ import {
   estimateDriveHours,
   getDetroitDate,
   haversineMiles,
+  isPlausibleMichiganCoordinate,
   rankDestinations,
   targetDateFor,
 } from "../src/lib/planner.ts";
@@ -34,6 +35,7 @@ test("distance helpers are stable and plausible", () => {
   const detroitToAnnArbor = haversineMiles(42.3314, -83.0458, 42.2808, -83.743);
   assert.ok(detroitToAnnArbor > 30 && detroitToAnnArbor < 40);
   assert.equal(estimateDriveHours(0), 0.2);
+  assert.equal(isPlausibleMichiganCoordinate(42.3314, -83.0458), true);
 });
 
 test("Detroit calendar choices use the Michigan date", () => {

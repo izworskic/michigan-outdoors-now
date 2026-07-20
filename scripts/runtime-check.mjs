@@ -51,6 +51,25 @@ try {
   const missingGuide = await fetch(`${origin}/ideas/not-a-guide`);
   assert.equal(missingGuide.status, 404);
 
+  const explorer = await fetch(`${origin}/explore`);
+  assert.equal(explorer.status, 200);
+  assert.match(await explorer.text(), /Interactive Michigan finder/);
+
+  const placePage = await fetch(`${origin}/places/tawas-point`);
+  assert.equal(placePage.status, 200);
+  assert.match(await placePage.text(), /Plan a day at/);
+
+  const missingPlace = await fetch(`${origin}/places/not-a-place`);
+  assert.equal(missingPlace.status, 404);
+
+  const conditions = await fetch(`${origin}/api/conditions/tawas-point`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  assert.equal(conditions.status, 200);
+  assert.match(conditions.headers.get("x-robots-tag") ?? "", /noindex/);
+  const conditionsPayload = await conditions.json();
+  assert.equal(conditionsPayload.place.id, "tawas-point");
+
   const llmsFull = await fetch(`${origin}/llms-full.txt`);
   assert.equal(llmsFull.status, 200);
   assert.match(await llmsFull.text(), /expanded reference/);
@@ -99,8 +118,28 @@ try {
   assert.ok(payload.plans.every((plan) => plan.driveHours <= 2.1));
   assert.ok(payload.plans.every((plan) => plan.destination.activities.includes("hiking") || plan.destination.activities.includes("birding")));
 
+  const coordinateRecommendation = await fetch(`${origin}/api/recommendations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: "Bay City",
+      originCoordinates: { latitude: 43.5945, longitude: -83.8889 },
+      date: "today",
+      maxDriveHours: 2,
+      activities: ["scenic"],
+      kids: false,
+      dog: false,
+      accessible: false,
+    }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  assert.equal(coordinateRecommendation.status, 200);
+  const coordinatePayload = await coordinateRecommendation.json();
+  assert.match(coordinatePayload.origin.name, /Bay City area/);
+  assert.ok(coordinatePayload.plans.length > 0);
+
   console.log(
-    `Runtime check passed: home, local and guide pages, protected 404s, AI-readable reference, validation, and ${payload.conditionsStatus} planner response (${payload.plans.length} plans).`,
+    `Runtime check passed: home, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

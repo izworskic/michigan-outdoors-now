@@ -1,9 +1,15 @@
 "use client";
 
 import { track } from "@vercel/analytics";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { origins } from "../data/origins";
-import { activityLabels, formatDriveTime } from "../lib/planner";
+import {
+  activityLabels,
+  formatDriveTime,
+  haversineMiles,
+  isPlausibleMichiganCoordinate,
+} from "../lib/planner";
 import { parsePlannerFragment, serializePlannerFragment } from "../lib/planner-share";
 import {
   activityIds,
@@ -67,6 +73,7 @@ export function Planner({
   initialAccessible = false,
 }: PlannerProps) {
   const [origin, setOrigin] = useState(defaultOrigin);
+  const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
   const [date, setDate] = useState<DateChoice>(initialDate);
   const [maxDriveHours, setMaxDriveHours] = useState(initialMaxDriveHours);
   const [activities, setActivities] = useState<ActivityId[]>(() => [...initialActivities]);
@@ -79,18 +86,21 @@ export function Planner({
   const [backupId, setBackupId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [setupStatus, setSetupStatus] = useState("");
   const [shareStatus, setShareStatus] = useState("");
+  const startTracked = useRef(false);
 
   const plannerRequest = useMemo<PlannerRequest>(() => ({
     origin,
+    ...(originCoordinates ? { originCoordinates } : {}),
     date,
     maxDriveHours,
     activities,
     kids,
     dog,
     accessible,
-  }), [origin, date, maxDriveHours, activities, kids, dog, accessible]);
+  }), [origin, originCoordinates, date, maxDriveHours, activities, kids, dog, accessible]);
 
   const primary = response?.plans.find((plan) => plan.destination.id === primaryId) ?? null;
   const backup = response?.plans.find((plan) => plan.destination.id === backupId) ?? null;
@@ -101,6 +111,7 @@ export function Planner({
 
     const timer = window.setTimeout(() => {
       setOrigin(shared.origin);
+      setOriginCoordinates(undefined);
       setDate(shared.date);
       setMaxDriveHours(shared.maxDriveHours);
       setActivities(shared.activities);
@@ -113,6 +124,73 @@ export function Planner({
 
     return () => window.clearTimeout(timer);
   }, []);
+
+  function trackStart() {
+    if (startTracked.current) return;
+    startTracked.current = true;
+    safeTrack("planner_started");
+  }
+
+  function useMyLocation() {
+    trackStart();
+    setError("");
+    if (!navigator.geolocation) {
+      setError("This browser does not offer location. Type a Michigan city or ZIP instead.");
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const latitude = Number(coords.latitude.toFixed(5));
+        const longitude = Number(coords.longitude.toFixed(5));
+        if (!isPlausibleMichiganCoordinate(latitude, longitude)) {
+          setError("That location appears to be outside Michigan. Type the Michigan city you are starting from.");
+          setLocating(false);
+          return;
+        }
+
+        const nearest = origins.reduce((closest, candidate) => {
+          const candidateDistance = haversineMiles(latitude, longitude, candidate.latitude, candidate.longitude);
+          const closestDistance = haversineMiles(latitude, longitude, closest.latitude, closest.longitude);
+          return candidateDistance < closestDistance ? candidate : closest;
+        });
+        setOrigin(nearest.name);
+        setOriginCoordinates({ latitude, longitude });
+        setActivePreset("");
+        setSetupStatus(`Using your device location near ${nearest.name} for this request. It is not placed in the URL or analytics.`);
+        setLocating(false);
+        safeTrack("device_location_used");
+      },
+      () => {
+        setError("Location was not available. Allow it in your browser or type a Michigan city or ZIP.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 600_000 },
+    );
+  }
+
+  function widenSearch() {
+    const choices = [1, 2, 3, 5];
+    const next = choices.find((choice) => choice > maxDriveHours) ?? 5;
+    setMaxDriveHours(next);
+    setResponse(null);
+    setSetupStatus(`Drive window widened to ${next} ${next === 1 ? "hour" : "hours"}. Build the plan again.`);
+    safeTrack("no_results_recovery", { action: "widen_drive" });
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    window.setTimeout(() => document.getElementById("planner")?.scrollIntoView({ behavior }), 0);
+  }
+
+  function relaxRequirements() {
+    setKids(false);
+    setDog(false);
+    setAccessible(false);
+    setResponse(null);
+    setSetupStatus("Extra requirements cleared. Build the plan again, then confirm details for any result.");
+    safeTrack("no_results_recovery", { action: "clear_requirements" });
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    window.setTimeout(() => document.getElementById("planner")?.scrollIntoView({ behavior }), 0);
+  }
 
   function applyPreset(preset: (typeof presets)[number]) {
     setDate(preset.date);
@@ -227,7 +305,7 @@ export function Planner({
         )}
       </div>
 
-      <form onSubmit={submit} className="planner-form">
+      <form onSubmit={submit} onFocusCapture={trackStart} className="planner-form">
         <fieldset className="quick-start">
           <legend>Quick starts</legend>
           <p>Choose a useful starting point, then adjust it below.</p>
@@ -251,17 +329,23 @@ export function Planner({
         <div className="form-row form-row-primary">
           <label className="field field-origin">
             <span>Starting in Michigan</span>
-            <input
-              value={origin}
-              onChange={(event) => { setOrigin(event.target.value); setActivePreset(""); }}
-              list="michigan-origins"
-              name="origin"
-              autoComplete="postal-code"
-              placeholder="City or ZIP code"
-              required
-              minLength={2}
-              maxLength={80}
-            />
+            <span className="origin-input-row">
+              <input
+                value={origin}
+                onChange={(event) => { setOrigin(event.target.value); setOriginCoordinates(undefined); setActivePreset(""); }}
+                list="michigan-origins"
+                name="origin"
+                autoComplete="postal-code"
+                placeholder="City or ZIP code"
+                required
+                minLength={2}
+                maxLength={80}
+              />
+              <button type="button" className="location-button" onClick={useMyLocation} disabled={locating}>
+                {locating ? "Finding…" : "Use my location"}
+              </button>
+            </span>
+            <small>Optional and one-time. Coordinates stay out of the page URL and analytics.</small>
             <datalist id="michigan-origins">
               {origins.map((item) => (
                 <option key={item.slug} value={item.name}>{`${item.name} — ${item.zip}`}</option>
@@ -362,7 +446,7 @@ export function Planner({
             <span>{loading ? "Checking Michigan…" : "Show my best options"}</span>
             <span aria-hidden="true">→</span>
           </button>
-          <p>Free · no account · no device location</p>
+          <p>Free · no account · location only if you tap it</p>
         </div>
       </form>
 
@@ -439,6 +523,7 @@ export function Planner({
                       )}
                       <details className="access-note"><summary>Access note</summary><p>{plan.destination.accessNote}</p></details>
                       <div className="result-actions">
+                        <Link href={`/places/${plan.destination.id}`} onClick={() => safeTrack("place_detail_opened")}>Plan this place →</Link>
                         <a href={plan.mapUrl} target="_blank" rel="noreferrer" onClick={() => safeTrack("outbound_map_opened")}>Open in Maps ↗</a>
                         <a href={plan.destination.officialUrl} target="_blank" rel="noreferrer" onClick={() => safeTrack("outbound_official_opened")}>Official details ↗</a>
                         {plan.relatedTool && <a href={plan.relatedTool.url} onClick={() => safeTrack("related_tool_opened")}>{plan.relatedTool.label} →</a>}
@@ -450,7 +535,15 @@ export function Planner({
               <TripDecision primary={primary} backup={backup} shareStatus={shareStatus} onShare={sharePlan} />
             </>
           ) : (
-            <div className="empty-result"><h4>No strong match inside that drive window.</h4><p>Try one more hour, remove a requirement, or choose another activity.</p></div>
+            <div className="empty-result">
+              <h4>No strong match inside that drive window.</h4>
+              <p>Use one of these quick recoveries, then build the plan again.</p>
+              <div className="empty-actions">
+                {maxDriveHours < 5 && <button type="button" onClick={widenSearch}>Widen the drive window</button>}
+                {(kids || dog || accessible) && <button type="button" onClick={relaxRequirements}>Clear extra requirements</button>}
+                <Link href="/explore">Browse all 28 places</Link>
+              </div>
+            </div>
           )}
 
           <p className="result-note">{response.note} Drive times are rough estimates, not live traffic. A trip-fit score is not a safety score.</p>

@@ -10,9 +10,11 @@ The planner returns up to three explainable destination matches based on:
 - outdoor activities and practical needs
 - current forecast, wind, and U.S. AQI when available
 
-It uses a curated set of 28 destinations, deterministic ranking, Open-Meteo data, and a distance-and-fit fallback. It requires no API key, account, device location, database, or LLM.
+It uses a curated set of 28 destinations, deterministic ranking, Open-Meteo data, and a distance-and-fit fallback. It requires no API key, account, database, or LLM. Device location is an optional one-tap input; typed Michigan cities and ZIP codes remain the default fallback.
 
 The site also includes ten substantial, server-rendered planning guides for distinct search intents: outdoors today, family days, beaches, hiking, birding, paddling, dark skies, freighters, dog-friendly trips, and lower-barrier access. Each guide includes unique decision help, relevant curated examples, official links, FAQs, structured data, and a preconfigured planner.
+
+The impact-readiness release adds a filterable, no-key Michigan map at `/explore` and 28 server-rendered destination decision pages at `/places/[place]`. Each destination page combines a unique direct answer, live planning signals, activity and access context, official and map links, nearby alternatives, related guides, structured place data, and the interactive planner.
 
 ## Local development
 
@@ -29,9 +31,9 @@ Open `http://localhost:3000`.
 npm run check
 ```
 
-This runs linting, deterministic planner and guide-quality tests, the production build, generated SEO and structured-data checks, a live production-server request check, and both usefulness and search-readiness release gates.
+This runs linting, deterministic planner, guide, destination, and privacy tests; the production build; generated SEO and structured-data checks; live production-server requests; the original source-readiness checks; and the stricter 200-point impact gate.
 
-The scorecard methodology lives in `docs/usefulness-scorecard.md` and `docs/search-growth-plan.md`. Scores measure release readiness, not guaranteed rankings or traffic.
+The scorecard methodology lives in `docs/usefulness-scorecard.md`, `docs/search-growth-plan.md`, and `docs/impact-readiness-v2.md`. Scores measure release readiness, not guaranteed rankings or traffic.
 
 ## Safe indexing gate
 

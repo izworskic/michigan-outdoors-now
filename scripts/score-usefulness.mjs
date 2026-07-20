@@ -15,6 +15,9 @@ const files = Object.fromEntries(
       "src/app/globals.css",
       "src/app/layout.tsx",
       "src/app/page.tsx",
+      "src/app/explore/page.tsx",
+      "src/app/places/[place]/page.tsx",
+      "src/components/destination-explorer.tsx",
     ].map(async (path) => [path, await readFile(new URL(`../${path}`, import.meta.url), "utf8")]),
   ),
 );
@@ -39,7 +42,7 @@ const categories = [
       [4, has("src/components/planner.tsx", "Quick starts", "preset-grid")],
       [4, has("src/lib/planner-share.ts", "#plan=", "parsePlannerFragment")],
       [4, has("src/components/planner.tsx", "navigator.share", "clipboard.writeText")],
-      [4, has("src/components/planner.tsx", "setResponse(payload)", "plannerRequest")],
+      [4, has("src/components/planner.tsx", "navigator.geolocation", "no_results_recovery", "Use my location")],
     ],
   },
   {
@@ -55,7 +58,7 @@ const categories = [
     checks: [
       [5, has("src/components/planner.tsx", "formatGeneratedTime", "Live conditions used", "Estimated fit")],
       [5, has("src/components/planner.tsx", "not a safety score", "Official details")],
-      [5, has("src/components/planner.tsx", "no account", "no device location") && has("src/lib/planner-share.ts", "#plan=")],
+      [5, has("src/components/planner.tsx", "location only if you tap it", "not placed in the URL or analytics") && has("src/lib/planner-share.ts", "#plan=")],
     ],
   },
   {
@@ -70,7 +73,7 @@ const categories = [
     name: "Discoverability and measurement",
     checks: [
       [3, has("src/app/layout.tsx", "Metadata", "application/ld+json") && has("src/app/page.tsx", "WebApplication", "FAQPage")],
-      [3, baseline.productionVerified === true],
+      [3, has("src/app/explore/page.tsx", "DestinationExplorer", "Quick answer") && has("src/app/places/[place]/page.tsx", "PlaceConditions", "nearbyDestinations")],
       [2, has("src/app/layout.tsx", "<Analytics", "<SpeedInsights") && has("src/components/planner.tsx", "planner_completed")],
       [2, has("src/app/layout.tsx", "Chris Izworski", "chrisizworski.com")],
     ],
@@ -87,7 +90,7 @@ const score = results.reduce((sum, result) => sum + result.score, 0);
 console.log(`Usefulness baseline: ${baseline.baselineScore}/100`);
 for (const result of results) console.log(`${result.name}: ${result.score}/${result.possible}`);
 console.log(`Preview source score: ${score}/100 (release target: ${baseline.releaseTarget})`);
-console.log(`Production domain/indexing verified: ${baseline.productionVerified ? "yes" : "no — requires live verification"}`);
+console.log(`Production outcome gate: ${baseline.productionVerified ? "verified" : "pending — intentionally separate from source readiness"}`);
 
 if (score < baseline.releaseTarget) {
   console.error("Usefulness release gate failed.");

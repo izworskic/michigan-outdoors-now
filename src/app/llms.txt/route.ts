@@ -1,5 +1,6 @@
 import { origins } from "../../data/origins";
 import { guides } from "../../data/guides";
+import { destinations } from "../../data/destinations";
 import { siteUrl } from "../../lib/site";
 
 export function GET() {
@@ -8,6 +9,9 @@ export function GET() {
     .join("\n");
   const guidePages = guides
     .map((guide) => `- [${guide.title}](${siteUrl}/ideas/${guide.slug}): ${guide.directAnswer}`)
+    .join("\n");
+  const placePages = destinations
+    .map((destination) => `- [${destination.name}](${siteUrl}/places/${destination.id}): ${destination.summary}`)
     .join("\n");
   const body = `# Michigan Outdoors Now
 
@@ -18,6 +22,7 @@ export function GET() {
 - [Planner](${siteUrl})
 - [Method, privacy, and limits](${siteUrl}/how-it-works)
 - [Michigan outdoor trip guides](${siteUrl}/ideas)
+- [Interactive Michigan destination map](${siteUrl}/explore)
 - [More tools by Chris Izworski](https://chrisizworski.com/tools)
 
 ## People-first planning guides
@@ -27,6 +32,10 @@ ${guidePages}
 ## Local starting pages
 
 ${localPages}
+
+## Curated destination planning pages
+
+${placePages}
 
 ## Important limitation
 

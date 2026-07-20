@@ -7,18 +7,20 @@ This scorecard prevents a visual redesign from being mistaken for a more useful 
 - Audited baseline: **62/100** on 2026-07-20.
 - Required preview score: **88/100 or higher**.
 - Production stays untouched until build, runtime, mobile, accessibility, SEO, and live-data checks pass on the preview.
-- Production domain/indexing verification is intentionally worth three points and cannot pass from source code alone.
+- Production domain/indexing verification is reported as a separate outcome gate and cannot pass from source code alone.
 
 | Category | Weight | Baseline | What earns full credit |
 | --- | ---: | ---: | --- |
 | Decision quality | 25 | 14 | Curated ranking, current conditions, activity-aware weather, primary/backup choice, and map/official next actions |
 | Interaction efficiency | 20 | 8 | Progressive form, useful presets, shareable private-fragment setup, share action, and easy reruns |
 | Result clarity | 15 | 7 | Side-by-side comparison, the weather signals that matter, and plain-language reasons/cautions |
-| Trust and safety | 15 | 13 | Source/timestamp/fallback clarity, explicit safety limitations, official checks, and no account/device-location request |
+| Trust and safety | 15 | 13 | Source/timestamp/fallback clarity, explicit safety limitations, official checks, no account, and optional location that stays out of shared URLs and analytics |
 | Mobile and accessibility | 15 | 14 | Semantic controls, keyboard/focus/live-region support, mobile layout, touch targets, and reduced motion |
-| Discoverability and measurement | 10 | 6 | Metadata/schema/local pages, verified production domain/indexing, product analytics, and Chris Izworski identity links |
+| Discoverability and measurement | 10 | 6 | Metadata/schema, local and destination pages, interactive discovery, product analytics, and Chris Izworski identity links |
 
 Run `npm run score:usefulness` to evaluate source-backed criteria. It reports production verification separately instead of pretending a branch can prove DNS, indexing, or a live alias.
+
+The stricter follow-up matrix is documented in `impact-readiness-v2.md` and run with `npm run score:impact`. It adds map discovery, destination-level utility, location privacy, empty-result recovery, live condition panels, entity architecture, and outcome gates.
 
 ## Engagement benchmark
 

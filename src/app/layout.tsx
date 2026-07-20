@@ -75,6 +75,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </Link>
             <nav aria-label="Main navigation">
               <Link href="/#planner">Build a plan</Link>
+              <Link href="/explore">Explore map</Link>
               <Link href="/ideas">Trip ideas</Link>
               <Link href="/how-it-works">How it works</Link>
               <a href="https://chrisizworski.com/tools">More tools</a>
@@ -90,6 +91,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </div>
             <div className="footer-links">
               <Link href="/ideas">Trip guides</Link>
+              <Link href="/explore">Destination map</Link>
               <Link href="/how-it-works">Method & privacy</Link>
               <a href="https://chrisizworski.com/tools">All tools</a>
               <a href="https://github.com/izworskic/michigan-outdoors-now">Source</a>

@@ -53,6 +53,17 @@ export function estimateDriveHours(distanceMiles: number) {
   return Math.max(0.2, distanceMiles / 50 + 0.18);
 }
 
+export function isPlausibleMichiganCoordinate(latitude: number, longitude: number) {
+  return (
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    latitude >= 41.6 &&
+    latitude <= 48.5 &&
+    longitude >= -90.5 &&
+    longitude <= -82.1
+  );
+}
+
 function weatherAdjustment(weather: WeatherSnapshot | undefined, selected: Set<ActivityId>) {
   if (!weather) return 0;
 

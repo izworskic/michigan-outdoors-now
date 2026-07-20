@@ -75,7 +75,7 @@ export default async function GuidePage({ params }: { params: Promise<{ guide: s
           "@type": "ListItem",
           position: index + 1,
           name: destination.name,
-          url: destination.officialUrl,
+          url: `${siteUrl}/places/${destination.id}`,
         })),
       },
       {
@@ -160,7 +160,10 @@ export default async function GuidePage({ params }: { params: Promise<{ guide: s
                 <h3>{destination.name}</h3>
                 <p>{destination.summary}</p>
                 <small>{destination.setting}</small>
-                <a href={destination.officialUrl} target="_blank" rel="noreferrer">Official details ↗</a>
+                <div className="guide-example-links">
+                  <Link href={`/places/${destination.id}`}>Plan this place →</Link>
+                  <a href={destination.officialUrl} target="_blank" rel="noreferrer">Official source ↗</a>
+                </div>
               </article>
             ))}
           </div>

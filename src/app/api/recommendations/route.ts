@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { destinations } from "../../../data/destinations";
 import { fetchWeatherSnapshots, resolveMichiganOrigin } from "../../../lib/live-data";
-import { rankDestinations, targetDateFor } from "../../../lib/planner";
+import {
+  isPlausibleMichiganCoordinate,
+  rankDestinations,
+  targetDateFor,
+} from "../../../lib/planner";
 import {
   activityIds,
   type ActivityId,
@@ -27,6 +31,19 @@ function isPlannerRequest(value: unknown): value is PlannerRequest {
   const allowedDates: DateChoice[] = ["today", "tomorrow", "weekend"];
   const allowedDriveHours = [1, 2, 3, 5];
 
+  const coordinates = request.originCoordinates;
+  const coordinateRecord = coordinates as Record<string, unknown> | undefined;
+  const validCoordinates =
+    coordinates === undefined ||
+    (typeof coordinates === "object" &&
+      coordinates !== null &&
+      typeof coordinateRecord?.latitude === "number" &&
+      typeof coordinateRecord.longitude === "number" &&
+      isPlausibleMichiganCoordinate(
+        coordinateRecord.latitude,
+        coordinateRecord.longitude,
+      ));
+
   return (
     typeof request.origin === "string" &&
     request.origin.trim().length >= 2 &&
@@ -41,7 +58,8 @@ function isPlannerRequest(value: unknown): value is PlannerRequest {
     new Set(request.activities).size === request.activities.length &&
     typeof request.kids === "boolean" &&
     typeof request.dog === "boolean" &&
-    typeof request.accessible === "boolean"
+    typeof request.accessible === "boolean" &&
+    validCoordinates
   );
 }
 
@@ -63,13 +81,21 @@ export async function POST(request: Request) {
   }
 
   let origin;
-  try {
-    origin = await resolveMichiganOrigin(body.origin);
-  } catch {
-    return NextResponse.json(
-      { error: "The location service is temporarily unavailable. Try a listed Michigan city." },
-      { status: 503, headers: responseHeaders },
-    );
+  if (body.originCoordinates) {
+    origin = {
+      name: `${body.origin} area`,
+      latitude: body.originCoordinates.latitude,
+      longitude: body.originCoordinates.longitude,
+    };
+  } else {
+    try {
+      origin = await resolveMichiganOrigin(body.origin);
+    } catch {
+      return NextResponse.json(
+        { error: "The location service is temporarily unavailable. Try a listed Michigan city." },
+        { status: 503, headers: responseHeaders },
+      );
+    }
   }
 
   if (!origin) return invalid("Enter a Michigan city or ZIP code.");

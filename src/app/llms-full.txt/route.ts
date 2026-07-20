@@ -17,7 +17,7 @@ Official checks: ${guide.checklist.join(" ")}`,
     .join("\n\n");
   const destinationText = destinations
     .map(
-      (destination) => `- ${destination.name} (${destination.area}, Michigan): ${destination.summary} Setting: ${destination.setting}. Activities: ${destination.activities.join(", ")}. Access note: ${destination.accessNote} Official source: ${destination.officialUrl}`,
+      (destination) => `- ${destination.name} (${destination.area}, Michigan): ${destination.summary} Planning page: ${siteUrl}/places/${destination.id}. Setting: ${destination.setting}. Activities: ${destination.activities.join(", ")}. Family filter: ${destination.kidsFriendly ? "included" : "not included"}. Dog filter: ${destination.dogsAllowed ? "included; verify exact rules" : "not included"}. Lower-barrier filter: ${destination.accessibleFriendly ? "included; read the access note" : "not included"}. Access note: ${destination.accessNote} Official source: ${destination.officialUrl}`,
     )
     .join("\n");
   const body = `# Michigan Outdoors Now — expanded reference
@@ -28,7 +28,7 @@ Canonical site: ${siteUrl}
 Author: Chris Izworski — https://chrisizworski.com/
 Method and privacy: ${siteUrl}/how-it-works
 
-The planner does not request device location or require an account. A trip-fit score compares options and is never a safety score. Drive times are rough rather than live traffic. Official land managers, weather services, marine sources, and local authorities remain the decision sources for closures, rules, access, water, trails, roads, and safety.
+The planner does not require an account. Device location is optional, requested only after a user taps the location button, and is not written into the shared URL or analytics. A trip-fit score compares options and is never a safety score. Drive times are rough rather than live traffic. Official land managers, weather services, marine sources, and local authorities remain the decision sources for closures, rules, access, water, trails, roads, and safety.
 
 ${guideText}
 

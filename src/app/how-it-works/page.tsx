@@ -38,7 +38,7 @@ export default function HowItWorksPage() {
         </section>
         <section>
           <span className="prose-number">05</span>
-          <div><h2>Minimal data by design</h2><p>The planner does not request device location and does not require an account. You enter a city or ZIP. A request is processed to generate the response; this application does not save a personal trip profile or sell planner entries.</p></div>
+          <div><h2>Minimal data by design</h2><p>The planner does not require an account. You can enter a city or ZIP, or explicitly tap Use my location. Optional coordinates are used for that request, kept out of the shared URL and analytics, and are not saved as a personal trip profile or sold.</p></div>
         </section>
         <section>
           <span className="prose-number">06</span>

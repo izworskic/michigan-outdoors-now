@@ -102,6 +102,7 @@ export default async function OriginPage({ params }: { params: Promise<{ origin:
               <h3>{destination.name}</h3>
               <span>About {Math.round(destination.distance)} rough miles</span>
               <p>{destination.summary}</p>
+              <Link href={`/places/${destination.id}`}>Plan this place →</Link>
               <a href={destination.officialUrl} target="_blank" rel="noreferrer">Official details ↗</a>
             </article>
           ))}
