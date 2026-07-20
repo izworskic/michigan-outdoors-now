@@ -37,7 +37,7 @@ The scorecard methodology lives in `docs/usefulness-scorecard.md`, `docs/search-
 
 ## Safe indexing gate
 
-Search indexing is disabled unless `NEXT_PUBLIC_ALLOW_INDEXING=true` is explicitly set at build time. Until then, pages carry `noindex` metadata and headers and `robots.txt` disallows crawling.
+Vercel production builds (`VERCEL_ENV=production`) are indexable automatically once this approved release reaches production. Preview deployments, local builds, and test builds remain `noindex` by default. Set `NEXT_PUBLIC_ALLOW_INDEXING=true` only for an approved non-Vercel production build, or set `NEXT_PUBLIC_DISABLE_INDEXING=true` as an emergency production kill switch.
 
 Set `NEXT_PUBLIC_SITE_URL` to the approved canonical production origin before enabling indexing. Generated planner API responses always remain private, non-cacheable, and `noindex`.
 
