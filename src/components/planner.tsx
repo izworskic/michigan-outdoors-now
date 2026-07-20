@@ -1,14 +1,25 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { track } from "@vercel/analytics";
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { origins } from "../data/origins";
-import { activityLabels, formatDriveTime } from "../lib/planner";
+import {
+  activityLabels,
+  formatDriveTime,
+  haversineMiles,
+  isPlausibleMichiganCoordinate,
+} from "../lib/planner";
+import { parsePlannerFragment, serializePlannerFragment } from "../lib/planner-share";
 import {
   activityIds,
   type ActivityId,
   type DateChoice,
+  type PlannerRequest,
   type PlannerResponse,
 } from "../lib/types";
+import { ResultComparison } from "./result-comparison";
+import { TripDecision } from "./trip-decision";
 
 const dateOptions: Array<{ value: DateChoice; label: string; detail: string }> = [
   { value: "today", label: "Today", detail: "Go soon" },
@@ -16,24 +27,185 @@ const dateOptions: Array<{ value: DateChoice; label: string; detail: string }> =
   { value: "weekend", label: "This weekend", detail: "Saturday plan" },
 ];
 
+const presets: Array<{
+  id: string;
+  label: string;
+  detail: string;
+  date: DateChoice;
+  maxDriveHours: number;
+  activities: ActivityId[];
+  kids?: boolean;
+}> = [
+  { id: "family", label: "Easy family day", detail: "Nearby trails + views", date: "weekend", maxDriveHours: 1, activities: ["hiking", "scenic"], kids: true },
+  { id: "shore", label: "Great Lakes shore", detail: "Beach + scenery", date: "tomorrow", maxDriveHours: 2, activities: ["beaches", "scenic"] },
+  { id: "wildlife", label: "Wildlife + birds", detail: "Birding + walking", date: "weekend", maxDriveHours: 2, activities: ["birding", "hiking"] },
+  { id: "stars", label: "Dark-sky night", detail: "Low-cloud options", date: "weekend", maxDriveHours: 3, activities: ["dark-sky", "scenic"] },
+  { id: "ships", label: "Shipwatching", detail: "Freighters + shoreline", date: "today", maxDriveHours: 2, activities: ["freighters", "scenic"] },
+];
+
 type PlannerProps = {
   defaultOrigin?: string;
   compactIntro?: boolean;
+  initialDate?: DateChoice;
+  initialMaxDriveHours?: number;
+  initialActivities?: ActivityId[];
+  initialKids?: boolean;
+  initialDog?: boolean;
+  initialAccessible?: boolean;
 };
 
-export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: PlannerProps) {
+function safeTrack(name: string, properties?: Record<string, string | number | boolean>) {
+  try {
+    track(name, properties);
+  } catch {
+    // Analytics must never interfere with trip planning.
+  }
+}
+
+export function Planner({
+  defaultOrigin = "Bay City",
+  compactIntro = false,
+  initialDate = "weekend",
+  initialMaxDriveHours = 2,
+  initialActivities = ["hiking", "scenic"],
+  initialKids = false,
+  initialDog = false,
+  initialAccessible = false,
+}: PlannerProps) {
   const [origin, setOrigin] = useState(defaultOrigin);
-  const [date, setDate] = useState<DateChoice>("weekend");
-  const [maxDriveHours, setMaxDriveHours] = useState(2);
-  const [activities, setActivities] = useState<ActivityId[]>(["hiking", "scenic"]);
-  const [kids, setKids] = useState(false);
-  const [dog, setDog] = useState(false);
-  const [accessible, setAccessible] = useState(false);
+  const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
+  const [date, setDate] = useState<DateChoice>(initialDate);
+  const [maxDriveHours, setMaxDriveHours] = useState(initialMaxDriveHours);
+  const [activities, setActivities] = useState<ActivityId[]>(() => [...initialActivities]);
+  const [kids, setKids] = useState(initialKids);
+  const [dog, setDog] = useState(initialDog);
+  const [accessible, setAccessible] = useState(initialAccessible);
+  const [activePreset, setActivePreset] = useState("");
   const [response, setResponse] = useState<PlannerResponse | null>(null);
+  const [primaryId, setPrimaryId] = useState("");
+  const [backupId, setBackupId] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [setupStatus, setSetupStatus] = useState("");
+  const [shareStatus, setShareStatus] = useState("");
+  const startTracked = useRef(false);
+
+  const plannerRequest = useMemo<PlannerRequest>(() => ({
+    origin,
+    ...(originCoordinates ? { originCoordinates } : {}),
+    date,
+    maxDriveHours,
+    activities,
+    kids,
+    dog,
+    accessible,
+  }), [origin, originCoordinates, date, maxDriveHours, activities, kids, dog, accessible]);
+
+  const primary = response?.plans.find((plan) => plan.destination.id === primaryId) ?? null;
+  const backup = response?.plans.find((plan) => plan.destination.id === backupId) ?? null;
+
+  useEffect(() => {
+    const shared = parsePlannerFragment(window.location.hash);
+    if (!shared) return;
+
+    const timer = window.setTimeout(() => {
+      setOrigin(shared.origin);
+      setOriginCoordinates(undefined);
+      setDate(shared.date);
+      setMaxDriveHours(shared.maxDriveHours);
+      setActivities(shared.activities);
+      setKids(shared.kids);
+      setDog(shared.dog);
+      setAccessible(shared.accessible);
+      setSetupStatus("Shared setup loaded. Review it, then build the plan with current conditions.");
+      safeTrack("shared_setup_loaded", { activityCount: shared.activities.length });
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  function trackStart() {
+    if (startTracked.current) return;
+    startTracked.current = true;
+    safeTrack("planner_started");
+  }
+
+  function useMyLocation() {
+    trackStart();
+    setError("");
+    if (!navigator.geolocation) {
+      setError("This browser does not offer location. Type a Michigan city or ZIP instead.");
+      return;
+    }
+
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const latitude = Number(coords.latitude.toFixed(5));
+        const longitude = Number(coords.longitude.toFixed(5));
+        if (!isPlausibleMichiganCoordinate(latitude, longitude)) {
+          setError("That location appears to be outside Michigan. Type the Michigan city you are starting from.");
+          setLocating(false);
+          return;
+        }
+
+        const nearest = origins.reduce((closest, candidate) => {
+          const candidateDistance = haversineMiles(latitude, longitude, candidate.latitude, candidate.longitude);
+          const closestDistance = haversineMiles(latitude, longitude, closest.latitude, closest.longitude);
+          return candidateDistance < closestDistance ? candidate : closest;
+        });
+        setOrigin(nearest.name);
+        setOriginCoordinates({ latitude, longitude });
+        setActivePreset("");
+        setSetupStatus(`Using your device location near ${nearest.name} for this request. It is not placed in the URL or analytics.`);
+        setLocating(false);
+        safeTrack("device_location_used");
+      },
+      () => {
+        setError("Location was not available. Allow it in your browser or type a Michigan city or ZIP.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 600_000 },
+    );
+  }
+
+  function widenSearch() {
+    const choices = [1, 2, 3, 5];
+    const next = choices.find((choice) => choice > maxDriveHours) ?? 5;
+    setMaxDriveHours(next);
+    setResponse(null);
+    setSetupStatus(`Drive window widened to ${next} ${next === 1 ? "hour" : "hours"}. Build the plan again.`);
+    safeTrack("no_results_recovery", { action: "widen_drive" });
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    window.setTimeout(() => document.getElementById("planner")?.scrollIntoView({ behavior }), 0);
+  }
+
+  function relaxRequirements() {
+    setKids(false);
+    setDog(false);
+    setAccessible(false);
+    setResponse(null);
+    setSetupStatus("Extra requirements cleared. Build the plan again, then confirm details for any result.");
+    safeTrack("no_results_recovery", { action: "clear_requirements" });
+    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    window.setTimeout(() => document.getElementById("planner")?.scrollIntoView({ behavior }), 0);
+  }
+
+  function applyPreset(preset: (typeof presets)[number]) {
+    setDate(preset.date);
+    setMaxDriveHours(preset.maxDriveHours);
+    setActivities(preset.activities);
+    setKids(Boolean(preset.kids));
+    setDog(false);
+    setAccessible(false);
+    setActivePreset(preset.id);
+    setSetupStatus(`${preset.label} setup applied. Change anything you like.`);
+    safeTrack("planner_preset_selected", { preset: preset.id });
+  }
 
   function toggleActivity(activity: ActivityId) {
+    setActivePreset("");
     setActivities((current) =>
       current.includes(activity)
         ? current.filter((item) => item !== activity)
@@ -41,36 +213,80 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
     );
   }
 
+  function choosePrimary(destinationId: string) {
+    if (destinationId === primaryId) return;
+    setPrimaryId(destinationId);
+    if (destinationId === backupId) setBackupId(primaryId);
+    safeTrack("trip_primary_changed");
+  }
+
+  function chooseBackup(destinationId: string) {
+    if (destinationId === primaryId) return;
+    setBackupId(destinationId);
+    safeTrack("trip_backup_changed");
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!activities.length) {
+      setError("Choose at least one activity so the planner knows what a useful day means to you.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     setResponse(null);
+    setShareStatus("");
 
     try {
       const request = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          origin,
-          date,
-          maxDriveHours,
-          activities,
-          kids,
-          dog,
-          accessible,
-        }),
+        body: JSON.stringify(plannerRequest),
       });
       const payload = (await request.json()) as PlannerResponse | { error?: string };
       if (!request.ok || !("plans" in payload)) {
         throw new Error("error" in payload && payload.error ? payload.error : "The planner could not finish.");
       }
       setResponse(payload);
+      setPrimaryId(payload.plans[0]?.destination.id ?? "");
+      setBackupId(payload.plans[1]?.destination.id ?? "");
+      safeTrack("planner_completed", {
+        planCount: payload.plans.length,
+        activityCount: activities.length,
+        conditions: payload.conditionsStatus,
+      });
       window.setTimeout(() => document.getElementById("planner-results")?.focus(), 0);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The planner could not finish. Try again.");
+      safeTrack("planner_failed");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function sharePlan() {
+    if (!primary) return;
+
+    const url = new URL(window.location.href);
+    url.hash = serializePlannerFragment(plannerRequest).slice(1);
+    const text = `Michigan Outdoors Now: ${primary.destination.name}${backup ? `, with ${backup.destination.name} as backup` : ""}.`;
+
+    try {
+      let shareMethod = "clipboard";
+      if (navigator.share) {
+        shareMethod = "native";
+        await navigator.share({ title: "My Michigan outdoor plan", text, url: url.toString() });
+        setShareStatus("Plan shared.");
+      } else {
+        await navigator.clipboard.writeText(`${text} ${url.toString()}`);
+        setShareStatus("Plan link copied. Send it to your group when ready.");
+      }
+      window.history.replaceState(null, "", url);
+      safeTrack("trip_plan_shared", { method: shareMethod });
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") return;
+      setShareStatus("Could not copy automatically. Use your browser’s Share command to send this page.");
     }
   }
 
@@ -89,21 +305,47 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
         )}
       </div>
 
-      <form onSubmit={submit} className="planner-form">
+      <form onSubmit={submit} onFocusCapture={trackStart} className="planner-form">
+        <fieldset className="quick-start">
+          <legend>Quick starts</legend>
+          <p>Choose a useful starting point, then adjust it below.</p>
+          <div className="preset-grid">
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                className="preset-button"
+                aria-pressed={activePreset === preset.id}
+                onClick={() => applyPreset(preset)}
+              >
+                <strong>{preset.label}</strong>
+                <span>{preset.detail}</span>
+              </button>
+            ))}
+          </div>
+          <p className="setup-status" aria-live="polite">{setupStatus}</p>
+        </fieldset>
+
         <div className="form-row form-row-primary">
           <label className="field field-origin">
             <span>Starting in Michigan</span>
-            <input
-              value={origin}
-              onChange={(event) => setOrigin(event.target.value)}
-              list="michigan-origins"
-              name="origin"
-              autoComplete="postal-code"
-              placeholder="City or ZIP code"
-              required
-              minLength={2}
-              maxLength={80}
-            />
+            <span className="origin-input-row">
+              <input
+                value={origin}
+                onChange={(event) => { setOrigin(event.target.value); setOriginCoordinates(undefined); setActivePreset(""); }}
+                list="michigan-origins"
+                name="origin"
+                autoComplete="postal-code"
+                placeholder="City or ZIP code"
+                required
+                minLength={2}
+                maxLength={80}
+              />
+              <button type="button" className="location-button" onClick={useMyLocation} disabled={locating}>
+                {locating ? "Finding…" : "Use my location"}
+              </button>
+            </span>
+            <small>Optional and one-time. Coordinates stay out of the page URL and analytics.</small>
             <datalist id="michigan-origins">
               {origins.map((item) => (
                 <option key={item.slug} value={item.name}>{`${item.name} — ${item.zip}`}</option>
@@ -115,7 +357,7 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
             <span>Maximum one-way drive</span>
             <select
               value={maxDriveHours}
-              onChange={(event) => setMaxDriveHours(Number(event.target.value))}
+              onChange={(event) => { setMaxDriveHours(Number(event.target.value)); setActivePreset(""); }}
               name="maxDriveHours"
             >
               <option value={1}>Up to 1 hour</option>
@@ -136,7 +378,7 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
                   name="date"
                   value={option.value}
                   checked={date === option.value}
-                  onChange={() => setDate(option.value)}
+                  onChange={() => { setDate(option.value); setActivePreset(""); }}
                 />
                 <span>
                   <strong>{option.label}</strong>
@@ -168,34 +410,48 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
           </div>
         </fieldset>
 
-        <fieldset className="choice-group needs-group">
-          <legend>Who needs to fit the plan?</legend>
-          <div className="toggle-row">
-            <label className="toggle-choice">
-              <input type="checkbox" checked={kids} onChange={(event) => setKids(event.target.checked)} />
-              <span>Good with kids</span>
-            </label>
-            <label className="toggle-choice">
-              <input type="checkbox" checked={dog} onChange={(event) => setDog(event.target.checked)} />
-              <span>Dog allowed</span>
-            </label>
-            <label className="toggle-choice">
-              <input
-                type="checkbox"
-                checked={accessible}
-                onChange={(event) => setAccessible(event.target.checked)}
-              />
-              <span>Lower-barrier access</span>
-            </label>
-          </div>
-        </fieldset>
+        <details className="planner-more" open={kids || dog || accessible || undefined}>
+          <summary>
+            Family, dog & access needs <span>Optional{(kids || dog || accessible) ? " · filters on" : ""}</span>
+          </summary>
+          <fieldset className="choice-group needs-group">
+            <legend>Who needs to fit the plan?</legend>
+            <div className="toggle-row">
+              <label className="toggle-choice">
+                <input type="checkbox" checked={kids} onChange={(event) => { setKids(event.target.checked); setActivePreset(""); }} />
+                <span>Good with kids</span>
+              </label>
+              <label className="toggle-choice">
+                <input type="checkbox" checked={dog} onChange={(event) => { setDog(event.target.checked); setActivePreset(""); }} />
+                <span>Dog allowed</span>
+              </label>
+              <label className="toggle-choice">
+                <input
+                  type="checkbox"
+                  checked={accessible}
+                  onChange={(event) => { setAccessible(event.target.checked); setActivePreset(""); }}
+                />
+                <span>Lower-barrier access</span>
+              </label>
+            </div>
+          </fieldset>
+        </details>
+
+        <div className="planner-brief" data-usefulness="planner-brief">
+          <span>Your brief</span>
+          <strong>{dateOptions.find((option) => option.value === date)?.label} from {origin || "your Michigan starting point"}</strong>
+          <p>
+            Up to {maxDriveHours} {maxDriveHours === 1 ? "hour" : "hours"} · {activities.length ? activities.map((item) => activityLabels[item]).join(" + ") : "choose an activity"}
+            {(kids || dog || accessible) && ` · ${[kids && "kids", dog && "dog", accessible && "lower-barrier access"].filter(Boolean).join(" + ")}`}
+          </p>
+        </div>
 
         <div className="submit-row">
           <button className="primary-button" type="submit" disabled={loading}>
             <span>{loading ? "Checking Michigan…" : "Show my best options"}</span>
             <span aria-hidden="true">→</span>
           </button>
-          <p>Free · no account · no location tracking</p>
+          <p>Free · no account · location only if you tap it</p>
         </div>
       </form>
 
@@ -214,9 +470,8 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
           <div className="results-heading">
             <div>
               <p className="eyebrow">Three strongest fits</p>
-              <h3>
-                From {response.origin.name} for {formatTargetDate(response.targetDate)}
-              </h3>
+              <h3>From {response.origin.name} for {formatTargetDate(response.targetDate)}</h3>
+              <p className="results-meta">Updated {formatGeneratedTime(response.generatedAt)} · choose a primary and backup below</p>
             </div>
             <span className={`source-badge source-${response.conditionsStatus}`}>
               {response.conditionsStatus === "live" ? "Live conditions used" : "Estimated fit"}
@@ -224,68 +479,75 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
           </div>
 
           {response.plans.length ? (
-            <ol className="result-list">
-              {response.plans.map((plan, index) => (
-                <li className="result-card" key={plan.destination.id}>
-                  <div className="result-rank" aria-label={`Option ${index + 1}`}>
-                    {String(index + 1).padStart(2, "0")}
-                  </div>
-                  <div className="result-main">
-                    <div className="result-title-row">
-                      <div>
-                        <p className="result-area">{plan.destination.area} · {plan.destination.setting}</p>
-                        <h4>{plan.destination.name}</h4>
+            <>
+              <ResultComparison
+                plans={response.plans}
+                primaryId={primaryId}
+                backupId={backupId}
+                onPrimary={choosePrimary}
+                onBackup={chooseBackup}
+              />
+              <ol className="result-list">
+                {response.plans.map((plan, index) => (
+                  <li className="result-card" key={plan.destination.id} data-primary={primaryId === plan.destination.id} data-backup={backupId === plan.destination.id}>
+                    <div className="result-rank" aria-label={`Option ${index + 1}`}>{String(index + 1).padStart(2, "0")}</div>
+                    <div className="result-main">
+                      <div className="result-title-row">
+                        <div>
+                          <p className="result-area">{plan.destination.area} · {plan.destination.setting}</p>
+                          <h4>{plan.destination.name}</h4>
+                        </div>
+                        <div className="fit-score" aria-label={`${plan.score} percent trip fit`}>
+                          <strong>{plan.score}</strong><span>trip fit</span>
+                        </div>
                       </div>
-                      <div className="fit-score" aria-label={`${plan.score} percent trip fit`}>
-                        <strong>{plan.score}</strong>
-                        <span>trip fit</span>
+                      <div className="result-choice-row" aria-label={`Choose how to use ${plan.destination.name}`}>
+                        <button type="button" aria-pressed={primaryId === plan.destination.id} onClick={() => choosePrimary(plan.destination.id)}>
+                          {primaryId === plan.destination.id ? "✓ Primary plan" : "Make primary"}
+                        </button>
+                        <button type="button" aria-pressed={backupId === plan.destination.id} disabled={primaryId === plan.destination.id} onClick={() => chooseBackup(plan.destination.id)}>
+                          {backupId === plan.destination.id ? "✓ Weather backup" : "Set as backup"}
+                        </button>
                       </div>
-                    </div>
-                    <p className="result-summary">{plan.destination.summary}</p>
+                      <p className="result-summary">{plan.destination.summary}</p>
 
-                    <div className="result-facts">
-                      <span>{formatDriveTime(plan.driveHours)}</span>
-                      <span>{plan.distanceMiles} rough miles</span>
-                      {plan.weather?.high !== null && plan.weather?.high !== undefined && (
-                        <span>
-                          {Math.round(plan.weather.high)}° / {plan.weather.low === null ? "—" : `${Math.round(plan.weather.low)}°`}
-                        </span>
+                      <div className="result-facts">
+                        <span>{formatDriveTime(plan.driveHours)}</span>
+                        <span>{plan.distanceMiles} rough miles</span>
+                        {plan.weather?.high !== null && plan.weather?.high !== undefined && <span>{Math.round(plan.weather.high)}° high / {plan.weather.low === null ? "—" : `${Math.round(plan.weather.low)}° low`}</span>}
+                        {plan.weather?.precipitationProbability !== null && plan.weather?.precipitationProbability !== undefined && <span>{Math.round(plan.weather.precipitationProbability)}% rain</span>}
+                        {plan.weather?.windGust !== null && plan.weather?.windGust !== undefined && <span>{Math.round(plan.weather.windGust)} mph gusts</span>}
+                        {plan.weather?.aqi !== null && plan.weather?.aqi !== undefined && <span>AQI {Math.round(plan.weather.aqi)}</span>}
+                        {activities.includes("dark-sky") && plan.weather?.cloudCover !== null && plan.weather?.cloudCover !== undefined && <span>{Math.round(plan.weather.cloudCover)}% clouds</span>}
+                        {plan.weather?.sunshineHours !== null && plan.weather?.sunshineHours !== undefined && <span>{plan.weather.sunshineHours.toFixed(1)} sunshine hrs</span>}
+                      </div>
+
+                      <ul className="reason-list">{plan.reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>
+                      {plan.cautions.length > 0 && (
+                        <div className="caution-box"><strong>Watch before you go</strong><ul>{plan.cautions.map((caution) => <li key={caution}>{caution}</li>)}</ul></div>
                       )}
-                      {plan.weather?.precipitationProbability !== null &&
-                        plan.weather?.precipitationProbability !== undefined && (
-                          <span>{Math.round(plan.weather.precipitationProbability)}% rain</span>
-                        )}
-                    </div>
-
-                    <ul className="reason-list">
-                      {plan.reasons.map((reason) => <li key={reason}>{reason}</li>)}
-                    </ul>
-
-                    {plan.cautions.length > 0 && (
-                      <div className="caution-box">
-                        <strong>Watch before you go</strong>
-                        <ul>{plan.cautions.map((caution) => <li key={caution}>{caution}</li>)}</ul>
+                      <details className="access-note"><summary>Access note</summary><p>{plan.destination.accessNote}</p></details>
+                      <div className="result-actions">
+                        <Link href={`/places/${plan.destination.id}`} onClick={() => safeTrack("place_detail_opened")}>Plan this place →</Link>
+                        <a href={plan.mapUrl} target="_blank" rel="noreferrer" onClick={() => safeTrack("outbound_map_opened")}>Open in Maps ↗</a>
+                        <a href={plan.destination.officialUrl} target="_blank" rel="noreferrer" onClick={() => safeTrack("outbound_official_opened")}>Official details ↗</a>
+                        {plan.relatedTool && <a href={plan.relatedTool.url} onClick={() => safeTrack("related_tool_opened")}>{plan.relatedTool.label} →</a>}
                       </div>
-                    )}
-
-                    <details className="access-note">
-                      <summary>Access note</summary>
-                      <p>{plan.destination.accessNote}</p>
-                    </details>
-
-                    <div className="result-actions">
-                      <a href={plan.mapUrl} target="_blank" rel="noreferrer">Open in Maps ↗</a>
-                      <a href={plan.destination.officialUrl} target="_blank" rel="noreferrer">Official details ↗</a>
-                      {plan.relatedTool && <a href={plan.relatedTool.url}>{plan.relatedTool.label} →</a>}
                     </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
+                  </li>
+                ))}
+              </ol>
+              <TripDecision primary={primary} backup={backup} shareStatus={shareStatus} onShare={sharePlan} />
+            </>
           ) : (
             <div className="empty-result">
               <h4>No strong match inside that drive window.</h4>
-              <p>Try one more hour, remove a requirement, or choose another activity.</p>
+              <p>Use one of these quick recoveries, then build the plan again.</p>
+              <div className="empty-actions">
+                {maxDriveHours < 5 && <button type="button" onClick={widenSearch}>Widen the drive window</button>}
+                {(kids || dog || accessible) && <button type="button" onClick={relaxRequirements}>Clear extra requirements</button>}
+                <Link href="/explore">Browse all 28 places</Link>
+              </div>
             </div>
           )}
 
@@ -298,10 +560,12 @@ export function Planner({ defaultOrigin = "Bay City", compactIntro = false }: Pl
 
 function formatTargetDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(Date.UTC(year, month - 1, day)));
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })
+    .format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function formatGeneratedTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "just now";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Detroit", timeZoneName: "short" }).format(date);
 }

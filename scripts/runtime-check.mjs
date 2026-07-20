@@ -32,6 +32,10 @@ try {
   const homeHtml = await home.text();
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
+  assert.ok(
+    homeHtml.indexOf('id="planner"') < homeHtml.indexOf('class="persona-section'),
+    "The planner should appear before editorial trip-guide content on the homepage.",
+  );
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
   assert.equal(home.headers.get("x-powered-by"), null);
   assert.equal(home.headers.get("x-frame-options"), "DENY");
@@ -43,6 +47,39 @@ try {
 
   const missingPage = await fetch(`${origin}/from/not-a-city`);
   assert.equal(missingPage.status, 404);
+
+  const guidePage = await fetch(`${origin}/ideas/family-day-trips`);
+  assert.equal(guidePage.status, 200);
+  assert.match(await guidePage.text(), /Michigan Outdoor Day Trips for Families/);
+
+  const missingGuide = await fetch(`${origin}/ideas/not-a-guide`);
+  assert.equal(missingGuide.status, 404);
+
+  const explorer = await fetch(`${origin}/explore`);
+  assert.equal(explorer.status, 200);
+  const explorerHtml = await explorer.text();
+  assert.match(explorerHtml, /Michigan destination finder/);
+  assert.match(explorerHtml, /Find places near me/);
+  assert.match(explorerHtml, /Choose map or list view/);
+
+  const placePage = await fetch(`${origin}/places/tawas-point`);
+  assert.equal(placePage.status, 200);
+  assert.match(await placePage.text(), /Plan a day at/);
+
+  const missingPlace = await fetch(`${origin}/places/not-a-place`);
+  assert.equal(missingPlace.status, 404);
+
+  const conditions = await fetch(`${origin}/api/conditions/tawas-point`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  assert.equal(conditions.status, 200);
+  assert.match(conditions.headers.get("x-robots-tag") ?? "", /noindex/);
+  const conditionsPayload = await conditions.json();
+  assert.equal(conditionsPayload.place.id, "tawas-point");
+
+  const llmsFull = await fetch(`${origin}/llms-full.txt`);
+  assert.equal(llmsFull.status, 200);
+  assert.match(await llmsFull.text(), /expanded reference/);
 
   const robots = await fetch(`${origin}/robots.txt`);
   assert.equal(robots.status, 200);
@@ -88,8 +125,28 @@ try {
   assert.ok(payload.plans.every((plan) => plan.driveHours <= 2.1));
   assert.ok(payload.plans.every((plan) => plan.destination.activities.includes("hiking") || plan.destination.activities.includes("birding")));
 
+  const coordinateRecommendation = await fetch(`${origin}/api/recommendations`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: "Bay City",
+      originCoordinates: { latitude: 43.5945, longitude: -83.8889 },
+      date: "today",
+      maxDriveHours: 2,
+      activities: ["scenic"],
+      kids: false,
+      dog: false,
+      accessible: false,
+    }),
+    signal: AbortSignal.timeout(25_000),
+  });
+  assert.equal(coordinateRecommendation.status, 200);
+  const coordinatePayload = await coordinateRecommendation.json();
+  assert.match(coordinatePayload.origin.name, /Bay City area/);
+  assert.ok(coordinatePayload.plans.length > 0);
+
   console.log(
-    `Runtime check passed: home, local page, protected 404, validation, and ${payload.conditionsStatus} planner response (${payload.plans.length} plans).`,
+    `Runtime check passed: home, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

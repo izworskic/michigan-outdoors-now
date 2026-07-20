@@ -1,0 +1,19 @@
+{
+  "recordedAt": "2026-07-20",
+  "scale": 200,
+  "releaseTarget": 180,
+  "priorPreview": {
+    "usefulness": 128,
+    "searchReadiness": 126,
+    "note": "The stricter v2 matrix was applied to the pre-map, pre-location, pre-destination-page preview commit. It is not a rescaling of the original 100-point compliance checks."
+  },
+  "outcomeGates": {
+    "productionVerified": false,
+    "stableBaselineRecorded": false,
+    "tenXOutcomeReached": false
+  },
+  "northStars": {
+    "usefulness": "high-intent trip actions per qualified visit",
+    "search": "qualified organic entries that complete a planner or open an official/map destination action"
+  }
+}

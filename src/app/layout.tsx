@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { allowIndexing, jsonLd, personSchema, siteUrl } from "../lib/site";
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -55,6 +58,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         name: "Michigan Outdoors Now",
         description: "A Michigan outdoor day and weekend planner by Chris Izworski.",
         creator: { "@id": "https://chrisizworski.com/#chris-izworski" },
+        publisher: { "@id": "https://chrisizworski.com/#chris-izworski" },
         inLanguage: "en-US",
       },
     ],
@@ -72,6 +76,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             </Link>
             <nav aria-label="Main navigation">
               <Link href="/#planner">Build a plan</Link>
+              <Link href="/explore">Explore map</Link>
+              <Link href="/ideas">Trip ideas</Link>
               <Link href="/how-it-works">How it works</Link>
               <a href="https://chrisizworski.com/tools">More tools</a>
             </nav>
@@ -85,6 +91,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <p>A focused Michigan planning tool built by <a href="https://chrisizworski.com/">Chris Izworski</a>.</p>
             </div>
             <div className="footer-links">
+              <Link href="/ideas">Trip guides</Link>
+              <Link href="/explore">Destination map</Link>
               <Link href="/how-it-works">Method & privacy</Link>
               <a href="https://chrisizworski.com/tools">All tools</a>
               <a href="https://github.com/izworskic/michigan-outdoors-now">Source</a>
@@ -93,6 +101,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <p className="fine-print">Conditions change. Confirm weather, closures, water, trail, and road conditions with official sources before travel.</p>
         </footer>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(identityGraph) }} />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

@@ -1,0 +1,33 @@
+{
+  "recordedAt": "2026-07-20",
+  "baselineScore": 62,
+  "releaseTarget": 88,
+  "productionVerified": false,
+  "categories": [
+    { "name": "Decision quality", "weight": 25, "baseline": 14 },
+    { "name": "Interaction efficiency", "weight": 20, "baseline": 8 },
+    { "name": "Result clarity", "weight": 15, "baseline": 7 },
+    { "name": "Trust and safety", "weight": 15, "baseline": 13 },
+    { "name": "Mobile and accessibility", "weight": 15, "baseline": 14 },
+    { "name": "Discoverability and measurement", "weight": 10, "baseline": 6 }
+  ],
+  "measurement": {
+    "baselineState": "No reliable product-event baseline existed before this release.",
+    "northStar": "high-intent actions per visit",
+    "highIntentEvents": [
+      "planner_completed",
+      "trip_primary_changed",
+      "trip_backup_changed",
+      "trip_plan_shared",
+      "outbound_map_opened",
+      "outbound_official_opened"
+    ],
+    "targets": {
+      "plannerCompletionRate": ">= 30% of planner starts",
+      "decisionActionRate": ">= 50% of completed plans",
+      "outboundActionRate": ">= 35% of completed plans",
+      "shareRate": ">= 8% of completed plans",
+      "longTermGoal": "10x high-intent actions versus the first stable seven-day post-release baseline"
+    }
+  }
+}

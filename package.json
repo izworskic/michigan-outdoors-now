@@ -10,9 +10,15 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "check:seo": "node scripts/check-seo.mjs",
     "check:runtime": "node scripts/runtime-check.mjs",
-    "check": "npm run lint && npm run test && npm run build && npm run check:seo && npm run check:runtime"
+    "score:usefulness": "node scripts/score-usefulness.mjs",
+    "score:search": "node --import tsx scripts/score-search-readiness.ts",
+    "score:impact": "node --import tsx scripts/score-impact-readiness.ts",
+    "check": "npm run lint && npm run test && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
+    "maplibre-gl": "^5.24.0",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4"

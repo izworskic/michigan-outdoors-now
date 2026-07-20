@@ -5,7 +5,7 @@ import { destinationCount } from "../../data/destinations";
 export const metadata: Metadata = {
   title: "How the Michigan Outdoor Planner Works",
   description:
-    "See how Michigan Outdoors Now uses curated destinations, rough drive estimates, weather, wind, and air quality—and understand its privacy and safety limits.",
+    "See how Michigan Outdoors Now uses a real destination map, curated places, rough drive estimates, weather, wind, and air quality—and understand its privacy and safety limits.",
   alternates: { canonical: "/how-it-works" },
 };
 
@@ -30,7 +30,7 @@ export default function HowItWorksPage() {
         </section>
         <section>
           <span className="prose-number">03</span>
-          <div><h2>Current data adjusts the order</h2><p>The remaining choices are compared with daily forecast data, including temperature, rain chance, and gusts. U.S. Air Quality Index data is included when available. Data comes from <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> and can be delayed, incomplete, or unavailable.</p></div>
+          <div><h2>Current data adjusts the order</h2><p>The remaining choices are compared with daily forecast data, including temperature, rain chance, precipitation, gusts, sunshine, and cloud cover. U.S. Air Quality Index data is included when available. Wind receives extra weight for selected water activities and cloud cover matters more for dark-sky plans. Data comes from <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a> and can be delayed, incomplete, or unavailable.</p></div>
         </section>
         <section>
           <span className="prose-number">04</span>
@@ -38,7 +38,15 @@ export default function HowItWorksPage() {
         </section>
         <section>
           <span className="prose-number">05</span>
-          <div><h2>Minimal data by design</h2><p>The planner does not request device location and does not require an account. You enter a city or ZIP. A request is processed to generate the response; this application does not save a personal trip profile or sell planner entries.</p></div>
+          <div><h2>Minimal data by design</h2><p>The planner does not require an account. You can enter a city or ZIP, or explicitly tap Use my location. Optional coordinates are used for that request, kept out of the shared URL and analytics, and are not saved as a personal trip profile or sold.</p></div>
+        </section>
+        <section>
+          <span className="prose-number">06</span>
+          <div><h2>A real map with a list fallback</h2><p>The <Link href="/explore">Michigan destination map</Link> uses MapLibre with OpenFreeMap and OpenStreetMap data, visible attribution, and no API key. Numbered pins match the readable destination list. If you explicitly use device location, it ranks nearby matches for that visit and keeps the coordinates out of URLs and analytics.</p></div>
+        </section>
+        <section>
+          <span className="prose-number">07</span>
+          <div><h2>Guides answer a real planning need</h2><p>The <Link href="/ideas">Michigan trip guides</Link> are organized around people and decisions—family days, beaches, trails, birding, paddling, night skies, freighters, dogs, and lower-barrier access. Each page contains visible guidance, curated examples, official links, limitations, and a preconfigured planner. They are not automatically generated city-and-keyword pages.</p></div>
         </section>
         <aside className="prose-callout">
           <p className="eyebrow">Before leaving</p>

@@ -6,9 +6,11 @@ import {
   estimateDriveHours,
   getDetroitDate,
   haversineMiles,
+  isPlausibleMichiganCoordinate,
   rankDestinations,
   targetDateFor,
 } from "../src/lib/planner.ts";
+import { parsePlannerFragment, serializePlannerFragment } from "../src/lib/planner-share.ts";
 import type { WeatherSnapshot } from "../src/lib/types.ts";
 
 test("the curated catalog and static origin set stay intentional", () => {
@@ -33,6 +35,7 @@ test("distance helpers are stable and plausible", () => {
   const detroitToAnnArbor = haversineMiles(42.3314, -83.0458, 42.2808, -83.743);
   assert.ok(detroitToAnnArbor > 30 && detroitToAnnArbor < 40);
   assert.equal(estimateDriveHours(0), 0.2);
+  assert.equal(isPlausibleMichiganCoordinate(42.3314, -83.0458), true);
 });
 
 test("Detroit calendar choices use the Michigan date", () => {
@@ -91,7 +94,10 @@ test("forecast data is reflected without turning fit into a safety promise", () 
     high: 72,
     low: 58,
     precipitationProbability: 10,
+    precipitationInches: 0,
     windGust: 12,
+    sunshineHours: 9.5,
+    cloudCover: 18,
     weatherCode: 1,
     aqi: 30,
   };
@@ -115,4 +121,88 @@ test("forecast data is reflected without turning fit into a safety promise", () 
   assert.ok(first.every((plan) => plan.conditionsStatus === "live"));
   assert.ok(first.every((plan) => plan.score >= 1 && plan.score <= 99));
   assert.ok(first.every((plan) => plan.reasons.some((reason) => reason.startsWith("Forecast:"))));
+});
+
+test("dark-sky plans explain and penalize heavy cloud cover", () => {
+  const clear: WeatherSnapshot = {
+    date: "2026-07-25",
+    high: 70,
+    low: 55,
+    precipitationProbability: 10,
+    precipitationInches: 0,
+    windGust: 10,
+    sunshineHours: 10,
+    cloudCover: 12,
+    weatherCode: 1,
+    aqi: 28,
+  };
+  const cloudy = { ...clear, cloudCover: 88 };
+  const darkSkyDestinations = destinations.filter((destination) => destination.activities.includes("dark-sky"));
+  const weatherByDestination = new Map(
+    darkSkyDestinations.map((destination, index) => [destination.id, index === 0 ? clear : cloudy]),
+  );
+  const plans = rankDestinations({
+    latitude: darkSkyDestinations[0].latitude,
+    longitude: darkSkyDestinations[0].longitude,
+    originName: "Northern Michigan",
+    maxDriveHours: 5,
+    activities: ["dark-sky"],
+    kids: false,
+    dog: false,
+    accessible: false,
+    weatherByDestination,
+  });
+
+  assert.ok(plans.some((plan) => plan.reasons.some((reason) => reason.includes("cloud cover"))));
+  assert.ok(
+    plans
+      .filter((plan) => plan.weather?.cloudCover === 88)
+      .every((plan) => plan.cautions.some((caution) => caution.includes("stargazing"))),
+  );
+});
+
+test("water plans flag wind-sensitive conditions", () => {
+  const windy: WeatherSnapshot = {
+    date: "2026-07-25",
+    high: 76,
+    low: 62,
+    precipitationProbability: 15,
+    precipitationInches: 0,
+    windGust: 31,
+    sunshineHours: 8,
+    cloudCover: 25,
+    weatherCode: 1,
+    aqi: 35,
+  };
+  const waterDestinations = destinations.filter((destination) => destination.activities.includes("paddling"));
+  const plans = rankDestinations({
+    latitude: waterDestinations[0].latitude,
+    longitude: waterDestinations[0].longitude,
+    originName: "Michigan",
+    maxDriveHours: 5,
+    activities: ["paddling"],
+    kids: false,
+    dog: false,
+    accessible: false,
+    weatherByDestination: new Map(waterDestinations.map((destination) => [destination.id, windy])),
+  });
+
+  assert.ok(plans.every((plan) => plan.cautions.some((caution) => caution.includes("marine forecast"))));
+});
+
+test("share fragments round-trip valid planner settings and reject invalid data", () => {
+  const request = {
+    origin: "Bay City",
+    date: "weekend" as const,
+    maxDriveHours: 2,
+    activities: ["freighters", "scenic"] as const,
+    kids: true,
+    dog: false,
+    accessible: true,
+  };
+  const fragment = serializePlannerFragment({ ...request, activities: [...request.activities] });
+
+  assert.deepEqual(parsePlannerFragment(fragment), { ...request, activities: [...request.activities] });
+  assert.equal(parsePlannerFragment("#plan=origin%3DBay%2BCity%26when%3Dnever"), null);
+  assert.equal(parsePlannerFragment("#other=value"), null);
 });

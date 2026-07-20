@@ -42,7 +42,10 @@ export type WeatherSnapshot = {
   high: number | null;
   low: number | null;
   precipitationProbability: number | null;
+  precipitationInches: number | null;
   windGust: number | null;
+  sunshineHours: number | null;
+  cloudCover: number | null;
   weatherCode: number | null;
   aqi: number | null;
 };
@@ -72,6 +75,10 @@ export type Plan = {
 
 export type PlannerRequest = {
   origin: string;
+  originCoordinates?: {
+    latitude: number;
+    longitude: number;
+  };
   date: DateChoice;
   maxDriveHours: number;
   activities: ActivityId[];

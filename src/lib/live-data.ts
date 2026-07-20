@@ -67,7 +67,10 @@ type ForecastPayload = {
     temperature_2m_max?: Array<number | null>;
     temperature_2m_min?: Array<number | null>;
     precipitation_probability_max?: Array<number | null>;
+    precipitation_sum?: Array<number | null>;
     wind_gusts_10m_max?: Array<number | null>;
+    sunshine_duration?: Array<number | null>;
+    cloud_cover_mean?: Array<number | null>;
     weather_code?: Array<number | null>;
   };
 };
@@ -113,9 +116,10 @@ export async function fetchWeatherSnapshots(
   const forecastParams = new URLSearchParams({
     ...common,
     daily:
-      "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_gusts_10m_max",
+      "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,sunshine_duration,cloud_cover_mean",
     temperature_unit: "fahrenheit",
     wind_speed_unit: "mph",
+    precipitation_unit: "inch",
     forecast_days: "8",
   });
   const airParams = new URLSearchParams({
@@ -160,7 +164,13 @@ export async function fetchWeatherSnapshots(
         forecast.daily?.precipitation_probability_max,
         dayIndex,
       ),
+      precipitationInches: valueAt(forecast.daily?.precipitation_sum, dayIndex),
       windGust: valueAt(forecast.daily?.wind_gusts_10m_max, dayIndex),
+      sunshineHours: (() => {
+        const seconds = valueAt(forecast.daily?.sunshine_duration, dayIndex);
+        return seconds === null ? null : Number((seconds / 3_600).toFixed(1));
+      })(),
+      cloudCover: valueAt(forecast.daily?.cloud_cover_mean, dayIndex),
       weatherCode: valueAt(forecast.daily?.weather_code, dayIndex),
       aqi: dailyAqi(air[locationIndex], targetDate),
     });
