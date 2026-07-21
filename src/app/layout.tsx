@@ -9,7 +9,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Michigan Outdoors Now — Day Trip Planner by Chris Izworski",
+    default: "Michigan Outdoors Now, Day Trip Planner by Chris Izworski",
     template: "%s | Michigan Outdoors Now",
   },
   description:
@@ -24,13 +24,13 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "/",
     siteName: "Michigan Outdoors Now",
-    title: "Michigan Outdoors Now — by Chris Izworski",
+    title: "Michigan Outdoors Now, by Chris Izworski",
     description:
       "A live-condition-aware Michigan day and weekend planner built around your drive time and interests.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Michigan Outdoors Now — by Chris Izworski",
+    title: "Michigan Outdoors Now, by Chris Izworski",
     description: "Three practical Michigan outdoor plans, matched to your day, drive, and current conditions.",
   },
   robots: allowIndexing

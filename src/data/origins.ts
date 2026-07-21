@@ -44,7 +44,7 @@ export const origins: Origin[] = [
     latitude: 43.0125,
     longitude: -83.6875,
     intro:
-      "Flint sits within reach of Saginaw Bay, the Thumb, and inland forests—use the planner to narrow those choices by conditions and fit.",
+      "Flint sits within reach of Saginaw Bay, the Thumb, and inland forests. Use the planner to narrow those choices by conditions and fit.",
   },
   {
     slug: "lansing",

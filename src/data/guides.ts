@@ -40,7 +40,7 @@ export const guides: SearchGuide[] = [
       "Find practical things to do outside in Michigan today. Compare nearby hiking, beaches, birds, scenery, weather, wind, and air quality from your starting city.",
     directAnswer:
       "The best outdoor plan in Michigan today depends on your drive window, preferred activity, rain, wind, temperature, and air quality. Start with a Michigan city or ZIP, keep the first search inside one or two hours, and leave with both a primary plan and a weather backup.",
-    audience: "Someone with a free day—or a free afternoon—who wants a confident answer without opening fifteen tabs.",
+    audience: "Someone with a free day, or a free afternoon, who wants a confident answer without opening fifteen tabs.",
     bestFor: "Same-day choices, flexible interests, and a short drive.",
     planStart: "Today · up to 2 hours · hiking and scenery",
     weatherPivot: "Rain, gusts, heat, smoke, or a rough shoreline can move an inland option ahead of the original idea.",
@@ -141,7 +141,7 @@ export const guides: SearchGuide[] = [
     description:
       "Find Michigan hiking day-trip ideas from your city. Compare drive time, rain, temperature, wind, AQI, scenery, access notes, maps, and official trail information.",
     directAnswer:
-      "For a Michigan hiking day trip, first choose a realistic drive radius and the day, then compare rain, temperature, air quality, trail setting, and official access. The planner recommends destinations—not individual trail difficulty—so use the official map to choose the route that fits your group.",
+      "For a Michigan hiking day trip, first choose a realistic drive radius and the day, then compare rain, temperature, air quality, trail setting, and official access. The planner recommends destinations, not individual trail difficulty, so use the official map to choose the route that fits your group.",
     audience: "Casual walkers and hikers who know how far they will drive but have not chosen a park or recreation area.",
     bestFor: "Woodland walks, overlooks, dunes, waterfalls, wildlife areas, and flexible trail systems.",
     planStart: "This weekend · up to 2 hours · hiking and scenery",
@@ -244,7 +244,7 @@ export const guides: SearchGuide[] = [
       "Plan a Michigan dark-sky or stargazing trip. Compare dark-sky destinations by drive time, cloud cover, rain, wind, temperature, access notes, and official information.",
     directAnswer:
       "For a Michigan stargazing trip, prioritize dark location, cloud cover, moonlight, open viewing direction, official nighttime access, and a safe return drive. This planner weighs average cloud cover for dark-sky choices, but it cannot guarantee stars or northern lights.",
-    audience: "Stargazers and aurora hopefuls who need a place decision—not another vague statewide list.",
+    audience: "Stargazers and aurora hopefuls who need a place decision, not another vague statewide list.",
     bestFor: "Dark-sky parks, open shoreline horizons, Milky Way planning, and aurora-viewing preparation.",
     planStart: "This weekend · up to 3 hours · dark skies and scenery",
     weatherPivot: "Cloud cover is the central forecast signal; rain, gusts, smoke, temperature, moonlight, and nighttime access also matter.",

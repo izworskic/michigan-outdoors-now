@@ -6,7 +6,7 @@ import { jsonLd, personSchema, siteUrl } from "../../lib/site";
 export const metadata: Metadata = {
   title: "Michigan Outdoor Trip Ideas and Planners",
   description:
-    "Choose the kind of Michigan outdoor day you need—family, beach, hiking, birding, paddling, stargazing, freighters, dog-friendly, or lower-barrier—then build a live-condition-aware plan.",
+    "Choose the kind of Michigan outdoor day you need: family, beach, hiking, birding, paddling, stargazing, freighters, dog-friendly, or lower-barrier. Then build a live-condition-aware plan.",
   alternates: { canonical: "/ideas" },
   openGraph: {
     title: "Michigan Outdoor Trip Ideas and Planners",

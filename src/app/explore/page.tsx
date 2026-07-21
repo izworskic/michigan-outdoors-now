@@ -87,7 +87,7 @@ export default function ExplorePage() {
         </p>
         <aside>
           <strong>A focused collection</strong>
-          <span>These 28 places are decision-ready starting points—not a claim to be Michigan’s complete park, trail, campground, or accessibility directory.</span>
+          <span>These 28 places are decision-ready starting points, not a claim to be Michigan’s complete park, trail, campground, or accessibility directory.</span>
         </aside>
       </section>
 

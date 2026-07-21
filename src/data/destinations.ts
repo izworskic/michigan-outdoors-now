@@ -278,7 +278,7 @@ export const destinations: Destination[] = [
     latitude: 46.559,
     longitude: -86.3159,
     activities: ["hiking", "paddling", "fishing", "beaches", "birding", "scenic", "dark-sky"],
-    summary: "Sandstone cliffs, waterfalls, beaches, and Lake Superior scale—best matched carefully to wind and wave conditions.",
+    summary: "Sandstone cliffs, waterfalls, beaches, and Lake Superior scale, best matched carefully to wind and wave conditions.",
     setting: "Lake Superior cliffs and forest",
     kidsFriendly: true,
     dogsAllowed: true,

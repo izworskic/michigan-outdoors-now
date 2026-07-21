@@ -71,7 +71,7 @@ export default function Home() {
             <h1>Less searching.<br /><span>More outside.</span></h1>
             <p className="hero-lede">
               Tell us where you are, how far you will drive, and what sounds good. Get three
-              Michigan plans shaped by current conditions—not a wall of generic listings.
+              Michigan plans shaped by current conditions, not a wall of generic listings.
             </p>
             <div className="hero-actions">
               <a className="hero-button" href="#planner">Build my plan <span aria-hidden="true">↓</span></a>

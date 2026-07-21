@@ -15,6 +15,6 @@ The v2 matrix is a separate 200-point test. It evaluates harder product and sear
 
 1. Verify the production domain, canonical URL, crawl access, sitemap, analytics, and Search Console ownership.
 2. Record a stable seven-day product baseline and 28-day organic baseline after indexing.
-3. Measure the 10x goal against qualified actions—not raw impressions. Qualified actions include planner completions, primary or backup decisions, shares, map opens, and official-source opens.
+3. Measure the 10x goal against qualified actions, not raw impressions. Qualified actions include planner completions, primary or backup decisions, shares, map opens, and official-source opens.
 
 The score is a release gate, not a prediction of Google rankings. It cannot guarantee traffic, clicks, or a 10x outcome.
