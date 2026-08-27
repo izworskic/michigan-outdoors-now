@@ -85,6 +85,10 @@ const placeSlugs = [
   "holland-state-park",
   "warren-dunes",
   "grand-haven-state-park",
+  "mackinac-island",
+  "torch-lake-antrim",
+  "silver-lake-state-park",
+  "isle-royale",
 ];
 
 for (const slug of originSlugs) {
@@ -104,9 +108,9 @@ assert.ok(exploreIndex, "built destination explorer missing");
 const exploreHtml = await readFile(exploreIndex, "utf8");
 assert.match(exploreHtml, /Michigan destination finder/);
 assert.match(exploreHtml, /Find places near me/);
-assert.match(exploreHtml, /<strong>28<\/strong> matching/);
+assert.match(exploreHtml, /<strong>32<\/strong> matching/);
 assert.match(exploreHtml, /Zoomable map of matching Michigan outdoor destinations/);
-assert.equal((exploreHtml.match(/class="result-map-number"/g) ?? []).length, 28);
+assert.equal((exploreHtml.match(/class="result-map-number"/g) ?? []).length, 32);
 assert.match(exploreHtml, /CollectionPage/);
 
 for (const slug of guideSlugs) {
@@ -144,7 +148,7 @@ for (const slug of placeSlugs) {
 const sitemapPath = files.find((file) => file.endsWith("sitemap.xml.body"));
 assert.ok(sitemapPath, "built sitemap body was not found");
 const sitemap = await readFile(sitemapPath, "utf8");
-assert.equal((sitemap.match(/<url>/g) ?? []).length, 53);
+assert.equal((sitemap.match(/<url>/g) ?? []).length, 57);
 assert.doesNotMatch(sitemap, /<priority>|<changefreq>|<lastmod>/);
 
 const robotsPath = files.find((file) => file.endsWith("robots.txt.body"));
@@ -152,4 +156,4 @@ assert.ok(robotsPath, "built robots body was not found");
 const robots = await readFile(robotsPath, "utf8");
 assert.match(robots, /Disallow: \//);
 
-console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, an interactive map, 53 sitemap URLs, and preview noindex.`);
+console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, an interactive map, 57 sitemap URLs, and preview noindex.`);

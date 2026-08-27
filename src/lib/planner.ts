@@ -114,14 +114,19 @@ function weatherCautions(weather: WeatherSnapshot | undefined, selected: Set<Act
   return cautions;
 }
 
-function relatedToolFor(destination: Destination, selected: ActivityId[]) {
+function isGreatLakesWaterDestination(destination: Destination) {
+  const context = `${destination.setting} ${destination.summary}`;
+  return /Lake Michigan|Lake Huron|Lake Superior|Lake Erie|Lake St\. Clair|Saginaw Bay|Straits of Mackinac/i.test(context);
+}
+
+export function relatedToolFor(destination: Destination, selected: ActivityId[]) {
   if (destination.id === "pictured-rocks") {
     return { label: "Pictured Rocks trip planner", url: "https://picturedrocks.chrisizworski.com/" };
   }
   if (destination.id === "tahquamenon-falls") {
     return { label: "Michigan waterfall conditions", url: "https://chrisizworski.com/michigan-waterfall-conditions/" };
   }
-  if (selected.includes("beaches")) {
+  if (selected.includes("beaches") && isGreatLakesWaterDestination(destination)) {
     return { label: "Best Michigan beaches today", url: "https://chrisizworski.com/best-michigan-beaches-today/" };
   }
   if (destination.id === "au-sable-mio" || destination.id === "rifle-river") {
@@ -130,16 +135,16 @@ function relatedToolFor(destination: Destination, selected: ActivityId[]) {
   if (destination.id === "soo-locks") {
     return { label: "Soo Locks live guide", url: "https://chrisizworski.com/soo-locks/" };
   }
-  if (selected.includes("birding") || destination.activities.includes("birding")) {
+  if (selected.includes("birding")) {
     return { label: "Michigan birding report", url: "https://birding.chrisizworski.com/" };
   }
   if (selected.includes("dark-sky")) {
     return { label: "Michigan stargazing tonight", url: "https://chrisizworski.com/michigan-stargazing-tonight/" };
   }
-  if (selected.includes("freighters") || destination.activities.includes("freighters")) {
+  if (selected.includes("freighters")) {
     return { label: "Great Lakes freighter viewing", url: "https://chrisizworski.com/great-lakes-freighter-viewing/" };
   }
-  if (selected.includes("paddling")) {
+  if (selected.includes("paddling") && isGreatLakesWaterDestination(destination)) {
     return { label: "Great Lakes buoy dashboard", url: "https://chrisizworski.com/great-lakes-buoys/" };
   }
   return { label: "More tools by Chris Izworski", url: "https://chrisizworski.com/tools" };

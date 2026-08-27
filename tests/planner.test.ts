@@ -8,17 +8,43 @@ import {
   haversineMiles,
   isPlausibleMichiganCoordinate,
   rankDestinations,
+  relatedToolFor,
   targetDateFor,
 } from "../src/lib/planner.ts";
 import { parsePlannerFragment, serializePlannerFragment } from "../src/lib/planner-share.ts";
 import type { WeatherSnapshot } from "../src/lib/types.ts";
 
 test("the curated catalog and static origin set stay intentional", () => {
-  assert.equal(destinationCount, 28);
-  assert.equal(destinations.length, 28);
-  assert.equal(new Set(destinations.map((destination) => destination.id)).size, 28);
+  assert.equal(destinationCount, 32);
+  assert.equal(destinations.length, 32);
+  assert.equal(new Set(destinations.map((destination) => destination.id)).size, 32);
   assert.equal(origins.length, 11);
   assert.equal(originsBySlug.get("bay-city")?.zip, "48708");
+});
+
+
+test("specialist handoffs respect destination type and selected intent", () => {
+  const torch = destinations.find((destination) => destination.id === "torch-lake-antrim");
+  const silver = destinations.find((destination) => destination.id === "silver-lake-state-park");
+  const mackinac = destinations.find((destination) => destination.id === "mackinac-island");
+  assert.ok(torch && silver && mackinac);
+
+  assert.notEqual(
+    relatedToolFor(torch, ["beaches"]).url,
+    "https://chrisizworski.com/best-michigan-beaches-today/",
+  );
+  assert.equal(
+    relatedToolFor(silver, ["beaches"]).url,
+    "https://chrisizworski.com/best-michigan-beaches-today/",
+  );
+  assert.notEqual(
+    relatedToolFor(mackinac, ["hiking"]).url,
+    "https://chrisizworski.com/great-lakes-freighter-viewing/",
+  );
+  assert.equal(
+    relatedToolFor(mackinac, ["freighters"]).url,
+    "https://chrisizworski.com/great-lakes-freighter-viewing/",
+  );
 });
 
 test("destination clicks use secure, current source paths", () => {
