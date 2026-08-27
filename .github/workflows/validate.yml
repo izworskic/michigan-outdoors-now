@@ -37,6 +37,9 @@ jobs:
       - name: Run deterministic tests
         run: npm run test
 
+      - name: Verify live specialist links
+        run: npm run check:specialists
+
       - name: Build production output
         run: npm run build
 

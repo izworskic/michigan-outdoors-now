@@ -32,14 +32,30 @@ try {
   const homeHtml = await home.text();
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
+  assert.match(homeHtml, /Where should you go outside today\?/);
+  assert.match(homeHtml, /Live statewide read/);
   assert.ok(
-    homeHtml.indexOf('id="planner"') < homeHtml.indexOf('class="persona-section'),
-    "The planner should appear before editorial trip-guide content on the homepage.",
+    homeHtml.indexOf('Live statewide read') < homeHtml.indexOf('id="planner"'),
+    "The statewide decision should appear before the personalization form.",
   );
+  assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
   assert.equal(home.headers.get("x-powered-by"), null);
   assert.equal(home.headers.get("x-frame-options"), "DENY");
   assert.equal(home.headers.get("x-content-type-options"), "nosniff");
+
+  const statewide = await fetch(`${origin}/api/statewide?date=today&mode=best`, {
+    signal: AbortSignal.timeout(25_000),
+  });
+  assert.equal(statewide.status, 200);
+  assert.match(statewide.headers.get("x-robots-tag") ?? "", /noindex/);
+  const statewidePayload = await statewide.json();
+  assert.equal(statewidePayload.mode, "best");
+  assert.ok(Array.isArray(statewidePayload.picks));
+  if (statewidePayload.conditionsStatus === "live") {
+    assert.ok(statewidePayload.picks.length > 0);
+    assert.ok(statewidePayload.picks.every((pick) => ["hiking", "scenic", "birding"].includes(pick.activity)));
+  }
 
   const localPage = await fetch(`${origin}/from/bay-city`);
   assert.equal(localPage.status, 200);
@@ -146,7 +162,7 @@ try {
   assert.ok(coordinatePayload.plans.length > 0);
 
   console.log(
-    `Runtime check passed: home, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: decision-first home, statewide ranking, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

@@ -14,7 +14,7 @@ The platform turns live public data into actionable recommendations. Weather sit
 Optimize for organic Google impressions, SERP ownership, CTR, useful long-tail coverage, repeat visits, engagement, shareability, AI-answer discoverability, strong internal linking, future monetization, and above all genuine usefulness. Do not create thin programmatic SEO pages.
 
 ## Platform model
-Keep useful existing URLs, rankings, backlinks, data integrations and indexed pages. Rebuild intelligence underneath them rather than discarding search equity. The parent experience is Michigan Outdoors Now. Specialist tools remain canonical owners for narrow decisions such as beaches, fall color, ice, skiing, waterfalls, aurora, stargazing, freighter viewing and destination-specific conditions.
+Keep useful existing URLs, rankings, backlinks, data integrations and indexed pages. Rebuild intelligence underneath them rather than discarding search equity. The parent experience is Michigan Outdoors Now. Specialist tools remain canonical owners for narrow decisions such as beaches, Great Lakes conditions, trout, birding, fall color, ice, skiing, aurora, ship tracking and destination-specific conditions. A specialist may only be surfaced after its live URL has been verified. Removed or retired tools must never be reintroduced from an old registry or historical branch.
 
 ## Shared decision intelligence
 Normalize available inputs such as weather, precipitation, wind, AQI, smoke, waves, water temperature, currents, swim hazards, streamflow, snow, ice context, closures, daylight, road/access status and authoritative local observations. Prefer documented, stable, low-cost or free public sources. Do not silently fabricate replacement data.
@@ -48,6 +48,12 @@ Keep commercial elements secondary to usefulness. Future ads, relevant affiliate
 
 ## Development operating rules
 Inspect current code, branches, recent work, search experiments and data sources before changing a surface. Coordinate with other agents by preserving useful work. Favor durable shared architecture and incremental production releases over wholesale rewrites.
+
+## Tool lifecycle
+A tool shown as live must resolve successfully at release time. CI must request every specialist URL and fail on broken responses. Keep an explicit retired-path regression list so removed tools cannot silently return through stale data, old branches, or copied registries.
+
+## Homepage product contract
+The first screen must answer the statewide decision before asking for a location or form completion. Personalization is the second step. The statewide layer may rank general weather-fit activities only when it has the required inputs; activities that need waves, water, river, sightings, space-weather, ice, snow, or AIS signals must route to the verified specialist that owns those inputs.
 
 # Benchmark and Internal Evaluation Appendix
 
