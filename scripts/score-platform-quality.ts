@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import process from "node:process";
 
+async function main() {
 const root = new URL("../", import.meta.url);
 const baseline = JSON.parse(await readFile(new URL("benchmarks/platform-quality.json", root), "utf8"));
 const paths = [
@@ -33,3 +34,9 @@ const rows = dimensions.map(([key, weight, passed]) => ({ key, weight, score: pa
 const score = rows.reduce((sum, row) => sum + row.score, 0);
 console.log(JSON.stringify({ benchmark: "platform-quality", score, target: baseline.releaseThreshold, flagshipTarget: baseline.flagshipTarget, rows, fatal }, null, 2));
 if (score < baseline.releaseThreshold || fatal.length) process.exit(1);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
