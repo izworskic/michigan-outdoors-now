@@ -74,9 +74,21 @@ try {
   const explorer = await fetch(`${origin}/explore`);
   assert.equal(explorer.status, 200);
   const explorerHtml = await explorer.text();
-  assert.match(explorerHtml, /Michigan destination finder/);
-  assert.match(explorerHtml, /Find places near me/);
-  assert.match(explorerHtml, /Choose map or list view/);
+  assert.match(explorerHtml, /Michigan outdoor universe/);
+  assert.match(explorerHtml, /Explore Michigan outdoors\./);
+  assert.match(explorerHtml, /Not a shortlist\./);
+  assert.match(explorerHtml, /Official statewide discovery/);
+  assert.doesNotMatch(explorerHtml, /numbered pins|result-map-number|Show all 28 places|See all 28 places/);
+
+  const outdoorUniverse = await fetch(`${origin}/api/outdoor-universe?layer=hiking`, {
+    signal: AbortSignal.timeout(20_000),
+  });
+  assert.equal(outdoorUniverse.status, 200);
+  assert.match(outdoorUniverse.headers.get("x-robots-tag") ?? "", /noindex/);
+  const outdoorUniversePayload = await outdoorUniverse.json();
+  assert.equal(outdoorUniversePayload.layer, "hiking");
+  assert.match(outdoorUniversePayload.source.name, /Michigan DNR Trails Open Data/);
+  assert.ok(Array.isArray(outdoorUniversePayload.geojson.features));
 
   const placePage = await fetch(`${origin}/places/tawas-point`);
   assert.equal(placePage.status, 200);
@@ -162,7 +174,7 @@ try {
   assert.ok(coordinatePayload.plans.length > 0);
 
   console.log(
-    `Runtime check passed: decision-first home, statewide ranking, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: decision-first home, statewide ranking, official DNR outdoor universe, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

@@ -109,12 +109,14 @@ assert.match(await readFile(guideIndex, "utf8"), /Ten ways into one useful decis
 const exploreIndex = htmlFiles.find((file) => file.endsWith("/explore.html"));
 assert.ok(exploreIndex, "built destination explorer missing");
 const exploreHtml = await readFile(exploreIndex, "utf8");
-assert.match(exploreHtml, /Michigan destination finder/);
-assert.match(exploreHtml, /Find places near me/);
-assert.match(exploreHtml, /<strong>32<\/strong> matching/);
-assert.match(exploreHtml, /Zoomable map of matching Michigan outdoor destinations/);
-assert.equal((exploreHtml.match(/class="result-map-number"/g) ?? []).length, 32);
+assert.match(exploreHtml, /Michigan outdoor universe/);
+assert.match(exploreHtml, /Explore Michigan outdoors\./);
+assert.match(exploreHtml, /Not a shortlist\./);
+assert.match(exploreHtml, /Official statewide discovery/);
+assert.match(exploreHtml, /Michigan DNR Trails Open Data/);
+assert.doesNotMatch(exploreHtml, /numbered pins|result-map-number|Show all 28 places|See all 28 places/);
 assert.match(exploreHtml, /CollectionPage/);
+assert.match(exploreHtml, /Dataset/);
 
 for (const slug of guideSlugs) {
   const guidePage = htmlFiles.find((file) => file.endsWith(`/ideas/${slug}.html`));
@@ -159,4 +161,4 @@ assert.ok(robotsPath, "built robots body was not found");
 const robots = await readFile(robotsPath, "utf8");
 assert.match(robots, /Disallow: \//);
 
-console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, an interactive map, 57 sitemap URLs, and preview noindex.`);
+console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, a statewide DNR discovery map, 57 sitemap URLs, and preview noindex.`);

@@ -28,6 +28,8 @@ const paths = [
   "src/app/globals.css",
   "src/lib/planner.ts",
   "src/lib/live-data.ts",
+  "src/lib/outdoor-universe.ts",
+  "src/app/api/outdoor-universe/route.ts",
   "scripts/check-seo.mjs",
   "scripts/runtime-check.mjs",
   "docs/search-growth-plan.md",
@@ -64,8 +66,9 @@ const usefulness = calculate([
     name: "Destination discovery",
     checks: [
       [10,
-        has("src/components/michigan-destination-map.tsx", "maplibre-gl", "tiles.openfreemap.org", "fitBounds", "destination-pin") &&
-        has("src/components/destination-explorer.tsx", "explorer_filter_changed", "Find places near me", "Family, dog & access")],
+        has("src/components/michigan-destination-map.tsx", "maplibre-gl", "tiles.openfreemap.org", "official-dnr-trails", "destination-pin-decision") &&
+        has("src/components/destination-explorer.tsx", "explorer_filter_changed", "Find decision-ready places near me", "Official DNR map layer") &&
+        has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "fetchOutdoorUniverse")],
       [8, destinations.length >= 28 && has("src/app/sitemap.ts", "destinations.map", "/places/${destination.id}")],
       [7, has("src/components/place-conditions.tsx", "Rain chance", "Peak gusts", "Air quality")],
       [5, has("src/app/places/[place]/page.tsx", "nearbyDestinations", "NEARBY ALTERNATIVES")],
@@ -92,7 +95,7 @@ const usefulness = calculate([
       [8, has("src/components/destination-explorer.tsx", "aria-live", "aria-pressed") && has("src/components/planner.tsx", "<fieldset", "aria-live")],
       [7,
         has("src/app/globals.css", "@media (max-width: 560px)", "prefers-reduced-motion", "destination-map") &&
-        has("src/components/destination-explorer.tsx", "data-mobile-view", "Choose map or list view")],
+        has("src/components/destination-explorer.tsx", "data-mobile-view", "Choose map or discovery rail view")],
       [8, has("src/app/places/[place]/page.tsx", "relatedGuides") && has("src/lib/planner.ts", "relatedToolFor")],
     ],
   },
@@ -114,7 +117,9 @@ const search = calculate([
     name: "Demand and intent coverage",
     checks: [
       [10, guides.length >= 10],
-      [8, has("src/app/explore/page.tsx", "Interactive Michigan Outdoor Map and Destination Finder", "What can this Michigan outdoor map help me decide?")],
+      [8,
+        has("src/app/explore/page.tsx", "Michigan Outdoor Map: Trails, Parks and Decision-Ready Places", "Broad discovery. Narrow confidence.", '"@type": "Dataset"') &&
+        has("src/app/api/outdoor-universe/route.ts", "fetchOutdoorUniverse", "noindex, nofollow")],
       [8, destinations.length >= 28 && has("src/app/places/[place]/page.tsx", "generateStaticParams", "generateMetadata")],
       [7, has("src/app/from/[origin]/page.tsx", "generateStaticParams", "Michigan Day Trips from")],
       [7, has("src/components/destination-explorer.tsx", "activityIds", "regionIds", "Family fit")],
@@ -145,7 +150,7 @@ const search = calculate([
     checks: [
       [9, has("src/app/places/[place]/page.tsx", "alternates: { canonical", "openGraph", "twitter")],
       [9, has("src/app/places/[place]/page.tsx", "BreadcrumbList", '"@type": "Place"', "GeoCoordinates")],
-      [9, has("src/app/explore/page.tsx", "CollectionPage", "ItemList")],
+      [9, has("src/app/explore/page.tsx", "CollectionPage", "ItemList", '"@type": "Dataset"', "Michigan DNR Trails Open Data")],
       [9, has("src/app/places/[place]/page.tsx", "Chris Izworski", "personSchema", "dateModified")],
       [9, has("src/app/llms.txt/route.ts", "Curated destination planning pages", "Interactive Michigan destination map") && has("src/app/llms-full.txt/route.ts", "Planning page:")],
     ],
