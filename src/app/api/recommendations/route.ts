@@ -101,33 +101,34 @@ export async function POST(request: Request) {
   if (!origin) return invalid("Enter a Michigan city or ZIP code.");
 
   const targetDates = targetDatesFor(body.date);
-  const rankedPlanSets: ReturnType<typeof rankDestinations>[] = [];
+  const rankedPlanSets = await Promise.all(
+    targetDates.map(async (targetDate) => {
+      let weatherByDestination = new Map();
+      try {
+        weatherByDestination = await fetchWeatherSnapshots(destinations, targetDate);
+      } catch {
+        // A distance-and-fit result remains useful when a live provider is unavailable.
+      }
 
-  for (const targetDate of targetDates) {
-    let weatherByDestination = new Map();
-    try {
-      weatherByDestination = await fetchWeatherSnapshots(destinations, targetDate);
-    } catch {
-      // A distance-and-fit result remains useful when a live provider is unavailable.
-    }
-
-    rankedPlanSets.push(rankDestinations({
-      latitude: origin.latitude,
-      longitude: origin.longitude,
-      originName: origin.name,
-      maxDriveHours: body.maxDriveHours,
-      activities: body.activities,
-      kids: body.kids,
-      dog: body.dog,
-      accessible: body.accessible,
-      weatherByDestination,
-    }));
-  }
+      return rankDestinations({
+        latitude: origin.latitude,
+        longitude: origin.longitude,
+        originName: origin.name,
+        maxDriveHours: body.maxDriveHours,
+        activities: body.activities,
+        kids: body.kids,
+        dog: body.dog,
+        accessible: body.accessible,
+        weatherByDestination,
+      });
+    }),
+  );
 
   const plans = rankedPlanSets
     .flat()
     .sort(
       (a, b) =>
+        Number(b.conditionsStatus === "live") - Number(a.conditionsStatus === "live") ||
         b.score - a.score ||
         a.driveHours - b.driveHours ||
         a.destination.name.localeCompare(b.destination.name),
