@@ -8,6 +8,7 @@ async function main() {
     "src/app/page.tsx",
     "src/components/outdoor-intent-hub.tsx",
     "src/app/globals.css",
+    "src/app/atlas.css",
     "src/data/specialist-tools.ts",
   ];
   const files = Object.fromEntries(
@@ -16,7 +17,7 @@ async function main() {
 
   const page = files["src/app/page.tsx"];
   const hub = files["src/components/outdoor-intent-hub.tsx"];
-  const css = files["src/app/globals.css"];
+  const css = files["src/app/globals.css"] + "\n" + files["src/app/atlas.css"];
   const specialists = files["src/data/specialist-tools.ts"];
   const penalties = [];
 
