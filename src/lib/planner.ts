@@ -1,4 +1,5 @@
 import { destinations } from "../data/destinations";
+import { evaluateActivities } from "./decision-engine";
 import type {
   ActivityId,
   DateChoice,
@@ -65,55 +66,8 @@ export function isPlausibleMichiganCoordinate(latitude: number, longitude: numbe
 }
 
 function weatherAdjustment(weather: WeatherSnapshot | undefined, selected: Set<ActivityId>) {
-  if (!weather) return 0;
-
-  let adjustment = 0;
-
-  if (weather.precipitationProbability !== null) {
-    if (weather.precipitationProbability <= 20) adjustment += 8;
-    else if (weather.precipitationProbability <= 45) adjustment += 3;
-    else if (weather.precipitationProbability >= 75) adjustment -= 10;
-    else adjustment -= 3;
-  }
-
-  if (weather.windGust !== null) {
-    if (weather.windGust <= 20) adjustment += 4;
-    else if (weather.windGust >= 35) adjustment -= 8;
-    else if (weather.windGust >= 28) adjustment -= 3;
-  }
-
-  if (weather.high !== null) {
-    if (weather.high >= 48 && weather.high <= 82) adjustment += 5;
-    if (weather.high < 28 || weather.high > 92) adjustment -= 6;
-  }
-
-  if (weather.aqi !== null) {
-    if (weather.aqi <= 50) adjustment += 4;
-    else if (weather.aqi > 100) adjustment -= 8;
-    else if (weather.aqi > 75) adjustment -= 3;
-  }
-
-  if (weather.weatherCode !== null && weather.weatherCode >= 95) {
-    adjustment -= 12;
-  }
-
-  const waterDay = selected.has("paddling") || selected.has("beaches");
-  if (waterDay && weather.windGust !== null) {
-    if (weather.windGust >= 35) adjustment -= 12;
-    else if (weather.windGust >= 25) adjustment -= 7;
-  }
-
-  if (selected.has("dark-sky") && weather.cloudCover !== null) {
-    if (weather.cloudCover <= 25) adjustment += 8;
-    else if (weather.cloudCover >= 70) adjustment -= 12;
-    else if (weather.cloudCover >= 50) adjustment -= 5;
-  }
-
-  if ((selected.has("hiking") || selected.has("birding")) && weather.precipitationProbability !== null) {
-    if (weather.precipitationProbability >= 70) adjustment -= 5;
-  }
-
-  return adjustment;
+  const decision = evaluateActivities([...selected], { weather, sourceCount: weather ? 1 : 0 });
+  return decision.score === null ? 0 : (decision.score - 65) * 0.35;
 }
 
 function weatherReason(weather: WeatherSnapshot, selected: Set<ActivityId>) {
@@ -200,6 +154,11 @@ export function rankDestinations(input: RankInput): Plan[] {
       const driveHours = estimateDriveHours(distanceMiles);
       const matchingActivities = destination.activities.filter((activity) => selected.has(activity));
       const weather = input.weatherByDestination?.get(destination.id);
+      const decisionActivities = matchingActivities.length ? matchingActivities : [...selected];
+      const decision = evaluateActivities(decisionActivities, {
+        weather,
+        sourceCount: weather ? 1 : 0,
+      });
 
       if (driveHours > input.maxDriveHours + 0.05) return null;
       if (selected.size > 0 && matchingActivities.length === 0) return null;
@@ -223,6 +182,7 @@ export function rankDestinations(input: RankInput): Plan[] {
       ];
 
       if (weather) reasons.push(weatherReason(weather, selected));
+      reasons.push(decision.summary);
       if (input.kids) reasons.push("Included because it works well for a family outing.");
       if (input.accessible) reasons.push("Included for its lower-barrier access options.");
 
@@ -238,10 +198,14 @@ export function rankDestinations(input: RankInput): Plan[] {
           officialUrl: destination.officialUrl,
         },
         score: Math.round(Math.min(99, Math.max(1, rawScore))),
+        decisionStatus: decision.status,
+        confidence: decision.confidence,
+        bestWindow: decision.bestWindow,
+        activityScores: decision.activities,
         distanceMiles: Math.round(distanceMiles),
         driveHours: Number(driveHours.toFixed(1)),
         reasons,
-        cautions: weatherCautions(weather, selected),
+        cautions: [...new Set([...weatherCautions(weather, selected), ...decision.cautions])],
         weather: weather ?? null,
         conditionsStatus: weather ? ("live" as const) : ("estimated" as const),
         mapUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${destination.name}, ${destination.area}, Michigan`)}`,
