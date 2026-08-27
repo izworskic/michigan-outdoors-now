@@ -35,7 +35,7 @@ test("specialist handoffs respect destination type and selected intent", () => {
   );
   assert.equal(
     relatedToolFor(silver, ["beaches"]).url,
-    "https://chrisizworski.com/best-michigan-beaches-today/",
+    "https://chrisizworski.com/great-lakes-beaches/",
   );
   assert.notEqual(
     relatedToolFor(mackinac, ["hiking"]).url,
