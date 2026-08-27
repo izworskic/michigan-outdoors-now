@@ -40,17 +40,8 @@ export async function generateMetadata({ params }: { params: Promise<{ place: st
   };
 }
 
-export default async function PlacePage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ place: string }>;
-  searchParams: Promise<{ date?: string | string[] }>;
-}) {
-  const [{ place: slug }, query] = await Promise.all([params, searchParams]);
-  const requestedDate = Array.isArray(query.date) ? query.date[0] : query.date;
-  const conditionsDate =
-    requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : undefined;
+export default async function PlacePage({ params }: { params: Promise<{ place: string }> }) {
+  const { place: slug } = await params;
   const destination = destinations.find((candidate) => candidate.id === slug);
   if (!destination) notFound();
 
@@ -174,7 +165,6 @@ export default async function PlacePage({
             placeName={destination.name}
             waterSensitive={activities.has("beaches") || activities.has("paddling")}
             darkSky={activities.has("dark-sky")}
-            date={conditionsDate}
           />
         </div>
 
