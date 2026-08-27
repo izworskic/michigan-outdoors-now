@@ -33,9 +33,8 @@ try {
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
   assert.match(homeHtml, /Explore Michigan outdoors\./);
-  assert.match(homeHtml, /Not a shortlist\./);
   assert.match(homeHtml, /Official DNR trails and access changes/);
-  assert.doesNotMatch(homeHtml, /Where should you go outside today\?|Live statewide read|id="planner"/);
+  assert.doesNotMatch(homeHtml, /Not a shortlist\.|Where should you go outside today\?|Live statewide read|id="planner"/);
   assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
   assert.equal(home.headers.get("x-powered-by"), null);
@@ -73,9 +72,8 @@ try {
   assert.equal(explorer.status, 200);
   const explorerHtml = await explorer.text();
   assert.match(explorerHtml, /Explore Michigan outdoors\./);
-  assert.match(explorerHtml, /Not a shortlist\./);
   assert.match(explorerHtml, /Official DNR trails and access changes/);
-  assert.doesNotMatch(explorerHtml, /numbered pins|result-map-number|Show all 28 places|See all 28 places/);
+  assert.doesNotMatch(explorerHtml, /Not a shortlist\.|numbered pins|result-map-number|Show all 28 places|See all 28 places/);
 
   const outdoorUniverse = await fetch(`${origin}/api/outdoor-universe?layer=hiking`, {
     signal: AbortSignal.timeout(20_000),

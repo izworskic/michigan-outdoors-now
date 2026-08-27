@@ -26,7 +26,7 @@ const dimensions: Array<[string, number, boolean]> = [
   ["safetyUncertainty", 10, has("src/lib/decision-engine.ts", "closure", "swimHazard", "danger", "insufficient", "hardStop")],
   ["searchIntentFit", 10,
     has("src/data/specialist-tools.ts", "Michigan Beach Conditions", "Michigan Trout Report", "Northern Lights Michigan", "Michigan Fall Color") &&
-    has("src/app/explore/page.tsx", "Explore Michigan outdoors. <span>Not a shortlist.</span>", "Michigan DNR Trails Open Data")
+    has("src/app/explore/page.tsx", "Explore Michigan outdoors.", "Michigan DNR Trails Open Data")
   ],
   ["technicalSeo", 10, has("src/app/page.tsx", "WebApplication", "Dataset", "ItemList", "jsonLd")],
   ["mobileUx", 10, has("src/app/globals.css", "@media (max-width: 760px)", "@media (max-width: 560px)")],
