@@ -60,3 +60,6 @@ jobs:
 
       - name: Score platform quality
         run: npm run score:platform
+
+      - name: Score interface loss
+        run: npm run score:interface
