@@ -31,6 +31,9 @@ Where hourly inputs exist, identify useful windows rather than scoring only whol
 ## Geographic decision layer
 Support statewide and regional ranking, date choice, activity fit, drive-time constraints and eventually experience-per-hour-of-driving. The parent product answers “Where should I go?” while specialist tools answer deeper “Should I do this specific thing here?” questions.
 
+## Discovery universe versus decision-ready intelligence
+Never equate the hand-curated decision catalog with the full Michigan outdoor universe. Discovery should be broad and may use authoritative statewide datasets such as Michigan DNR trail geometry. Decision scoring remains narrower and must only apply where the required structured inputs exist. The map should visually distinguish broad discovery data from decision-ready places. Numbered markers are prohibited unless the numbers have an actual ranking or sequence meaning; arbitrary marker counts are not a navigation model.
+
 ## Search architecture
 SEO is part of product architecture. Protect existing canonical intent owners and active experiments. Research queries, SERP composition, seasonal demand and gaps before creating a new canonical. Avoid doorway pages and keyword stuffing.
 
