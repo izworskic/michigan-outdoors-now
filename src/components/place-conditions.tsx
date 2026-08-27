@@ -15,6 +15,7 @@ type PlaceConditionsProps = {
   placeName: string;
   waterSensitive: boolean;
   darkSky: boolean;
+  date?: string;
 };
 
 function metric(value: number | null | undefined, suffix = "") {
@@ -40,13 +41,15 @@ export function PlaceConditions({
   placeName,
   waterSensitive,
   darkSky,
+  date,
 }: PlaceConditionsProps) {
   const [payload, setPayload] = useState<ConditionsPayload | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetch(`/api/conditions/${encodeURIComponent(placeId)}`, { signal: controller.signal })
+    const dateQuery = date ? `?date=${encodeURIComponent(date)}` : "";
+    fetch(`/api/conditions/${encodeURIComponent(placeId)}${dateQuery}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Conditions unavailable");
         return (await response.json()) as ConditionsPayload;
@@ -57,19 +60,28 @@ export function PlaceConditions({
         setFailed(true);
       });
     return () => controller.abort();
-  }, [placeId]);
+  }, [placeId, date]);
+
+  const dateLabel = date
+    ? new Intl.DateTimeFormat("en-US", {
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+        timeZone: "UTC",
+      }).format(new Date(`${date}T12:00:00Z`))
+    : null;
 
   return (
     <section className="place-conditions" aria-labelledby="place-conditions-title">
       <div className="place-conditions-heading">
         <div>
-          <p className="eyebrow">Today at a glance</p>
+          <p className="eyebrow">{dateLabel ? `Plan for ${dateLabel}` : "Today at a glance"}</p>
           <h2 id="place-conditions-title">Planning signals for {placeName}</h2>
         </div>
         <span>{payload?.conditionsStatus === "live" ? "Live forecast" : "Planning check"}</span>
       </div>
 
-      {!payload && !failed && <p className="conditions-loading" aria-live="polite">Checking today’s forecast and air quality…</p>}
+      {!payload && !failed && <p className="conditions-loading" aria-live="polite">Checking the forecast and air quality…</p>}
       {failed && (
         <div className="conditions-fallback">
           <strong>Live conditions are temporarily unavailable.</strong>
