@@ -4,7 +4,7 @@ import { fetchWeatherSnapshots, resolveMichiganOrigin } from "../../../lib/live-
 import {
   isPlausibleMichiganCoordinate,
   rankDestinations,
-  targetDateFor,
+  targetDatesFor,
 } from "../../../lib/planner";
 import {
   activityIds,
@@ -100,34 +100,56 @@ export async function POST(request: Request) {
 
   if (!origin) return invalid("Enter a Michigan city or ZIP code.");
 
-  const targetDate = targetDateFor(body.date);
-  let weatherByDestination = new Map();
-  try {
-    weatherByDestination = await fetchWeatherSnapshots(destinations, targetDate);
-  } catch {
-    // A distance-and-fit result remains useful when a live provider is unavailable.
+  const targetDates = targetDatesFor(body.date);
+  const rankedPlanSets: ReturnType<typeof rankDestinations>[] = [];
+
+  for (const targetDate of targetDates) {
+    let weatherByDestination = new Map();
+    try {
+      weatherByDestination = await fetchWeatherSnapshots(destinations, targetDate);
+    } catch {
+      // A distance-and-fit result remains useful when a live provider is unavailable.
+    }
+
+    rankedPlanSets.push(rankDestinations({
+      latitude: origin.latitude,
+      longitude: origin.longitude,
+      originName: origin.name,
+      maxDriveHours: body.maxDriveHours,
+      activities: body.activities,
+      kids: body.kids,
+      dog: body.dog,
+      accessible: body.accessible,
+      weatherByDestination,
+    }));
   }
 
-  const plans = rankDestinations({
-    latitude: origin.latitude,
-    longitude: origin.longitude,
-    originName: origin.name,
-    maxDriveHours: body.maxDriveHours,
-    activities: body.activities,
-    kids: body.kids,
-    dog: body.dog,
-    accessible: body.accessible,
-    weatherByDestination,
-  });
+  const plans = rankedPlanSets
+    .flat()
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.driveHours - b.driveHours ||
+        a.destination.name.localeCompare(b.destination.name),
+    )
+    .filter(
+      (plan, index, all) =>
+        all.findIndex((candidate) => candidate.destination.id === plan.destination.id) === index,
+    )
+    .slice(0, 3);
+
   const hasLiveConditions = plans.some((plan) => plan.conditionsStatus === "live");
   const response: PlannerResponse = {
     origin,
-    targetDate,
+    targetDate: plans[0]?.weather?.date ?? targetDates[0],
+    targetDates,
     generatedAt: new Date().toISOString(),
     conditionsStatus: hasLiveConditions ? "live" : "estimated",
     plans,
     note: hasLiveConditions
-      ? "Forecasts help rank options, but this is planning guidance, not a safety rating. Check official closures and local conditions before leaving."
+      ? body.date === "weekend" && targetDates.length > 1
+        ? "Both days of the current weekend were compared. Forecasts help rank options, but check official closures and local conditions before leaving."
+        : "Forecasts help rank options, but this is planning guidance, not a safety rating. Check official closures and local conditions before leaving."
       : "Live forecast data was unavailable, so these are distance-and-fit suggestions. Check conditions and official closures before leaving.",
   };
 
