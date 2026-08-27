@@ -104,9 +104,9 @@ assert.ok(exploreIndex, "built destination explorer missing");
 const exploreHtml = await readFile(exploreIndex, "utf8");
 assert.match(exploreHtml, /Michigan destination finder/);
 assert.match(exploreHtml, /Find places near me/);
-assert.match(exploreHtml, /<strong>28<\/strong> matching/);
+assert.match(exploreHtml, /<strong>32<\/strong> matching/);
 assert.match(exploreHtml, /Zoomable map of matching Michigan outdoor destinations/);
-assert.equal((exploreHtml.match(/class="result-map-number"/g) ?? []).length, 28);
+assert.equal((exploreHtml.match(/class="result-map-number"/g) ?? []).length, 32);
 assert.match(exploreHtml, /CollectionPage/);
 
 for (const slug of guideSlugs) {

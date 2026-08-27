@@ -79,7 +79,7 @@ export default function Home() {
             </p>
             <div className="hero-actions">
               <a className="hero-button" href="#planner">Build my plan <span aria-hidden="true">↓</span></a>
-              <Link className="hero-secondary" href="/explore">Explore all 28 places →</Link>
+              <Link className="hero-secondary" href="/explore">Explore all {destinationCount} places →</Link>
             </div>
             <p className="byline">Designed and built by <a href="https://chrisizworski.com/">Chris Izworski</a></p>
           </div>
