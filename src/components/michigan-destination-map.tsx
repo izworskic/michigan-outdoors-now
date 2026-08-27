@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
+import type { UniverseGeoJson } from "../lib/outdoor-universe";
 import type { Destination } from "../lib/types";
 
 type LocationPoint = {
@@ -13,15 +14,21 @@ type MichiganDestinationMapProps = {
   activeId: string;
   destinations: Destination[];
   onActivate: (destinationId: string) => void;
+  trailGeoJson?: UniverseGeoJson | null;
+  trailLayerLabel?: string;
   userLocation?: LocationPoint;
 };
 
 const mapStyle = "https://tiles.openfreemap.org/styles/positron";
+const trailSourceId = "official-dnr-trails";
+const trailLayerId = "official-dnr-trails-line";
 
 export function MichiganDestinationMap({
   activeId,
   destinations,
   onActivate,
+  trailGeoJson,
+  trailLayerLabel,
   userLocation,
 }: MichiganDestinationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -85,6 +92,40 @@ export function MichiganDestinationMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!mapReady || !map) return;
+
+    const data = trailGeoJson ?? { type: "FeatureCollection", features: [] };
+    const existing = map.getSource(trailSourceId) as GeoJSONSource | undefined;
+    if (existing) {
+      existing.setData(data as never);
+      return;
+    }
+
+    map.addSource(trailSourceId, {
+      type: "geojson",
+      data: data as never,
+    });
+    map.addLayer({
+      id: trailLayerId,
+      type: "line",
+      source: trailSourceId,
+      paint: {
+        "line-color": "#26766c",
+        "line-opacity": 0.72,
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          4.5, 1.2,
+          8, 2.2,
+          12, 4,
+        ],
+      },
+    });
+  }, [mapReady, trailGeoJson]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     const mapApi = mapApiRef.current;
     if (!mapReady || !map || !mapApi) return;
 
@@ -92,13 +133,12 @@ export function MichiganDestinationMap({
     markerByIdRef.current.clear();
 
     const bounds = new mapApi.LngLatBounds();
-    destinations.forEach((destination, index) => {
+    destinations.forEach((destination) => {
       const element = document.createElement("button");
       element.type = "button";
-      element.className = "destination-pin";
-      element.textContent = String(index + 1);
-      element.setAttribute("aria-label", `${destination.name}, ${destination.area}`);
-      element.title = destination.name;
+      element.className = "destination-pin destination-pin-decision";
+      element.setAttribute("aria-label", `${destination.name}, ${destination.area}. Decision-ready place.`);
+      element.title = `${destination.name} · decision-ready`;
       element.addEventListener("click", () => onActivate(destination.id));
 
       const marker = new mapApi.Marker({ element, anchor: "center" })
@@ -150,12 +190,16 @@ export function MichiganDestinationMap({
 
   return (
     <div className="destination-map-frame">
-      <div ref={containerRef} className="destination-map" aria-label="Zoomable map of matching Michigan outdoor destinations" />
-      {!mapReady && !mapFailed && <div className="map-loading">Loading the Michigan map…</div>}
+      <div ref={containerRef} className="destination-map" aria-label="Zoomable Michigan outdoor map with decision-ready places and official DNR trail geometry" />
+      <div className="map-legend" aria-label="Map legend">
+        <span><i className="map-legend-decision" />Decision-ready place</span>
+        <span><i className="map-legend-trail" />{trailLayerLabel ?? "Official DNR trail layer"}</span>
+      </div>
+      {!mapReady && !mapFailed && <div className="map-loading">Loading the Michigan outdoor universe…</div>}
       {mapFailed && (
         <div className="map-fallback" role="status">
           <strong>The map could not load.</strong>
-          <span>Switch to List to keep browsing every place.</span>
+          <span>The discovery rail still lists decision-ready places and official DNR trail systems.</span>
         </div>
       )}
     </div>
