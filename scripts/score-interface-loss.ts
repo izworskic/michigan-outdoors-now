@@ -21,20 +21,27 @@ async function main() {
   const specialists = files["src/data/specialist-tools.ts"];
   const penalties = [];
 
-  const hasFourIntents =
-    hub.includes('title: "Today"') &&
-    hub.includes('title: "This weekend"') &&
-    hub.includes('title: "Check a place"') &&
-    hub.includes('title: "Pick an activity"') &&
-    hub.includes('className="persona-intent-tabs"');
-  penalties.push({ key: "intentRecognition", max: 20, loss: hasFourIntents ? 0 : 20 });
+  const hasAdventureChoice =
+    hub.includes("Choose your adventure") &&
+    hub.includes("Keep it close") &&
+    hub.includes("Find water") &&
+    hub.includes("Head north") &&
+    hub.includes("Disappear for a while") &&
+    hub.includes("Chase sunset") &&
+    hub.includes("Give me a river") &&
+    hub.includes("Make it a big day") &&
+    hub.includes("Wait for dark") &&
+    hub.includes("Make a weekend of it") &&
+    hub.includes("Surprise me") &&
+    hub.includes('className="adventure-deck"');
+  penalties.push({ key: "intentRecognition", max: 20, loss: hasAdventureChoice ? 0 : 20 });
 
   const mapFirst = page.includes("DestinationExplorer") || page.includes("MichiganDestinationMap");
   const tripScopeFirst =
-    hub.includes("Where are you starting?") &&
-    hub.includes("City or ZIP") &&
-    hub.includes("Drive up to") &&
-    hub.includes("Show me where to go");
+    hub.includes("Starting from") &&
+    hub.includes("Pick a pull") &&
+    hub.includes("chooseAdventure") &&
+    hub.includes("No setup wizard");
   penalties.push({ key: "timeToValue", max: 20, loss: mapFirst ? 20 : tripScopeFirst ? 0 : 10 });
 
   const primaryText = (page + hub).toLowerCase();
@@ -43,21 +50,24 @@ async function main() {
   penalties.push({ key: "architectureJargon", max: 15, loss: Math.min(15, jargon.length * 5) });
 
   const completeDecision =
-    hub.includes("Go when") &&
-    hub.includes("Why it works") &&
-    hub.includes("Know before you go") &&
-    hub.includes("Good backups");
+    hub.includes("Why now") &&
+    hub.includes("Best window") &&
+    hub.includes("One thing to watch") &&
+    hub.includes("Keep wandering");
   penalties.push({ key: "decisionCompleteness", max: 15, loss: completeDecision ? 0 : 15 });
 
   const clearTravelRadius =
-    hub.includes("Use current location") &&
-    hub.includes("Drive up to") &&
-    hub.includes("const driveChoices = [1, 2, 3, 4, 5, 6, 7, 8]") &&
+    hub.includes("Use my current location") &&
+    hub.includes("driveHours: 8") &&
+    hub.includes("What if we kept driving?") &&
+    hub.includes("Bring it closer") &&
     hub.includes("one way");
   penalties.push({ key: "locationAndRadiusClarity", max: 10, loss: clearTravelRadius ? 0 : 10 });
 
   const activityTruth =
-    hub.includes("Different activities need different data") &&
+    hub.includes('activities: ["paddling", "beaches", "scenic"]') &&
+    hub.includes('activities: ["fishing", "paddling", "scenic"]') &&
+    hub.includes('activities: ["dark-sky", "scenic"]') &&
     specialists.includes("Michigan Beach Conditions") &&
     specialists.includes("Michigan Trout Report") &&
     specialists.includes("Michigan Birding Report") &&
@@ -65,16 +75,17 @@ async function main() {
   penalties.push({ key: "activityTruth", max: 10, loss: activityTruth ? 0 : 10 });
 
   const recovery =
-    hub.includes("Good backups inside your range") &&
-    hub.includes("No strong match showed up inside your") &&
-    hub.includes("Try a wider travel limit");
+    hub.includes("What if we kept driving?") &&
+    hub.includes("Bring it closer") &&
+    hub.includes("Change the vibe") &&
+    hub.includes("Nothing is making a strong case yet");
   penalties.push({ key: "recoveryAlternatives", max: 5, loss: recovery ? 0 : 5 });
 
   const hierarchy =
-    css.includes(".persona-intent-tabs") &&
-    css.includes(".persona-quick-filters") &&
-    css.includes(".persona-lead-card") &&
-    css.includes(".persona-range-catalog>summary") &&
+    css.includes(".adventure-deck") &&
+    css.includes(".adventure-lead") &&
+    css.includes(".adventure-wander") &&
+    css.includes(".adventure-free-roam") &&
     css.includes("@media(max-width:700px)") &&
     page.includes("OutdoorIntentHub");
   penalties.push({ key: "visualHierarchy", max: 5, loss: hierarchy ? 0 : 5 });
@@ -82,10 +93,10 @@ async function main() {
   const total = penalties.reduce((sum, item) => sum + item.loss, 0);
   const fatal = [];
   if (mapFirst) fatal.push("homepage starts with the map instead of user intent");
-  if (!hasFourIntents) fatal.push("compact planning paths missing");
+  if (!hasAdventureChoice) fatal.push("adventure branches are missing");
   if (jargon.length >= 2) fatal.push("architecture jargon dominates primary user copy");
-  if (!tripScopeFirst || !clearTravelRadius) fatal.push("location and maximum travel radius are not clear before recommendation");
-  if (!completeDecision) fatal.push("primary answer lacks where/when/why/watch-out/alternative");
+  if (!tripScopeFirst || !clearTravelRadius) fatal.push("adventure choice cannot branch naturally from a starting point");
+  if (!completeDecision) fatal.push("primary answer lacks why/window/watch-out/wandering alternatives");
   if (!activityTruth) fatal.push("specialist-dependent activities are flattened");
 
   console.log(JSON.stringify({
