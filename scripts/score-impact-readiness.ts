@@ -155,7 +155,7 @@ const search = calculate([
     checks: [
       [8, has("src/app/layout.tsx", "<Analytics", "<SpeedInsights") && has("src/components/planner.tsx", "planner_started", "planner_completed")],
       [7, has("docs/search-growth-plan.md", "Search Console", "qualified organic entries")],
-      [5, has("scripts/check-seo.mjs", "53", "destination decision pages")],
+      [5, has("scripts/check-seo.mjs", "57", "destination decision pages")],
       [5, gates.productionVerified === true],
       [5, gates.stableBaselineRecorded === true],
       [5, gates.tenXOutcomeReached === true],

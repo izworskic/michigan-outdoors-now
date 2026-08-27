@@ -10,11 +10,11 @@ The planner returns up to three explainable destination matches based on:
 - outdoor activities and practical needs
 - current forecast, wind, and U.S. AQI when available
 
-It uses a curated set of 28 destinations, deterministic ranking, Open-Meteo data, and a distance-and-fit fallback. It requires no API key, account, database, or LLM. Device location is an optional one-tap input; typed Michigan cities and ZIP codes remain the default fallback.
+It uses a curated set of 32 destinations, deterministic ranking, Open-Meteo data, and a distance-and-fit fallback. It requires no API key, account, database, or LLM. Device location is an optional one-tap input; typed Michigan cities and ZIP codes remain the default fallback.
 
 The site also includes ten substantial, server-rendered planning guides for distinct search intents: outdoors today, family days, beaches, hiking, birding, paddling, dark skies, freighters, dog-friendly trips, and lower-barrier access. Each guide includes unique decision help, relevant curated examples, official links, FAQs, structured data, and a preconfigured planner.
 
-The impact-readiness release adds a real zoomable, filterable Michigan map at `/explore` and 28 server-rendered destination decision pages at `/places/[place]`. The map uses MapLibre with OpenFreeMap/OpenStreetMap data, needs no account or API key, shows numbered pins matched to the result list, and can privately rank matches from a visitor's one-time device location. Each destination page combines a unique direct answer, live planning signals, activity and access context, official and map links, nearby alternatives, related guides, structured place data, and the interactive planner.
+The impact-readiness release adds a real zoomable, filterable Michigan map at `/explore` and 32 server-rendered destination decision pages at `/places/[place]`. The map uses MapLibre with OpenFreeMap/OpenStreetMap data, needs no account or API key, shows numbered pins matched to the result list, and can privately rank matches from a visitor's one-time device location. Each destination page combines a unique direct answer, live planning signals, activity and access context, official and map links, nearby alternatives, related guides, structured place data, and the interactive planner.
 
 ## Local development
 

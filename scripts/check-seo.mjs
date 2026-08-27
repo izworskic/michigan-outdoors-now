@@ -85,6 +85,10 @@ const placeSlugs = [
   "holland-state-park",
   "warren-dunes",
   "grand-haven-state-park",
+  "mackinac-island",
+  "torch-lake-antrim",
+  "silver-lake-state-park",
+  "isle-royale",
 ];
 
 for (const slug of originSlugs) {
