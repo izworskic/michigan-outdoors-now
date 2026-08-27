@@ -47,12 +47,12 @@ test("trail system summaries group segments instead of pretending each line is a
     features: [
       {
         type: "Feature",
-        geometry: null,
+        geometry: { type: "LineString", coordinates: [[-89.1, 46.4], [-88.7, 46.6]] },
         properties: { OBJECTID: 1, TrailType: "Hiking", Name: "North Country Trail", SegmentLengthMiles: 2.2 },
       },
       {
         type: "Feature",
-        geometry: null,
+        geometry: { type: "LineString", coordinates: [[-87.3, 46.5], [-86.9, 46.7]] },
         properties: { OBJECTID: 2, TrailType: "Hiking", Name: "North Country Trail", SegmentLengthMiles: 3.1 },
       },
       {
@@ -68,4 +68,8 @@ test("trail system summaries group segments instead of pretending each line is a
   assert.equal(systems[0].name, "North Country Trail");
   assert.equal(systems[0].segments, 2);
   assert.equal(systems[0].miles, 5.3);
+  assert.equal(systems[0].longitude, -88);
+  assert.equal(systems[0].latitude, 46.55);
+  assert.equal(systems[1].longitude, null);
+  assert.equal(systems[1].latitude, null);
 });

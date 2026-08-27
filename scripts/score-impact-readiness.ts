@@ -66,9 +66,9 @@ const usefulness = calculate([
     name: "Destination discovery",
     checks: [
       [10,
-        has("src/components/michigan-destination-map.tsx", "maplibre-gl", "tiles.openfreemap.org", "official-dnr-trails", "destination-pin-decision") &&
-        has("src/components/destination-explorer.tsx", "explorer_filter_changed", "Find decision-ready places near me", "Official DNR map layer") &&
-        has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "fetchOutdoorUniverse")],
+        has("src/components/michigan-destination-map.tsx", "maplibre-gl", "tiles.openfreemap.org", "official-dnr-trails", "official-dnr-trail-systems", "destination-pin-decision") &&
+        has("src/components/destination-explorer.tsx", "explorer_filter_changed", "Find outdoor places near me", "Trail systems", "systemCount") &&
+        has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "fetchOutdoorUniverse", "longitude", "latitude")],
       [8, destinations.length >= 28 && has("src/app/sitemap.ts", "destinations.map", "/places/${destination.id}")],
       [7, has("src/components/place-conditions.tsx", "Rain chance", "Peak gusts", "Air quality")],
       [5, has("src/app/places/[place]/page.tsx", "nearbyDestinations", "NEARBY ALTERNATIVES")],
@@ -118,7 +118,7 @@ const search = calculate([
     checks: [
       [10, guides.length >= 10],
       [8,
-        has("src/app/explore/page.tsx", "Michigan Outdoor Map: Trails, Parks and Decision-Ready Places", "Broad discovery. Narrow confidence.", '"@type": "Dataset"') &&
+        has("src/app/explore/page.tsx", "Michigan Outdoor Map: Trails, Parks and Places to Explore", "Explore broadly. Plan deeply.", '"@type": "Dataset"') &&
         has("src/app/api/outdoor-universe/route.ts", "fetchOutdoorUniverse", "noindex, nofollow")],
       [8, destinations.length >= 28 && has("src/app/places/[place]/page.tsx", "generateStaticParams", "generateMetadata")],
       [7, has("src/app/from/[origin]/page.tsx", "generateStaticParams", "Michigan Day Trips from")],

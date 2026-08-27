@@ -181,7 +181,7 @@ export function DestinationExplorer() {
           return;
         }
         setLocation({ latitude, longitude });
-        setLocationStatus("Decision-ready places are sorted near you.");
+        setLocationStatus("Full-planning places are sorted near you.");
         setLocating(false);
         safeTrack("explorer_device_location_used");
       },
@@ -241,7 +241,7 @@ export function DestinationExplorer() {
 
         <button type="button" className="map-command-button map-near-button" onClick={useMyLocation} disabled={locating}>
           <span aria-hidden="true">◎</span>
-          {locating ? "Finding…" : location ? "Near me" : "Find decision-ready places near me"}
+          {locating ? "Finding…" : location ? "Near me" : "Find outdoor places near me"}
         </button>
 
         <details className="map-filter-menu">
@@ -291,6 +291,7 @@ export function DestinationExplorer() {
           destinations={visible}
           onActivate={activate}
           trailGeoJson={filteredTrailGeoJson}
+          trailSystems={filteredTrailSystems}
           closuresGeoJson={universe.access.closures}
           reroutesGeoJson={universe.access.reroutes}
           closureCount={closureCount}
@@ -306,7 +307,7 @@ export function DestinationExplorer() {
           </div>
           {!trailLoading && universe.status === "live" && (
             <>
-              <span>{universe.featureCount.toLocaleString()} segments · {universe.miles.toLocaleString()} mi</span>
+              <span>{universe.systemCount.toLocaleString()} trail systems · {universe.featureCount.toLocaleString()} segments · {universe.miles.toLocaleString()} mi</span>
               {closureCount > 0 && <span className="map-access-alert">{closureCount} closure{closureCount === 1 ? "" : "s"}</span>}
               {rerouteCount > 0 && <span>{rerouteCount} reroute{rerouteCount === 1 ? "" : "s"}</span>}
               {universe.partial && <span>partial coverage</span>}
@@ -318,7 +319,7 @@ export function DestinationExplorer() {
         {activeDestination && (
           <article className="map-selection">
             <button type="button" className="map-selection-close" onClick={() => setActiveId("")} aria-label="Close selected place">×</button>
-            <span>Decision ready · {regionLabels[destinationRegion(activeDestination)]}</span>
+            <span>Full trip planning · {regionLabels[destinationRegion(activeDestination)]}</span>
             <h3>{activeDestination.name}</h3>
             <p>{activeDestination.summary}</p>
             <div>
@@ -337,10 +338,10 @@ export function DestinationExplorer() {
           </header>
           <div className="universe-drawer-tabs" role="tablist" aria-label="Browse map results">
             <button type="button" role="tab" aria-selected={browseTab === "decisions"} onClick={() => setBrowseTab("decisions")}>
-              Decision ready <span>{visible.length}</span>
+              Full planning <span>{visible.length}</span>
             </button>
             <button type="button" role="tab" aria-selected={browseTab === "trails"} onClick={() => setBrowseTab("trails")}>
-              DNR trails <span>{filteredTrailSystems.length}</span>
+              Trail systems <span>{filteredTrailSystems.length}</span>
             </button>
           </div>
 
@@ -363,7 +364,7 @@ export function DestinationExplorer() {
                   })}
                 </div>
               ) : (
-                <div className="drawer-empty"><strong>No decision-ready match.</strong><span>Clear a filter or browse the DNR trail systems.</span></div>
+                <div className="drawer-empty"><strong>No full-planning place matches.</strong><span>Clear a filter or browse the statewide trail systems.</span></div>
               )
             ) : (
               universe.status === "live" && trailSystemsToShow.length ? (

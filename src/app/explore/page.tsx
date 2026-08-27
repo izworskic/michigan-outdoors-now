@@ -5,14 +5,14 @@ import { destinations } from "../../data/destinations";
 import { jsonLd, personSchema, siteUrl } from "../../lib/site";
 
 export const metadata: Metadata = {
-  title: "Michigan Outdoor Map: Trails, Parks and Decision-Ready Places",
+  title: "Michigan Outdoor Map: Trails, Parks and Places to Explore",
   description:
-    "Explore Michigan with official DNR trail geometry, temporary closures and reroutes, plus decision-ready outdoor destinations.",
+    "Explore Michigan with official DNR trail geometry, temporary closures and reroutes, plus places with deeper trip-planning detail.",
   alternates: { canonical: "/explore" },
   openGraph: {
-    title: "Michigan Outdoor Map: Official Trails + Decision Intelligence",
+    title: "Michigan Outdoor Map: Official Trails + Trip Planning",
     description:
-      "A statewide Michigan outdoor map using official DNR trails, live access changes, and separate decision-ready places.",
+      "A statewide Michigan outdoor map using official DNR trails, live access changes, and places with deeper planning detail.",
     url: "/explore",
   },
   twitter: {
@@ -55,7 +55,7 @@ export default function ExplorePage() {
       {
         "@type": "ItemList",
         "@id": `${pageUrl}#decision-ready`,
-        name: "Decision-ready Michigan outdoor destinations",
+        name: "Michigan outdoor places with full trip planning",
         numberOfItems: destinations.length,
         itemListElement: destinations.map((destination, index) => ({
           "@type": "ListItem",
@@ -85,13 +85,13 @@ export default function ExplorePage() {
 
       <section className="explore-after-map content-wrap" aria-labelledby="explore-method-title">
         <div>
-          <p className="eyebrow">Broad discovery. Narrow confidence.</p>
-          <h2 id="explore-method-title">The map can be comprehensive without pretending every line has a live score.</h2>
+          <p className="eyebrow">Explore broadly. Plan deeply.</p>
+          <h2 id="explore-method-title">See more of Michigan first. Go deeper when a place catches your attention.</h2>
         </div>
         <div>
           <p>
-            DNR trail geometry, temporary closures and reroutes drive discovery. Bright decision dots are the smaller
-            set where Michigan Outdoors Now has enough structured context for deeper conditions and trip planning.
+            Statewide DNR trail systems, mapped routes, temporary closures and reroutes make the map broad enough to wander.
+            Larger place markers lead to the locations where Michigan Outdoors Now can add deeper conditions and trip planning.
           </p>
           <div className="explore-after-links">
             <Link href="/ideas/outdoors-today">Outdoor ideas for today →</Link>

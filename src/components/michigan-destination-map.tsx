@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, Marker as MapLibreMarker } from "maplibre-gl";
-import type { UniverseGeoJson, UniverseTrailProperties } from "../lib/outdoor-universe";
+import type { UniverseGeoJson, UniverseTrailProperties, UniverseTrailSystem } from "../lib/outdoor-universe";
 import type { Destination } from "../lib/types";
 
 type LocationPoint = {
@@ -15,6 +15,7 @@ type MichiganDestinationMapProps = {
   destinations: Destination[];
   onActivate: (destinationId: string) => void;
   trailGeoJson?: UniverseGeoJson | null;
+  trailSystems?: UniverseTrailSystem[];
   closuresGeoJson?: UniverseGeoJson | null;
   reroutesGeoJson?: UniverseGeoJson | null;
   closureCount?: number;
@@ -26,6 +27,8 @@ type MichiganDestinationMapProps = {
 const mapStyle = "https://tiles.openfreemap.org/styles/positron";
 const trailSourceId = "official-dnr-trails";
 const trailLayerId = "official-dnr-trails-line";
+const trailSystemSourceId = "official-dnr-trail-systems";
+const trailSystemLayerId = "official-dnr-trail-systems-point";
 const closureSourceId = "official-dnr-closures";
 const closureLayerId = "official-dnr-closures-line";
 const rerouteSourceId = "official-dnr-reroutes";
@@ -61,6 +64,7 @@ export function MichiganDestinationMap({
   destinations,
   onActivate,
   trailGeoJson,
+  trailSystems = [],
   closuresGeoJson,
   reroutesGeoJson,
   closureCount = 0,
@@ -150,9 +154,47 @@ export function MichiganDestinationMap({
         type: "line",
         source: trailSourceId,
         paint: {
-          "line-color": "#26766c",
+          "line-color": "#477f91",
           "line-opacity": 0.7,
           "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 1.1, 8, 2, 12, 3.6],
+        },
+      });
+    }
+
+    const trailSystemData = {
+      type: "FeatureCollection" as const,
+      features: trailSystems
+        .filter((system) => system.longitude !== null && system.latitude !== null)
+        .map((system) => ({
+          type: "Feature" as const,
+          geometry: {
+            type: "Point" as const,
+            coordinates: [system.longitude as number, system.latitude as number],
+          },
+          properties: {
+            name: system.name,
+            type: system.type,
+            unit: system.unit ?? "",
+            miles: system.miles,
+            segments: system.segments,
+          },
+        })),
+    };
+    const existingSystemSource = map.getSource(trailSystemSourceId) as GeoJSONSource | undefined;
+    if (existingSystemSource) existingSystemSource.setData(trailSystemData as never);
+    else map.addSource(trailSystemSourceId, { type: "geojson", data: trailSystemData as never });
+
+    if (!map.getLayer(trailSystemLayerId)) {
+      map.addLayer({
+        id: trailSystemLayerId,
+        type: "circle",
+        source: trailSystemSourceId,
+        paint: {
+          "circle-color": "#315f7a",
+          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 4.5, 0.55, 8, 0.8],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4.5, 2.4, 8, 4, 12, 5.5],
+          "circle-stroke-color": "rgba(255,255,255,.9)",
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 4.5, 0.7, 9, 1.2],
         },
       });
     }
@@ -162,7 +204,7 @@ export function MichiganDestinationMap({
         type: "line",
         source: rerouteSourceId,
         paint: {
-          "line-color": "#b46620",
+          "line-color": "#a86a45",
           "line-opacity": 0.96,
           "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 2.2, 9, 4.2, 13, 6],
           "line-dasharray": [1.5, 1.4],
@@ -175,7 +217,7 @@ export function MichiganDestinationMap({
         type: "line",
         source: closureSourceId,
         paint: {
-          "line-color": "#9c3328",
+          "line-color": "#9b4b43",
           "line-opacity": 0.96,
           "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 2.8, 9, 5.4, 13, 8],
         },
@@ -184,6 +226,39 @@ export function MichiganDestinationMap({
 
     const api = mapApi;
     const activeMap = map;
+
+    const trailSystemClick = (event: MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const properties = (feature?.properties ?? {}) as {
+        name?: string;
+        type?: string;
+        unit?: string;
+        miles?: number | string;
+        segments?: number | string;
+      };
+      const node = document.createElement("div");
+      node.className = "trail-system-popup";
+      const eyebrow = document.createElement("span");
+      eyebrow.textContent = "Michigan DNR trail system";
+      const title = document.createElement("strong");
+      title.textContent = properties.name || "Mapped trail system";
+      const detail = document.createElement("p");
+      const miles = Number(properties.miles ?? 0);
+      const segments = Number(properties.segments ?? 0);
+      detail.textContent = [
+        properties.type || "Trail",
+        properties.unit || "",
+        miles > 0 ? `${miles.toLocaleString()} mapped mi` : "",
+        segments > 0 ? `${segments.toLocaleString()} segment${segments === 1 ? "" : "s"}` : "",
+      ].filter(Boolean).join(" · ");
+      const note = document.createElement("small");
+      note.textContent = "Map anchor for the trail network, not a trailhead. Zoom in to follow the mapped route.";
+      node.append(eyebrow, title, detail, note);
+      new api.Popup({ closeButton: true, maxWidth: "340px" })
+        .setLngLat(event.lngLat)
+        .setDOMContent(node)
+        .addTo(activeMap);
+    };
 
     function accessClick(kind: "closure" | "reroute") {
       return (event: MapLayerMouseEvent) => {
@@ -200,22 +275,28 @@ export function MichiganDestinationMap({
     const pointerOn = () => { activeMap.getCanvas().style.cursor = "pointer"; };
     const pointerOff = () => { activeMap.getCanvas().style.cursor = ""; };
 
+    activeMap.on("click", trailSystemLayerId, trailSystemClick);
     activeMap.on("click", closureLayerId, closureClick);
     activeMap.on("click", rerouteLayerId, rerouteClick);
+    activeMap.on("mouseenter", trailSystemLayerId, pointerOn);
     activeMap.on("mouseenter", closureLayerId, pointerOn);
     activeMap.on("mouseenter", rerouteLayerId, pointerOn);
+    activeMap.on("mouseleave", trailSystemLayerId, pointerOff);
     activeMap.on("mouseleave", closureLayerId, pointerOff);
     activeMap.on("mouseleave", rerouteLayerId, pointerOff);
 
     return () => {
+      activeMap.off("click", trailSystemLayerId, trailSystemClick);
       activeMap.off("click", closureLayerId, closureClick);
       activeMap.off("click", rerouteLayerId, rerouteClick);
+      activeMap.off("mouseenter", trailSystemLayerId, pointerOn);
       activeMap.off("mouseenter", closureLayerId, pointerOn);
       activeMap.off("mouseenter", rerouteLayerId, pointerOn);
+      activeMap.off("mouseleave", trailSystemLayerId, pointerOff);
       activeMap.off("mouseleave", closureLayerId, pointerOff);
       activeMap.off("mouseleave", rerouteLayerId, pointerOff);
     };
-  }, [mapReady, trailGeoJson, closuresGeoJson, reroutesGeoJson]);
+  }, [mapReady, trailGeoJson, trailSystems, closuresGeoJson, reroutesGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -230,8 +311,8 @@ export function MichiganDestinationMap({
       const element = document.createElement("button");
       element.type = "button";
       element.className = "destination-pin destination-pin-decision";
-      element.setAttribute("aria-label", `${destination.name}, ${destination.area}. Decision-ready place.`);
-      element.title = `${destination.name} · decision-ready`;
+      element.setAttribute("aria-label", `${destination.name}, ${destination.area}. Full trip-planning place.`);
+      element.title = `${destination.name} · full trip planning`;
       element.addEventListener("click", () => onActivate(destination.id));
 
       const marker = new mapApi.Marker({ element, anchor: "center" })
@@ -281,10 +362,11 @@ export function MichiganDestinationMap({
 
   return (
     <div className="destination-map-frame">
-      <div ref={containerRef} className="destination-map" aria-label="Michigan outdoor map with decision-ready places, official DNR trails, temporary closures, and reroutes" />
+      <div ref={containerRef} className="destination-map" aria-label="Michigan outdoor map with full-planning places, statewide DNR trail systems and routes, temporary closures, and reroutes" />
       <div className="map-legend" aria-label="Map legend">
-        <span><i className="map-legend-decision" />Decision ready</span>
-        <span><i className="map-legend-trail" />{trailLayerLabel ?? "DNR trail"}</span>
+        <span><i className="map-legend-decision" />Full trip planning</span>
+        <span><i className="map-legend-system" />Trail system</span>
+        <span><i className="map-legend-trail" />{trailLayerLabel ?? "DNR trail route"}</span>
         {closureCount > 0 && <span><i className="map-legend-closure" />Closure</span>}
         {rerouteCount > 0 && <span><i className="map-legend-reroute" />Reroute</span>}
       </div>
@@ -292,7 +374,7 @@ export function MichiganDestinationMap({
       {mapFailed && (
         <div className="map-fallback" role="status">
           <strong>The map could not load.</strong>
-          <span>Use Browse to inspect decision-ready places and DNR trail systems.</span>
+          <span>Use Browse to inspect full-planning places and statewide DNR trail systems.</span>
         </div>
       )}
     </div>

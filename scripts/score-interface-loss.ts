@@ -50,8 +50,8 @@ async function main() {
   const clearTravelRadius =
     hub.includes("Use my location") &&
     hub.includes("Maximum one-way drive") &&
-    hub.includes("Up to 4 hours") &&
-    hub.includes("0–4 hours away") &&
+    hub.includes("Up to 8 hours") &&
+    hub.includes("nearby through 8 hours away") &&
     hub.includes("This is a radius, not a target.");
   penalties.push({ key: "locationAndRadiusClarity", max: 10, loss: clearTravelRadius ? 0 : 10 });
 
@@ -72,6 +72,7 @@ async function main() {
   const hierarchy =
     css.includes(".persona-intent-grid") &&
     css.includes(".persona-lead-card") &&
+    css.includes(".persona-landscapes") &&
     css.includes("@media(max-width:700px)") &&
     page.includes("OutdoorIntentHub");
   penalties.push({ key: "visualHierarchy", max: 5, loss: hierarchy ? 0 : 5 });

@@ -1,0 +1,182 @@
+:root{
+  --pine-950:#132b3a;
+  --pine-900:#1b3d50;
+  --pine-800:#28566a;
+  --pine-700:#477587;
+  --lake-500:#3b8096;
+  --lake-200:#c7dfe5;
+  --paper:#ece4d7;
+  --paper-light:#f8f5ef;
+  --paper-deep:#ded2c1;
+  --ink:#243139;
+  --ink-muted:#69737a;
+  --orange:#b96d45;
+  --orange-dark:#8f5136;
+  --line:rgba(36,49,57,.18);
+  --shadow:0 24px 60px rgba(22,43,58,.12);
+}
+body{background:#f8f5ef;color:#243139}
+.site-header{background:#132b3a}
+.persona-hero{
+  position:relative;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 78% 15%,rgba(119,165,181,.16),transparent 25%),
+    linear-gradient(145deg,#102838 0%,#19384a 58%,#234b5d 100%);
+}
+.persona-hero::before{
+  content:"";
+  position:absolute;
+  inset:-18% -8%;
+  pointer-events:none;
+  opacity:.42;
+  background:
+    repeating-radial-gradient(ellipse at 82% 35%,transparent 0 31px,rgba(255,255,255,.055) 32px 33px,transparent 34px 61px),
+    repeating-radial-gradient(ellipse at 13% 105%,transparent 0 42px,rgba(199,223,229,.05) 43px 44px,transparent 45px 78px);
+  transform:rotate(-4deg);
+}
+.persona-hero-copy,.persona-intent-grid{position:relative;z-index:1}
+.persona-intent-card[data-active="true"]{
+  background:#f6f1e8;
+  box-shadow:inset 0 4px #a96242;
+}
+.persona-build-button{
+  border-color:#8f5136;
+  background:#b96d45;
+  color:#fffaf4;
+}
+.persona-build-button:hover:not(:disabled){background:#a75e3d}
+.persona-lead-rating{background:#dce8e9}
+.persona-watch{background:#f4e9df}
+.persona-watch strong{color:#724932}
+.persona-local{background:#e6ddd0}
+.persona-awaiting-plan{background:#e8e1d6}
+.persona-drive-field>div{
+  grid-template-columns:repeat(4,1fr);
+}
+.map-legend-system{
+  width:8px;
+  height:8px;
+  border:1px solid rgba(255,255,255,.95);
+  border-radius:50%;
+  background:#315f7a;
+  box-shadow:0 0 0 1px rgba(36,49,57,.28);
+}
+.trail-system-popup{
+  display:grid;
+  gap:5px;
+  min-width:220px;
+  padding:3px 1px;
+}
+.trail-system-popup span{
+  color:#315f7a;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.trail-system-popup strong{
+  color:#132b3a;
+  font-family:Georgia,serif;
+  font-size:18px;
+  font-weight:500;
+}
+.trail-system-popup p,.trail-system-popup small{
+  margin:0;
+  color:#69737a;
+  font-size:9px;
+  line-height:1.45;
+}
+.persona-landscapes{
+  width:min(calc(100% - 40px),1240px);
+  margin-inline:auto;
+  display:grid;
+  grid-template-columns:minmax(280px,.42fr) minmax(0,1fr);
+  gap:clamp(34px,6vw,78px);
+  padding:76px 0 82px;
+  border-top:1px solid var(--line);
+}
+.persona-landscape-intro{
+  align-self:start;
+  position:sticky;
+  top:28px;
+}
+.persona-landscape-intro h2{
+  margin:7px 0 13px;
+  font:500 clamp(38px,4.5vw,57px)/1 Georgia,serif;
+  letter-spacing:-.045em;
+}
+.persona-landscape-intro>p{
+  margin:0;
+  color:var(--ink-muted);
+  font-size:13px;
+  line-height:1.7;
+}
+.persona-landscape-intro>a{
+  display:inline-flex;
+  margin-top:20px;
+  color:var(--pine-800);
+  font-size:10px;
+  font-weight:850;
+  text-decoration:none;
+}
+.persona-landscape-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  border-top:1px solid var(--line);
+  border-left:1px solid var(--line);
+}
+.persona-landscape-grid>a{
+  min-height:210px;
+  display:flex;
+  flex-direction:column;
+  padding:21px;
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  background:rgba(248,245,239,.82);
+  color:inherit;
+  text-decoration:none;
+  transition:background .15s ease,transform .15s ease;
+}
+.persona-landscape-grid>a:hover{
+  background:#e8eff0;
+  transform:translateY(-1px);
+}
+.persona-landscape-grid span{
+  color:#8f5136;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.persona-landscape-grid strong{
+  margin-top:28px;
+  max-width:270px;
+  font:500 23px/1.05 Georgia,serif;
+}
+.persona-landscape-grid small{
+  margin-top:10px;
+  color:var(--ink-muted);
+  font-size:10px;
+  line-height:1.55;
+}
+.persona-landscape-grid b{
+  margin-top:auto;
+  padding-top:16px;
+  color:var(--pine-800);
+  font-size:9px;
+}
+@media(max-width:900px){
+  .persona-landscapes{grid-template-columns:1fr}
+  .persona-landscape-intro{position:static}
+}
+@media(max-width:700px){
+  .persona-drive-field>div{grid-template-columns:repeat(2,1fr)}
+  .persona-drive-field button:last-child{grid-column:auto}
+  .persona-landscapes{
+    width:min(calc(100% - 24px),1240px);
+    padding:56px 0 62px;
+  }
+  .persona-landscape-grid{grid-template-columns:1fr}
+  .persona-landscape-grid>a{min-height:170px}
+}
