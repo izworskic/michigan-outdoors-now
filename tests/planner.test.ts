@@ -77,11 +77,11 @@ test("Detroit calendar choices use the Michigan date", () => {
 });
 
 test("a drive limit is an inclusive maximum radius, not a target band", () => {
-  for (const hours of [0.5, 1, 2.5, 3.9, 4]) {
-    assert.equal(isWithinDriveRadius(hours, 4), true);
+  for (const hours of [0.5, 1, 2.5, 4, 6.5, 7.9, 8]) {
+    assert.equal(isWithinDriveRadius(hours, 8), true);
   }
-  assert.equal(isWithinDriveRadius(4.06, 4), false);
-  assert.equal(isWithinDriveRadius(4.1, 4), false);
+  assert.equal(isWithinDriveRadius(8.06, 8), false);
+  assert.equal(isWithinDriveRadius(8.1, 8), false);
 });
 
 test("hard filters honor drive time and activity", () => {
@@ -229,7 +229,7 @@ test("share fragments round-trip valid planner settings and reject invalid data"
   const request = {
     origin: "Bay City",
     date: "weekend" as const,
-    maxDriveHours: 4,
+    maxDriveHours: 8,
     activities: ["freighters", "scenic"] as const,
     kids: true,
     dog: false,

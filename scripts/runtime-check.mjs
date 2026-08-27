@@ -40,8 +40,8 @@ try {
   assert.match(homeHtml, /Where are you starting, and how far would you go\?/);
   assert.match(homeHtml, /Starting city or ZIP/);
   assert.match(homeHtml, /Maximum one-way drive/);
-  assert.match(homeHtml, /Up to 4 hours/);
-  assert.match(homeHtml, /0–4 hours away/);
+  assert.match(homeHtml, /Up to 8 hours/);
+  assert.match(homeHtml, /nearby through 8 hours away/);
   assert.doesNotMatch(homeHtml, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
   assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
@@ -129,7 +129,7 @@ try {
     body: JSON.stringify({
       origin: "x",
       date: "today",
-      maxDriveHours: 4,
+      maxDriveHours: 8,
       activities: [],
       kids: false,
       dog: false,
@@ -160,7 +160,7 @@ try {
   const payload = await recommendation.json();
   assert.match(payload.origin.name, /Bay City/);
   assert.ok(payload.plans.length > 0 && payload.plans.length <= 3);
-  assert.ok(payload.plans.every((plan) => plan.driveHours <= 4.1));
+  assert.ok(payload.plans.every((plan) => plan.driveHours <= 8.1));
   assert.ok(payload.plans.every((plan) => plan.destination.activities.includes("hiking") || plan.destination.activities.includes("birding")));
 
   const coordinateRecommendation = await fetch(`${origin}/api/recommendations`, {

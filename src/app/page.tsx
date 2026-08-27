@@ -56,10 +56,10 @@ export default function Home() {
         mainEntity: [
           {
             "@type": "Question",
-            name: "What does a four-hour travel limit mean?",
+            name: "What does an eight-hour travel limit mean?",
             acceptedAnswer: {
               "@type": "Answer",
-              text: "It means any qualifying destination from nearby through four hours away can be considered. Four hours is the maximum one-way drive, not a target distance.",
+              text: "It means any qualifying destination from nearby through eight hours away can be considered. Eight hours is the maximum one-way drive, not a target distance.",
             },
           },
           {
