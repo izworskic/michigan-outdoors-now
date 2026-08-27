@@ -173,7 +173,13 @@ export function MichiganDestinationMap({
     const trailSystemData = {
       type: "FeatureCollection" as const,
       features: trailSystems
-        .filter((system) => system.longitude !== null && system.latitude !== null)
+        .filter(
+          (system) =>
+            typeof system.longitude === "number" &&
+            Number.isFinite(system.longitude) &&
+            typeof system.latitude === "number" &&
+            Number.isFinite(system.latitude),
+        )
         .map((system) => ({
           type: "Feature" as const,
           geometry: {
