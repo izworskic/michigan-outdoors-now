@@ -144,7 +144,7 @@ for (const slug of placeSlugs) {
 const sitemapPath = files.find((file) => file.endsWith("sitemap.xml.body"));
 assert.ok(sitemapPath, "built sitemap body was not found");
 const sitemap = await readFile(sitemapPath, "utf8");
-assert.equal((sitemap.match(/<url>/g) ?? []).length, 53);
+assert.equal((sitemap.match(/<url>/g) ?? []).length, 57);
 assert.doesNotMatch(sitemap, /<priority>|<changefreq>|<lastmod>/);
 
 const robotsPath = files.find((file) => file.endsWith("robots.txt.body"));
@@ -152,4 +152,4 @@ assert.ok(robotsPath, "built robots body was not found");
 const robots = await readFile(robotsPath, "utf8");
 assert.match(robots, /Disallow: \//);
 
-console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, an interactive map, 53 sitemap URLs, and preview noindex.`);
+console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, an interactive map, 57 sitemap URLs, and preview noindex.`);
