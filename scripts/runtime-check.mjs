@@ -32,12 +32,10 @@ try {
   const homeHtml = await home.text();
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
-  assert.match(homeHtml, /Where should you go outside today\?/);
-  assert.match(homeHtml, /Live statewide read/);
-  assert.ok(
-    homeHtml.indexOf('Live statewide read') < homeHtml.indexOf('id="planner"'),
-    "The statewide decision should appear before the personalization form.",
-  );
+  assert.match(homeHtml, /Explore Michigan outdoors\./);
+  assert.match(homeHtml, /Not a shortlist\./);
+  assert.match(homeHtml, /Official DNR trails and access changes/);
+  assert.doesNotMatch(homeHtml, /Where should you go outside today\?|Live statewide read|id="planner"/);
   assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
   assert.equal(home.headers.get("x-powered-by"), null);
@@ -180,7 +178,7 @@ try {
   assert.ok(coordinatePayload.plans.length > 0);
 
   console.log(
-    `Runtime check passed: decision-first home, statewide ranking, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: map-first home, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

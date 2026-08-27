@@ -30,8 +30,11 @@ assert.match(home, /Michigan Outdoors Now/);
 assert.match(home, /Chris Izworski/);
 assert.match(home, /noindex/);
 assert.match(home, /application\/ld\+json/);
-assert.match(home, /Where should you go outside today\?/);
-assert.match(home, /Live statewide read/);
+assert.match(home, /Explore Michigan outdoors\./);
+assert.match(home, /Not a shortlist\./);
+assert.match(home, /Official DNR trails and access changes/);
+assert.match(home, /Michigan DNR Trails Open Data/);
+assert.doesNotMatch(home, /Where should you go outside today\?|Live statewide read|id="planner"/);
 assert.doesNotMatch(home, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
 
 const originSlugs = [
