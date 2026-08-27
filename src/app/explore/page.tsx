@@ -94,9 +94,9 @@ export default function ExplorePage() {
             set where Michigan Outdoors Now has enough structured context for deeper conditions and trip planning.
           </p>
           <div className="explore-after-links">
-            <Link href="/#statewide">Best outdoors statewide →</Link>
-            <Link href="/#planner">Build a drive-time plan →</Link>
+            <Link href="/ideas/outdoors-today">Outdoor ideas for today →</Link>
             <Link href="/ideas">Browse trip ideas →</Link>
+            <Link href="/how-it-works">How the decision model works →</Link>
           </div>
         </div>
       </section>

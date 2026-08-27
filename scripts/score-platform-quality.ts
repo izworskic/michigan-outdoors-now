@@ -28,12 +28,12 @@ const dimensions: Array<[string, number, boolean]> = [
     has("src/data/specialist-tools.ts", "Michigan Beach Conditions", "Michigan Trout Report", "Northern Lights Michigan", "Michigan Fall Color") &&
     has("src/app/explore/page.tsx", "Explore Michigan outdoors. <span>Not a shortlist.</span>", "Michigan DNR Trails Open Data")
   ],
-  ["technicalSeo", 10, has("src/app/page.tsx", "WebApplication", "FAQPage", "jsonLd")],
+  ["technicalSeo", 10, has("src/app/page.tsx", "WebApplication", "Dataset", "ItemList", "jsonLd")],
   ["mobileUx", 10, has("src/app/globals.css", "@media (max-width: 760px)", "@media (max-width: 560px)")],
   ["performanceResilience", 5, has("src/lib/live-data.ts", "AbortSignal.timeout", "Promise.allSettled", "revalidate")],
   ["explainabilityTrust", 5, has("src/lib/decision-engine.ts", "Decision status:", "confidence", "cautions")],
   ["platformIntegration", 5,
-    has("src/app/page.tsx", "Where should you go outside today?", "specialistTools", "StatewideDecisionBoard") &&
+    has("src/app/page.tsx", "DestinationExplorer", "Official DNR trails and access changes", "Michigan DNR Trails Open Data") &&
     has("src/lib/planner.ts", "great-lakes-beaches", "michigantroutreport.com", "northern-lights-michigan", "great-lakes-freighter-tracking") &&
     has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse") &&
     has("src/components/michigan-destination-map.tsx", "official-dnr-trails", "destination-pin-decision")
