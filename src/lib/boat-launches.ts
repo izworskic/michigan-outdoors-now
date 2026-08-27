@@ -45,7 +45,7 @@ export type BoatLaunchResponse = {
   note: string;
 };
 
-type ExistingLaunchApiPayload = {
+export type ExistingLaunchApiPayload = {
   fetched_at?: string;
   count?: number;
   great_lakes_count?: number;
@@ -56,6 +56,7 @@ type ExistingLaunchApiPayload = {
 };
 
 function numberOrNull(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -81,6 +82,58 @@ function emptyResponse(note: string): BoatLaunchResponse {
   };
 }
 
+export function normalizeBoatLaunchPayload(payload: ExistingLaunchApiPayload): BoatLaunchResponse {
+  if (!Array.isArray(payload.launches)) throw new Error("Boat launch source returned no launch inventory");
+
+  const features: BoatLaunchFeature[] = [];
+  for (const launch of payload.launches) {
+    const latitude = numberOrNull(launch.latitude);
+    const longitude = numberOrNull(launch.longitude);
+    const id = stringOrNull(launch.id);
+    const name = stringOrNull(launch.name);
+    if (latitude === null || longitude === null || !id || !name) continue;
+
+    features.push({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [longitude, latitude] },
+      properties: {
+        id,
+        name,
+        waterbody: stringOrNull(launch.waterbody),
+        county: stringOrNull(launch.county),
+        waterScope: stringOrNull(launch.waterScope),
+        launchStatus: stringOrNull(launch.launchStatus),
+        facilityCondition: stringOrNull(launch.facilityCondition),
+        lanes: numberOrNull(launch.lanes),
+        trailerParking: numberOrNull(launch.trailerParking),
+        piers: numberOrNull(launch.piers),
+        carryDown: launch.carryDown === true,
+        fee: stringOrNull(launch.fee),
+        operator: stringOrNull(launch.operator),
+        verificationStatus: stringOrNull(launch.verificationStatus),
+        sourceLabel: stringOrNull(launch.sourceLabel),
+      },
+    });
+  }
+
+  if (!features.length) throw new Error("Boat launch source returned no usable mapped launches");
+
+  return {
+    status: "live",
+    fetchedAt: payload.fetched_at || new Date().toISOString(),
+    source: {
+      name: payload.source || "Michigan Boat Launches",
+      url: payload.source_url || BOAT_LAUNCH_API,
+      authority: "Michigan Department of Natural Resources + source-qualified municipal operators",
+    },
+    count: features.length,
+    greatLakesCount: Number(payload.great_lakes_count) || features.filter((feature) => feature.properties.waterScope === "great-lakes").length,
+    inlandCount: Number(payload.inland_or_other_count) || features.filter((feature) => feature.properties.waterScope === "inland-or-other").length,
+    geojson: { type: "FeatureCollection", features },
+    note: "Launches come from the existing Michigan Boat Launches source-qualified inventory. The atlas fails closed if that inventory is unavailable.",
+  };
+}
+
 export async function fetchBoatLaunches(): Promise<BoatLaunchResponse> {
   try {
     const response = await fetch(BOAT_LAUNCH_API, {
@@ -91,55 +144,7 @@ export async function fetchBoatLaunches(): Promise<BoatLaunchResponse> {
     if (!response.ok) throw new Error(`Boat launch source returned ${response.status}`);
 
     const payload = (await response.json()) as ExistingLaunchApiPayload;
-    if (!Array.isArray(payload.launches)) throw new Error("Boat launch source returned no launch inventory");
-
-    const features: BoatLaunchFeature[] = [];
-    for (const launch of payload.launches) {
-      const latitude = numberOrNull(launch.latitude);
-      const longitude = numberOrNull(launch.longitude);
-      const id = stringOrNull(launch.id);
-      const name = stringOrNull(launch.name);
-      if (latitude === null || longitude === null || !id || !name) continue;
-
-      features.push({
-        type: "Feature",
-        geometry: { type: "Point", coordinates: [longitude, latitude] },
-        properties: {
-          id,
-          name,
-          waterbody: stringOrNull(launch.waterbody),
-          county: stringOrNull(launch.county),
-          waterScope: stringOrNull(launch.waterScope),
-          launchStatus: stringOrNull(launch.launchStatus),
-          facilityCondition: stringOrNull(launch.facilityCondition),
-          lanes: numberOrNull(launch.lanes),
-          trailerParking: numberOrNull(launch.trailerParking),
-          piers: numberOrNull(launch.piers),
-          carryDown: launch.carryDown === true,
-          fee: stringOrNull(launch.fee),
-          operator: stringOrNull(launch.operator),
-          verificationStatus: stringOrNull(launch.verificationStatus),
-          sourceLabel: stringOrNull(launch.sourceLabel),
-        },
-      });
-    }
-
-    if (!features.length) throw new Error("Boat launch source returned no usable mapped launches");
-
-    return {
-      status: "live",
-      fetchedAt: payload.fetched_at || new Date().toISOString(),
-      source: {
-        name: payload.source || "Michigan Boat Launches",
-        url: payload.source_url || BOAT_LAUNCH_API,
-        authority: "Michigan Department of Natural Resources + source-qualified municipal operators",
-      },
-      count: features.length,
-      greatLakesCount: Number(payload.great_lakes_count) || features.filter((feature) => feature.properties.waterScope === "great-lakes").length,
-      inlandCount: Number(payload.inland_or_other_count) || features.filter((feature) => feature.properties.waterScope === "inland-or-other").length,
-      geojson: { type: "FeatureCollection", features },
-      note: "Launches come from the existing Michigan Boat Launches source-qualified inventory. The atlas fails closed if that inventory is unavailable.",
-    };
+    return normalizeBoatLaunchPayload(payload);
   } catch {
     return emptyResponse("The existing Michigan Boat Launches inventory is temporarily unavailable. No launch pins are guessed or substituted.");
   }
