@@ -35,9 +35,11 @@ assert.match(home, /I want to get outside today/);
 assert.match(home, /Help me plan this weekend/);
 assert.match(home, /I already know the place/);
 assert.match(home, /I know what I want to do/);
-assert.match(home, /Go when/);
-assert.match(home, /Why it works/);
-assert.match(home, /Know before you go/);
+assert.match(home, /Where are you starting, and how far would you go\?/);
+assert.match(home, /Starting city or ZIP/);
+assert.match(home, /Maximum one-way drive/);
+assert.match(home, /Up to 4 hours/);
+assert.match(home, /0–4 hours away/);
 assert.doesNotMatch(home, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
 assert.doesNotMatch(home, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
 

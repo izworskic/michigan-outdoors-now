@@ -37,10 +37,11 @@ try {
   assert.match(homeHtml, /Help me plan this weekend/);
   assert.match(homeHtml, /I already know the place/);
   assert.match(homeHtml, /I know what I want to do/);
-  assert.match(homeHtml, /Go when/);
-  assert.match(homeHtml, /Why it works/);
-  assert.match(homeHtml, /Know before you go/);
-  assert.match(homeHtml, /Good backups/);
+  assert.match(homeHtml, /Where are you starting, and how far would you go\?/);
+  assert.match(homeHtml, /Starting city or ZIP/);
+  assert.match(homeHtml, /Maximum one-way drive/);
+  assert.match(homeHtml, /Up to 4 hours/);
+  assert.match(homeHtml, /0–4 hours away/);
   assert.doesNotMatch(homeHtml, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
   assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
@@ -145,7 +146,7 @@ try {
     body: JSON.stringify({
       origin: "48708",
       date: "today",
-      maxDriveHours: 2,
+      maxDriveHours: 4,
       activities: ["hiking", "birding"],
       kids: true,
       dog: false,
@@ -159,7 +160,7 @@ try {
   const payload = await recommendation.json();
   assert.match(payload.origin.name, /Bay City/);
   assert.ok(payload.plans.length > 0 && payload.plans.length <= 3);
-  assert.ok(payload.plans.every((plan) => plan.driveHours <= 2.1));
+  assert.ok(payload.plans.every((plan) => plan.driveHours <= 4.1));
   assert.ok(payload.plans.every((plan) => plan.destination.activities.includes("hiking") || plan.destination.activities.includes("birding")));
 
   const coordinateRecommendation = await fetch(`${origin}/api/recommendations`, {
@@ -183,7 +184,7 @@ try {
   assert.ok(coordinatePayload.plans.length > 0);
 
   console.log(
-    `Runtime check passed: persona-first home, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: persona-first home, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");
