@@ -1,55 +1,82 @@
 import Link from "next/link";
-import { destinationCount } from "../data/destinations";
-import { origins } from "../data/origins";
 import { Planner } from "../components/planner";
-import { featuredGuideSlugs, guidesBySlug } from "../data/guides";
-import { jsonLd, personSchema, siteUrl } from "../lib/site";
+import { StatewideDecisionBoard } from "../components/statewide-decision-board";
+import { destinationCount, destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
+import { fetchWeatherSnapshots } from "../lib/live-data";
+import { targetDateFor } from "../lib/planner";
+import { jsonLd, personSchema, siteUrl } from "../lib/site";
+import { rankStatewideDestinations, type StatewideResponse } from "../lib/statewide";
+
+export const revalidate = 900;
 
 const frequentlyAsked = [
   {
-    question: "How does Michigan Outdoors Now choose places?",
+    question: "What does the statewide ranking actually measure?",
     answer:
-      "It first filters a curated Michigan destination set by drive time, activities, and practical needs. It then uses forecast and air-quality data when available to help rank the strongest fits.",
+      "It compares activity-specific weather and air-quality fit across the curated destination set. It does not pretend to know closures, trail conditions, road conditions, marine hazards, or local access unless a specialist tool explicitly carries that data.",
   },
   {
-    question: "Is the trip-fit number a safety rating?",
+    question: "Why are beaches, paddling, fishing, aurora, ice, and birding separate?",
     answer:
-      "No. It is only a comparison of the choices entered, estimated drive distance, and available conditions. Always check official closures, marine forecasts, road conditions, and local alerts.",
+      "Those decisions need different live signals. The statewide board handles general outdoor weather fit, then routes specialized decisions to tools built around waves, water, river gauges, sightings, space weather, ice, or snow.",
   },
   {
-    question: "Does the planner track my location?",
+    question: "Can I make the answer local to me?",
     answer:
-      "Only if you tap Use my location. That optional browser permission supplies coordinates for one planner request; the tool keeps them out of the shared URL and analytics and does not save a trip profile. You can always type a Michigan city or ZIP instead.",
+      "Yes. The planner below takes a Michigan city, ZIP code, or optional one-time device location and adds drive time, activities, kids, dogs, and lower-barrier access needs.",
   },
 ];
 
-export default function Home() {
-  const featuredGuides = featuredGuideSlugs
-    .map((slug) => guidesBySlug.get(slug))
-    .filter((guide) => guide !== undefined);
+async function initialStatewide(): Promise<StatewideResponse> {
+  const targetDate = targetDateFor("today");
+  let weatherByDestination = new Map();
+
+  try {
+    weatherByDestination = await fetchWeatherSnapshots(destinations, targetDate);
+  } catch {
+    // The initial page still renders an honest unavailable state.
+  }
+
+  const picks = rankStatewideDestinations(weatherByDestination, "best");
+  return {
+    targetDate,
+    generatedAt: new Date().toISOString(),
+    mode: "best",
+    conditionsStatus: picks.length ? "live" : "unavailable",
+    picks,
+    note: picks.length
+      ? "Statewide weather-fit ranking across curated Michigan destinations."
+      : "Live statewide conditions are temporarily unavailable. Use a verified specialist below or personalize a trip.",
+  };
+}
+
+export default async function Home() {
+  const initial = await initialStatewide();
+  const liveTools = specialistTools.filter((tool) => tool.group === "live");
+  const seasonalTools = specialistTools.filter((tool) => tool.group === "seasonal");
+  const planningTools = specialistTools.filter((tool) => tool.group === "planning");
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebApplication",
-        "@id": `${siteUrl}/#planner`,
+        "@id": `${siteUrl}/#decision-engine`,
         name: "Michigan Outdoors Now",
         url: siteUrl,
         applicationCategory: "TravelApplication",
         operatingSystem: "Any",
-        browserRequirements: "Requires JavaScript",
+        browserRequirements: "Requires JavaScript for interactive filters",
         description:
-          "A live-condition-aware Michigan day and weekend planner using drive time, interests, forecast, wind, and air quality.",
+          "A Michigan outdoor decision engine that ranks statewide weather fit, then routes water, fishing, birding, aurora, shipping, fall color, ice, and snow decisions to verified live specialist tools.",
         featureList: [
-          "Michigan day-trip recommendations",
-          "Drive-window filtering",
-          "Forecast, wind, and air-quality context",
-          "Primary and weather-backup decisions",
-          "Activity-specific conditions scoring",
+          "Statewide outdoor rankings without requiring a location",
+          "Activity-specific weather and air-quality scoring",
           "Best three-hour decision windows",
-          "Live specialist handoffs for beaches, waterfalls, fall color, snow, and sky conditions",
-          "Shareable planner setups",
+          "Personalized drive-time planning",
+          "Verified live-tool handoffs for water, fishing, birding, aurora, shipping, fall color, ice, and skiing",
+          "Explicit missing-data and confidence states",
         ],
         author: { "@id": personSchema["@id"] },
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -67,141 +94,159 @@ export default function Home() {
 
   return (
     <>
-      <section className="hero">
-        <div className="hero-contours" aria-hidden="true" />
-        <div className="hero-grid">
-          <div className="hero-copy">
-            <p className="eyebrow eyebrow-light">Made for the Michigan decision</p>
-            <h1>Less searching.<br /><span>More outside.</span></h1>
-            <p className="hero-lede">
-              Tell us where you are, how far you will drive, and what sounds good. Get three
-              Michigan plans shaped by current conditions, not a wall of generic listings.
+      <section className="decision-hero">
+        <div className="decision-hero-inner">
+          <div className="decision-hero-copy">
+            <p className="decision-kicker">Michigan decision engine · updated from live conditions</p>
+            <h1>Where should you go outside today?</h1>
+            <p>
+              Start with the answer. Michigan Outdoors Now compares {destinationCount} curated
+              destinations using current forecast and air-quality signals, then shows the strongest
+              weather fit and the best time window.
             </p>
-            <div className="hero-actions">
-              <a className="hero-button" href="#planner">Build my plan <span aria-hidden="true">↓</span></a>
-              <Link className="hero-secondary" href="/explore">Explore all {destinationCount} places →</Link>
+            <div className="decision-hero-actions">
+              <a href="#statewide">See the statewide answer ↓</a>
+              <a href="#planner">Make it local to me</a>
             </div>
-            <p className="byline">Designed and built by <a href="https://chrisizworski.com/">Chris Izworski</a></p>
+            <div className="decision-trust">
+              <span>No location required</span>
+              <span>No fake fallback scores</span>
+              <span>Activity-specific rules</span>
+            </div>
           </div>
-          <div className="hero-map" aria-label="Michigan destination coverage illustration">
-            <div className="compass" aria-hidden="true"><span>N</span><i /></div>
-            <div className="map-card map-card-one"><small>LAKE SUPERIOR</small><strong>Cliffs + falls</strong><span>U.P.</span></div>
-            <div className="map-card map-card-two"><small>THE STRAITS</small><strong>Ships + stars</strong><span>NORTH</span></div>
-            <div className="map-card map-card-three"><small>GREAT LAKES</small><strong>Dunes + beach</strong><span>WEST</span></div>
-            <div className="map-card map-card-four"><small>RIVER COUNTRY</small><strong>Trout + trails</strong><span>EAST</span></div>
-            <div className="hero-stamp"><strong>{destinationCount}</strong><span>curated<br />destinations</span></div>
+          <div id="statewide">
+            <StatewideDecisionBoard initial={initial} />
           </div>
         </div>
       </section>
 
-      <div className="trust-strip" aria-label="Planner features">
-        <span><i>01</i> Michigan-only</span>
-        <span><i>02</i> Conditions-aware</span>
-        <span><i>03</i> No account</span>
-        <span><i>04</i> Shareable decision</span>
-      </div>
-
-      <div className="content-wrap planner-wrap planner-wrap-primary">
-        <Planner />
-      </div>
-
-      <section className="specialist-section content-wrap" aria-labelledby="specialist-title">
-        <div className="section-kicker"><span>LIVE DECISION LAYER</span><i /></div>
-        <div className="specialist-heading">
+      <section className="verified-tools-section content-wrap" aria-labelledby="verified-tools-title">
+        <div className="decision-section-head">
           <div>
-            <h2 id="specialist-title">Go straight to the live specialist.</h2>
-            <p>
-              The planner compares broad trip fit. These tools answer narrower Michigan decisions with
-              deeper live data when waves, water, snow, fall color, darkness, or river flow matter.
-            </p>
+            <p className="decision-section-label">Different question, different data</p>
+            <h2 id="verified-tools-title">Go deeper when weather alone is not enough.</h2>
           </div>
-          <Link className="text-link" href="/how-it-works">How the decision system works →</Link>
+          <p>
+            A beach decision needs waves and swim risk. Trout needs river data. Aurora needs space
+            weather and clouds. These are the live specialist tools currently verified in the network.
+          </p>
         </div>
-        <div className="specialist-grid">
-          {specialistTools.map((tool) => (
-            <a className="specialist-card" href={tool.url} key={tool.id}>
-              <span>{tool.timing}</span>
+
+        <div className="verified-tools-grid">
+          {liveTools.map((tool) => (
+            <a className="verified-tool-card" href={tool.url} key={tool.id}>
+              <div className="verified-tool-top">
+                <span className="verified-pill">Live</span>
+                <small>{tool.timing}</small>
+              </div>
               <h3>{tool.name}</h3>
               <p>{tool.question}</p>
-              <small>{tool.signals.join(" · ")}</small>
+              <div className="verified-signals">{tool.signals.join(" · ")}</div>
               <strong>Open live tool →</strong>
             </a>
           ))}
         </div>
       </section>
 
-      <section className="persona-section content-wrap" aria-labelledby="persona-title">
-        <div className="section-kicker"><span>START WITH YOU</span><i /></div>
-        <div className="persona-heading">
-          <h2 id="persona-title">Which sentence sounds most like your day?</h2>
-          <p>Choose a plain-English starting point. Each guide gives you the important details and opens a planner already shaped for that kind of trip.</p>
-        </div>
-        <div className="persona-grid">
-          {featuredGuides.map((guide, index) => (
-            <Link className="persona-card" href={`/ideas/${guide.slug}`} key={guide.slug}>
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <h3>{guide.entryLabel}</h3>
-              <p>{guide.entryDetail}</p>
-            </Link>
-          ))}
-        </div>
-        <Link className="text-link persona-all" href="/ideas">See all Michigan trip guides →</Link>
-        <Link className="text-link persona-all" href="/explore">Or filter the interactive Michigan map →</Link>
-      </section>
-
-      <section className="method-section">
+      <section className="personalize-section" id="personalize">
         <div className="content-wrap">
-          <div className="section-kicker"><span>FIELD METHOD</span><i /></div>
-          <div className="method-heading">
-            <h2>A short list with a reason behind it.</h2>
-            <p>The goal is not to catalog every trailhead. It is to make the next decision easier.</p>
+          <div className="decision-section-head personalize-heading">
+            <div>
+              <p className="decision-section-label">Now make it yours</p>
+              <h2>What is best within your drive window?</h2>
+            </div>
+            <p>
+              Add where you are starting, how far you will drive, and what you actually want to do.
+              The same decision logic becomes a personalized shortlist.
+            </p>
           </div>
-          <div className="method-grid">
-            <article><span>01</span><h3>Fit first</h3><p>Drive time, activity match, kids, dogs, and lower-barrier access narrow the field.</p></article>
-            <article><span>02</span><h3>Conditions next</h3><p>Forecast, rain chance, gusts, temperature, and air quality adjust the order when available.</p></article>
-            <article><span>03</span><h3>You decide</h3><p>Each result explains the match, flags concerns, and links to maps and official details.</p></article>
-          </div>
-          <Link className="text-link" href="/how-it-works">Read the full method, privacy, and limits →</Link>
+          <Planner
+            compactIntro
+            initialDate="today"
+            initialMaxDriveHours={2}
+            initialActivities={["hiking", "scenic"]}
+          />
         </div>
       </section>
 
-      <section className="origin-section content-wrap">
-        <div className="section-kicker"><span>START LOCAL</span><i /></div>
-        <div className="origin-heading">
-          <h2>Michigan ideas from where you already are.</h2>
-          <p>Open a local starting page or enter any Michigan city or ZIP in the planner.</p>
+      <section className="seasonal-section content-wrap" aria-labelledby="seasonal-title">
+        <div className="decision-section-head">
+          <div>
+            <p className="decision-section-label">Seasonal decision desks</p>
+            <h2 id="seasonal-title">When Michigan changes, the data should change too.</h2>
+          </div>
+          <p>
+            Fall color, ice, and skiing use seasonal signals rather than pretending the same year-round
+            score works for every activity.
+          </p>
         </div>
-        <div className="origin-grid">
-          {origins.map((origin) => (
-            <Link href={`/from/${origin.slug}`} key={origin.slug}>
-              <span>{origin.name}</span><small>{origin.zip}</small><i aria-hidden="true">↗</i>
-            </Link>
+        <div className="seasonal-grid">
+          {seasonalTools.map((tool) => (
+            <a href={tool.url} className="seasonal-card" key={tool.id}>
+              <span>{tool.timing}</span>
+              <h3>{tool.name}</h3>
+              <p>{tool.question}</p>
+              <strong>Open decision tool →</strong>
+            </a>
           ))}
         </div>
       </section>
 
-      <section className="maker-section">
-        <div className="content-wrap maker-grid">
-          <div className="maker-badge" aria-hidden="true"><span>CI</span><i>MI</i></div>
-          <div>
-            <p className="eyebrow">Made by a real Michigan builder</p>
-            <h2>Hi, I’m Chris Izworski.</h2>
-            <p>
-              I build useful Michigan and Great Lakes tools that turn scattered information into
-              a clearer next step. This planner connects that work into one practical starting point.
-            </p>
-            <div className="maker-links">
-              <a href="https://chrisizworski.com/">About Chris →</a>
-              <a href="https://chrisizworski.com/tools">Explore all tools →</a>
-              <a href="https://github.com/izworskic">GitHub →</a>
+      <section className="platform-proof">
+        <div className="content-wrap">
+          <div className="decision-section-head decision-section-head-light">
+            <div>
+              <p className="decision-section-label">What changed</p>
+              <h2>A decision product, not another weather dashboard.</h2>
             </div>
+            <p>
+              The first screen answers where to go. Supporting data comes second. Specialized risks
+              move to the tool that actually has the right inputs.
+            </p>
+          </div>
+          <div className="proof-grid">
+            <article>
+              <span>01</span>
+              <h3>Answer first</h3>
+              <p>See the statewide #1, alternatives, best window, reason, and watch item before filling out anything.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <h3>Activity rules</h3>
+              <p>Hiking, scenic days, and dark skies are evaluated differently. Water and winter are handed to deeper live tools.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <h3>No invented certainty</h3>
+              <p>Missing conditions remain unavailable. A score is not allowed to hide missing safety or specialist data.</p>
+            </article>
           </div>
         </div>
       </section>
 
-      <section className="faq-section content-wrap">
-        <div className="section-kicker"><span>GOOD TO KNOW</span><i /></div>
-        <h2>Before you build a plan</h2>
+      <section className="network-section content-wrap">
+        <div className="network-card">
+          <div>
+            <p className="decision-section-label">Build a bigger trip</p>
+            <h2>Day, weekend, or map.</h2>
+            <p>
+              Use the statewide answer for the quick decision, the map when you want to browse all
+              {destinationCount} destinations, or the weekend planner when one day is not enough.
+            </p>
+          </div>
+          <div className="network-actions">
+            <Link href="/explore">Explore the Michigan map →</Link>
+            {planningTools.map((tool) => (
+              <a href={tool.url} key={tool.id}>{tool.name} →</a>
+            ))}
+            <Link href="/ideas">Browse trip ideas →</Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="decision-faq content-wrap">
+        <p className="decision-section-label">Trust boundary</p>
+        <h2>What this can and cannot tell you</h2>
         <div className="faq-list">
           {frequentlyAsked.map((item) => (
             <details key={item.question}>

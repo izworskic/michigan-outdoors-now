@@ -2,11 +2,14 @@
 
 import { useState } from "react";
 import type { DateChoice } from "../lib/types";
-import {
-  statewideModeLabels,
-  type StatewideMode,
-  type StatewideResponse,
-} from "../lib/statewide";
+import type { StatewideMode, StatewideResponse } from "../lib/statewide";
+
+const statewideModeLabels: Record<StatewideMode, string> = {
+  best: "Best overall",
+  hiking: "Hiking",
+  scenic: "Scenic",
+  "dark-sky": "Dark sky",
+};
 
 const dateOptions: Array<{ id: DateChoice; label: string }> = [
   { id: "today", label: "Today" },

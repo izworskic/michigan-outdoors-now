@@ -31,7 +31,7 @@ test("specialist handoffs respect destination type and selected intent", () => {
 
   assert.notEqual(
     relatedToolFor(torch, ["beaches"]).url,
-    "https://chrisizworski.com/best-michigan-beaches-today/",
+    "https://chrisizworski.com/great-lakes-beaches/",
   );
   assert.equal(
     relatedToolFor(silver, ["beaches"]).url,
@@ -39,11 +39,11 @@ test("specialist handoffs respect destination type and selected intent", () => {
   );
   assert.notEqual(
     relatedToolFor(mackinac, ["hiking"]).url,
-    "https://chrisizworski.com/great-lakes-freighter-viewing/",
+    "https://chrisizworski.com/great-lakes-freighter-tracking/",
   );
   assert.equal(
     relatedToolFor(mackinac, ["freighters"]).url,
-    "https://chrisizworski.com/great-lakes-freighter-viewing/",
+    "https://chrisizworski.com/great-lakes-freighter-tracking/",
   );
 });
 
