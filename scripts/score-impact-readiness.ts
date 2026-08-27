@@ -81,7 +81,9 @@ const usefulness = calculate([
   {
     name: "Decision intelligence",
     checks: [
-      [10, has("src/lib/planner.ts", "rankDestinations", "weatherAdjustment", ".slice(0, 3)")],
+      [10,
+        has("src/lib/planner.ts", "rankDestinations", "weatherAdjustment", "limit = 3") &&
+        has("src/app/api/recommendations/route.ts", "candidatePlans", "rangeOptions", ".slice(0, 3)")],
       [8, has("src/lib/planner.ts", "marine forecast", "cloud cover", "Air quality")],
       [7, has("src/components/planner.tsx", "Good with kids", "Dog allowed", "Lower-barrier access")],
       [8, has("src/components/result-comparison.tsx", "Compare before you commit") && has("src/components/trip-decision.tsx", "Primary plan", "Backup plan")],

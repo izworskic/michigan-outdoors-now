@@ -151,7 +151,7 @@ export function relatedToolFor(destination: Destination, selected: ActivityId[])
   return { label: "More tools by Chris Izworski", url: "https://chrisizworski.com/tools" };
 }
 
-export function rankDestinations(input: RankInput): Plan[] {
+export function rankDestinations(input: RankInput, limit = 3): Plan[] {
   const selected = new Set(input.activities);
 
   const plans = destinations
@@ -232,7 +232,7 @@ export function rankDestinations(input: RankInput): Plan[] {
         a.driveHours - b.driveHours ||
         a.destination.name.localeCompare(b.destination.name),
     )
-    .slice(0, 3);
+    .slice(0, Math.max(1, limit));
 }
 
 export function formatDriveTime(hours: number) {

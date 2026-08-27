@@ -119,6 +119,15 @@ export type PlannerRequest = {
   accessible: boolean;
 };
 
+export type RangeOption = {
+  destination: Pick<Destination, "id" | "name" | "area" | "summary">;
+  score: number;
+  distanceMiles: number;
+  driveHours: number;
+  conditionsStatus: "live" | "estimated";
+  forecastDate: string | null;
+};
+
 export type PlannerResponse = {
   origin: { name: string; latitude: number; longitude: number };
   targetDate: string;
@@ -126,5 +135,6 @@ export type PlannerResponse = {
   generatedAt: string;
   conditionsStatus: "live" | "estimated";
   plans: Plan[];
+  rangeOptions: RangeOption[];
   note: string;
 };

@@ -87,6 +87,33 @@ test("a drive limit is an inclusive maximum radius, not a target band", () => {
   assert.equal(isWithinDriveRadius(8.1, 8), false);
 });
 
+test("widening the drive radius surfaces additional locations instead of hiding them behind the top three", () => {
+  const base = {
+    latitude: 43.5945,
+    longitude: -83.8889,
+    originName: "Bay City, Michigan",
+    activities: ["hiking", "scenic"] as const,
+    kids: false,
+    dog: false,
+    accessible: false,
+  };
+
+  const twoHours = rankDestinations(
+    { ...base, activities: [...base.activities], maxDriveHours: 2 },
+    destinations.length,
+  );
+  const eightHours = rankDestinations(
+    { ...base, activities: [...base.activities], maxDriveHours: 8 },
+    destinations.length,
+  );
+
+  assert.ok(twoHours.length > 0);
+  assert.ok(eightHours.length > twoHours.length);
+  assert.ok(twoHours.every((plan) => plan.driveHours <= 2.05));
+  assert.ok(eightHours.every((plan) => plan.driveHours <= 8.05));
+  assert.ok(eightHours.some((plan) => plan.driveHours > 2.05));
+});
+
 test("hard filters honor drive time and activity", () => {
   const plans = rankDestinations({
     latitude: 42.3314,
