@@ -24,11 +24,11 @@ type RunPlanOverrides = {
   driveHours?: number;
 };
 
-const intents: Array<{ id: IntentId; eyebrow: string; title: string; detail: string }> = [
-  { id: "today", eyebrow: "Right now", title: "I want to get outside today", detail: "Find the strongest options inside the distance I would actually travel." },
-  { id: "weekend", eyebrow: "Plan ahead", title: "Help me plan this weekend", detail: "Find something worth the drive, plus a backup." },
-  { id: "place", eyebrow: "I have an idea", title: "I already know the place", detail: "Check the place I am considering before I commit." },
-  { id: "activity", eyebrow: "Start with the activity", title: "I know what I want to do", detail: "Hike, beach, fish, bird, paddle, watch ships, or chase dark skies." },
+const intents: Array<{ id: IntentId; title: string }> = [
+  { id: "today", title: "Today" },
+  { id: "weekend", title: "This weekend" },
+  { id: "place", title: "Check a place" },
+  { id: "activity", title: "Pick an activity" },
 ];
 
 const genericActivities: Array<{ id: StatewideMode; label: string; detail: string }> = [
@@ -290,26 +290,19 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
       <div className="persona-hero">
         <div className="persona-hero-copy">
           <p className="persona-kicker">Michigan Outdoors Now</p>
-          <h1 id="persona-home-title">What kind of Michigan day are you trying to have?</h1>
-          <p>
-            Tell us what you are trying to do, where you are starting, and how far you would actually travel.
-            We’ll narrow the options to your real trip range.
-          </p>
+          <h1 id="persona-home-title">Find somewhere worth going.</h1>
+          <p>Start with where you are. We’ll narrow Michigan by drive time and the conditions that matter for the day.</p>
         </div>
 
-        <div className="persona-intent-grid" aria-label="Choose how you want to plan">
+        <div className="persona-intent-tabs" aria-label="Choose how you want to plan">
           {intents.map((item) => (
             <button
               key={item.id}
               type="button"
-              className="persona-intent-card"
-              data-active={intent === item.id}
               aria-pressed={intent === item.id}
               onClick={() => chooseIntent(item.id)}
             >
-              <span>{item.eyebrow}</span>
-              <strong>{item.title}</strong>
-              <small>{item.detail}</small>
+              {item.title}
             </button>
           ))}
         </div>
@@ -318,18 +311,14 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
       {(intent === "today" || intent === "weekend") && (
         <section className="persona-answer" aria-live="polite">
           <section className="persona-trip-scope" aria-labelledby="trip-scope-title">
-            <div className="persona-trip-scope-copy">
-              <p className="persona-section-kicker">Set your real trip range</p>
-              <h2 id="trip-scope-title">Where are you starting, and how far would you go?</h2>
-              <p>
-                We only rank places inside your maximum one-way drive. Pick 4 hours and the search includes
-                everything from nearby through 4 hours away.
-              </p>
+            <div className="persona-trip-scope-head">
+              <p className="persona-section-kicker">{intent === "weekend" ? "Plan this weekend" : "Go today"}</p>
+              <h2 id="trip-scope-title">Where are you starting?</h2>
             </div>
 
             <div className="persona-trip-controls">
               <label className="persona-origin-field">
-                <span>Starting city or ZIP</span>
+                <span>City or ZIP</span>
                 <div>
                   <input
                     value={origin}
@@ -341,69 +330,70 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                       setOriginCoordinates(undefined);
                       setPlans(null);
                     }}
-                    placeholder="Bay City, 48706, Marquette…"
+                    placeholder="Bay City, Marquette, 48706…"
                     autoComplete="postal-code"
                   />
                   <button type="button" onClick={useLocation} disabled={planning}>
-                    Use my location
+                    Use current location
                   </button>
                 </div>
               </label>
 
-              <fieldset className="persona-drive-field">
-                <legend>Maximum one-way drive</legend>
-                <div>
-                  {driveChoices.map((hours) => (
-                    <button
-                      type="button"
-                      key={hours}
-                      aria-pressed={driveHours === hours}
-                      onClick={() => chooseDriveHours(hours)}
-                    >
-                      Up to {hours} {hours === 1 ? "hour" : "hours"}
-                    </button>
-                  ))}
-                </div>
-                <small>
-                  This is a radius, not a target. <strong>Up to 8 hours means anything from nearby through 8 hours away.</strong>
-                </small>
-              </fieldset>
+              <div className="persona-quick-filters">
+                <fieldset className="persona-drive-field">
+                  <legend>Drive up to</legend>
+                  <div>
+                    {driveChoices.map((hours) => (
+                      <button
+                        type="button"
+                        key={hours}
+                        aria-label={`Up to ${hours} ${hours === 1 ? "hour" : "hours"} one way`}
+                        aria-pressed={driveHours === hours}
+                        onClick={() => chooseDriveHours(hours)}
+                      >
+                        {hours}h
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
 
-              <div className="persona-scope-activity">
-                <span>What sounds good?</span>
-                <div className="persona-mode-chips" aria-label="Choose the kind of outing">
-                  {genericActivities.map((item) => (
-                    <button
-                      type="button"
-                      key={item.id}
-                      aria-pressed={mode === item.id}
-                      onClick={() => chooseMode(item.id)}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
+                <div className="persona-scope-activity">
+                  <span>Looking for</span>
+                  <div className="persona-mode-chips" aria-label="Choose the kind of outing">
+                    {genericActivities.map((item) => (
+                      <button
+                        type="button"
+                        key={item.id}
+                        aria-pressed={mode === item.id}
+                        onClick={() => chooseMode(item.id)}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="persona-build-button"
-                onClick={() => void runPlan()}
-                disabled={planning}
-              >
-                {planning ? "Finding your options…" : `Find my best options within ${driveHours} hours`}
-              </button>
+              <div className="persona-planner-action">
+                <span>{intent === "weekend" ? "This weekend" : "Today"} · up to {driveHours}h one way</span>
+                <button
+                  type="button"
+                  className="persona-build-button"
+                  onClick={() => void runPlan()}
+                  disabled={planning}
+                >
+                  {planning ? "Looking…" : "Show me where to go"}
+                </button>
+              </div>
             </div>
           </section>
 
           {planError && <p className="persona-error">{planError}</p>}
 
           {!plans && !planning && !planError && (
-            <div className="persona-awaiting-plan">
-              <span>Next</span>
-              <strong>Set your starting point and travel limit.</strong>
-              <p>Then we’ll compare the strongest {modeLabel.toLowerCase()} options inside that entire range.</p>
-            </div>
+            <p className="persona-awaiting-plan">
+              Enter a starting point or use your location. That’s enough to begin.
+            </p>
           )}
 
           {plans && (
@@ -485,18 +475,10 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                   )}
 
                   {(plans.rangeOptions?.length ?? 0) > 0 && (
-                    <section className="persona-range-catalog" aria-labelledby="range-catalog-title">
-                      <div className="persona-range-catalog-head">
-                        <div>
-                          <p className="persona-section-kicker">Everything your radius opens up</p>
-                          <h3 id="range-catalog-title">
-                            {plans.rangeOptions.length} matching place{plans.rangeOptions.length === 1 ? "" : "s"} within {driveHours} {driveHours === 1 ? "hour" : "hours"}.
-                          </h3>
-                        </div>
-                        <p>
-                          The radius is cumulative. Wider searches keep the closer places and add new locations in the outer hour bands.
-                        </p>
-                      </div>
+                    <details className="persona-range-catalog">
+                      <summary>
+                        See all {plans.rangeOptions.length} matching place{plans.rangeOptions.length === 1 ? "" : "s"} within {driveHours}h
+                      </summary>
 
                       <div className="persona-range-bands">
                         {rangeBands.map((band) => (
@@ -520,7 +502,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                           </section>
                         ))}
                       </div>
-                    </section>
+                    </details>
                   )}
                 </>
               ) : (
