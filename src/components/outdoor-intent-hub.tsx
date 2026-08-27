@@ -38,7 +38,7 @@ const genericActivities: Array<{ id: StatewideMode; label: string; detail: strin
   { id: "dark-sky", label: "Dark sky", detail: "Cloud cover and weather that support a night outside." },
 ];
 
-const driveChoices = [1, 2, 3, 4, 5] as const;
+const driveChoices = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const specialistOrder = ["beaches", "buoys", "trout", "birding", "aurora", "freighters"] as const;
 
 function displayStatus(status: string) {
@@ -289,7 +289,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                   ))}
                 </div>
                 <small>
-                  This is a radius, not a target. <strong>Up to 4 hours means 0–4 hours away.</strong>
+                  This is a radius, not a target. <strong>Up to 8 hours means anything from nearby through 8 hours away.</strong>
                 </small>
               </fieldset>
 
