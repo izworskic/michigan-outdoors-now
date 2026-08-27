@@ -31,10 +31,9 @@ assert.match(home, /Chris Izworski/);
 assert.match(home, /noindex/);
 assert.match(home, /application\/ld\+json/);
 assert.match(home, /Explore Michigan outdoors\./);
-assert.match(home, /Not a shortlist\./);
 assert.match(home, /Official DNR trails and access changes/);
 assert.match(home, /Michigan DNR Trails Open Data/);
-assert.doesNotMatch(home, /Where should you go outside today\?|Live statewide read|id="planner"/);
+assert.doesNotMatch(home, /Not a shortlist\.|Where should you go outside today\?|Live statewide read|id="planner"/);
 assert.doesNotMatch(home, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
 
 const originSlugs = [
@@ -113,10 +112,9 @@ const exploreIndex = htmlFiles.find((file) => file.endsWith("/explore.html"));
 assert.ok(exploreIndex, "built destination explorer missing");
 const exploreHtml = await readFile(exploreIndex, "utf8");
 assert.match(exploreHtml, /Explore Michigan outdoors\./);
-assert.match(exploreHtml, /Not a shortlist\./);
 assert.match(exploreHtml, /Official DNR trails and access changes/);
 assert.match(exploreHtml, /Michigan DNR Trails Open Data/);
-assert.doesNotMatch(exploreHtml, /numbered pins|result-map-number|Show all 28 places|See all 28 places/);
+assert.doesNotMatch(exploreHtml, /Not a shortlist\.|numbered pins|result-map-number|Show all 28 places|See all 28 places/);
 assert.match(exploreHtml, /CollectionPage/);
 assert.match(exploreHtml, /Dataset/);
 

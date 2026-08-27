@@ -73,7 +73,7 @@ export default function Home() {
       <header className="explore-command-head">
         <div className="content-wrap">
           <div>
-            <h1>Explore Michigan outdoors. <span>Not a shortlist.</span></h1>
+            <h1>Explore Michigan outdoors.</h1>
             <p>Official DNR trails and access changes. Decision-ready places where the platform can go deeper.</p>
           </div>
         </div>
