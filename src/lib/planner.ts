@@ -123,26 +123,23 @@ export function relatedToolFor(destination: Destination, selected: ActivityId[])
   if (destination.id === "pictured-rocks") {
     return { label: "Pictured Rocks trip planner", url: "https://picturedrocks.chrisizworski.com/" };
   }
-  if (destination.id === "tahquamenon-falls") {
-    return { label: "Michigan waterfall conditions", url: "https://chrisizworski.com/michigan-waterfall-conditions/" };
-  }
   if (selected.includes("beaches") && isGreatLakesWaterDestination(destination)) {
-    return { label: "Best Michigan beaches today", url: "https://chrisizworski.com/best-michigan-beaches-today/" };
+    return { label: "Michigan beach conditions", url: "https://chrisizworski.com/great-lakes-beaches/" };
   }
   if (destination.id === "au-sable-mio" || destination.id === "rifle-river") {
-    return { label: "Michigan trout report", url: "https://trout.chrisizworski.com/" };
+    return { label: "Michigan trout report", url: "https://michigantroutreport.com/" };
   }
   if (destination.id === "soo-locks") {
     return { label: "Soo Locks live guide", url: "https://chrisizworski.com/soo-locks/" };
   }
   if (selected.includes("birding")) {
-    return { label: "Michigan birding report", url: "https://birding.chrisizworski.com/" };
+    return { label: "Michigan birding report", url: "https://michiganbirdingreport.com/" };
   }
   if (selected.includes("dark-sky")) {
-    return { label: "Michigan stargazing tonight", url: "https://chrisizworski.com/michigan-stargazing-tonight/" };
+    return { label: "Northern Lights Michigan", url: "https://chrisizworski.com/northern-lights-michigan/" };
   }
   if (selected.includes("freighters")) {
-    return { label: "Great Lakes freighter viewing", url: "https://chrisizworski.com/great-lakes-freighter-viewing/" };
+    return { label: "Great Lakes ship tracker", url: "https://chrisizworski.com/great-lakes-freighter-tracking/" };
   }
   if (selected.includes("paddling") && isGreatLakesWaterDestination(destination)) {
     return { label: "Great Lakes buoy dashboard", url: "https://chrisizworski.com/great-lakes-buoys/" };
