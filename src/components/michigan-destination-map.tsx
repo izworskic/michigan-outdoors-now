@@ -154,7 +154,7 @@ export function MichiganDestinationMap({
         type: "line",
         source: trailSourceId,
         paint: {
-          "line-color": "#26766c",
+          "line-color": "#477f91",
           "line-opacity": 0.7,
           "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 1.1, 8, 2, 12, 3.6],
         },
@@ -204,7 +204,7 @@ export function MichiganDestinationMap({
         type: "line",
         source: rerouteSourceId,
         paint: {
-          "line-color": "#b46620",
+          "line-color": "#a86a45",
           "line-opacity": 0.96,
           "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 2.2, 9, 4.2, 13, 6],
           "line-dasharray": [1.5, 1.4],
@@ -217,7 +217,7 @@ export function MichiganDestinationMap({
         type: "line",
         source: closureSourceId,
         paint: {
-          "line-color": "#9c3328",
+          "line-color": "#9b4b43",
           "line-opacity": 0.96,
           "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 2.8, 9, 5.4, 13, 8],
         },

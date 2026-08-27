@@ -307,7 +307,7 @@ export function DestinationExplorer() {
           </div>
           {!trailLoading && universe.status === "live" && (
             <>
-              <span>{universe.featureCount.toLocaleString()} segments · {universe.miles.toLocaleString()} mi</span>
+              <span>{universe.systemCount.toLocaleString()} trail systems · {universe.featureCount.toLocaleString()} segments · {universe.miles.toLocaleString()} mi</span>
               {closureCount > 0 && <span className="map-access-alert">{closureCount} closure{closureCount === 1 ? "" : "s"}</span>}
               {rerouteCount > 0 && <span>{rerouteCount} reroute{rerouteCount === 1 ? "" : "s"}</span>}
               {universe.partial && <span>partial coverage</span>}
