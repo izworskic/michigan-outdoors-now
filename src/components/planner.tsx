@@ -171,7 +171,7 @@ export function Planner({
   }
 
   function widenSearch() {
-    const choices = [1, 2, 3, 5];
+    const choices = [1, 2, 3, 4, 5];
     const next = choices.find((choice) => choice > maxDriveHours) ?? 5;
     setMaxDriveHours(next);
     setResponse(null);
@@ -363,6 +363,7 @@ export function Planner({
               <option value={1}>Up to 1 hour</option>
               <option value={2}>Up to 2 hours</option>
               <option value={3}>Up to 3 hours</option>
+              <option value={4}>Up to 4 hours</option>
               <option value={5}>Up to 5 hours</option>
             </select>
           </label>

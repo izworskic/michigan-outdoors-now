@@ -29,7 +29,7 @@ function isPlannerRequest(value: unknown): value is PlannerRequest {
   if (!value || typeof value !== "object") return false;
   const request = value as Record<string, unknown>;
   const allowedDates: DateChoice[] = ["today", "tomorrow", "weekend"];
-  const allowedDriveHours = [1, 2, 3, 5];
+  const allowedDriveHours = [1, 2, 3, 4, 5];
 
   const coordinates = request.originCoordinates;
   const coordinateRecord = coordinates as Record<string, unknown> | undefined;
