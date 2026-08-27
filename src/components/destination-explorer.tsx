@@ -4,6 +4,7 @@ import { track } from "@vercel/analytics";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { destinations } from "../data/destinations";
+import type { BoatLaunchResponse } from "../lib/boat-launches";
 import {
   destinationRegion,
   filterDestinations,
@@ -71,6 +72,23 @@ function updatedLabel(iso: string) {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+function emptyBoatLaunches(): BoatLaunchResponse {
+  return {
+    status: "unavailable",
+    fetchedAt: "",
+    source: {
+      name: "Michigan Boat Launches",
+      url: "https://chrisizworski.com/michigan-boat-launches/",
+      authority: "Michigan Department of Natural Resources + source-qualified municipal operators",
+    },
+    count: 0,
+    greatLakesCount: 0,
+    inlandCount: 0,
+    geojson: { type: "FeatureCollection", features: [] },
+    note: "Loading the existing statewide boat-launch inventory.",
+  };
+}
+
 export function DestinationExplorer() {
   const [query, setQuery] = useState("");
   const [activity, setActivity] = useState<ActivityId | "all">("all");
@@ -85,6 +103,9 @@ export function DestinationExplorer() {
   const [trailLayer, setTrailLayer] = useState<UniverseLayerId>("hiking");
   const [universe, setUniverse] = useState<OutdoorUniverseResponse>(() => emptyUniverse("hiking"));
   const [trailLoading, setTrailLoading] = useState(true);
+  const [boatLaunches, setBoatLaunches] = useState<BoatLaunchResponse>(() => emptyBoatLaunches());
+  const [boatLaunchLoading, setBoatLaunchLoading] = useState(true);
+  const [showBoatLaunches, setShowBoatLaunches] = useState(true);
   const [browseOpen, setBrowseOpen] = useState(false);
   const [browseTab, setBrowseTab] = useState<"decisions" | "trails">("decisions");
 
@@ -112,6 +133,31 @@ export function DestinationExplorer() {
       controller.abort();
     };
   }, [trailLayer]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+
+    fetch("/api/boat-launches", { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Boat launch layer unavailable");
+        return response.json() as Promise<BoatLaunchResponse>;
+      })
+      .then((payload) => {
+        if (!cancelled) setBoatLaunches(payload);
+      })
+      .catch(() => {
+        if (!cancelled) setBoatLaunches(emptyBoatLaunches());
+      })
+      .finally(() => {
+        if (!cancelled) setBoatLaunchLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, []);
 
   const visible = useMemo(() => {
     const matches = filterDestinations(destinations, { query, activity, region, kids, dog, accessible });
@@ -261,10 +307,21 @@ export function DestinationExplorer() {
                 {regionIds.map((regionId) => <option value={regionId} key={regionId}>{regionLabels[regionId]}</option>)}
               </select>
             </label>
-            <div className="map-checks" aria-label="Family, dog & access filters">
+            <div className="map-checks" aria-label="Family, dog, access and map filters">
               <label><input type="checkbox" checked={kids} onChange={(event) => setKids(event.target.checked)} /><span>Family fit</span></label>
               <label><input type="checkbox" checked={dog} onChange={(event) => setDog(event.target.checked)} /><span>Dog-compatible</span></label>
               <label><input type="checkbox" checked={accessible} onChange={(event) => setAccessible(event.target.checked)} /><span>Lower-barrier</span></label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showBoatLaunches}
+                  onChange={(event) => {
+                    setShowBoatLaunches(event.target.checked);
+                    safeTrack("explorer_boat_launches_toggled", { visible: event.target.checked });
+                  }}
+                />
+                <span>Public boat launches</span>
+              </label>
             </div>
             {filterCount > 0 && <button type="button" onClick={clearFilters}>Clear filters</button>}
           </div>
@@ -297,6 +354,8 @@ export function DestinationExplorer() {
           closureCount={closureCount}
           rerouteCount={rerouteCount}
           trailLayerLabel={universe.label}
+          boatLaunchGeoJson={showBoatLaunches ? boatLaunches.geojson : null}
+          boatLaunchCount={showBoatLaunches ? boatLaunches.count : 0}
           userLocation={location}
         />
 
@@ -308,12 +367,23 @@ export function DestinationExplorer() {
           {!trailLoading && universe.status === "live" && (
             <>
               <span>{universe.systemCount.toLocaleString()} trail systems · {universe.featureCount.toLocaleString()} segments · {universe.miles.toLocaleString()} mi</span>
+              {showBoatLaunches && (
+                <span>
+                  {boatLaunchLoading
+                    ? "boat launches loading"
+                    : boatLaunches.status === "live"
+                      ? `${boatLaunches.count.toLocaleString()} public boat launches`
+                      : "boat launches unavailable"}
+                </span>
+              )}
               {closureCount > 0 && <span className="map-access-alert">{closureCount} closure{closureCount === 1 ? "" : "s"}</span>}
               {rerouteCount > 0 && <span>{rerouteCount} reroute{rerouteCount === 1 ? "" : "s"}</span>}
               {universe.partial && <span>partial coverage</span>}
             </>
           )}
-          <span className="map-source-inline">Source: Michigan DNR · Updated {updatedLabel(universe.fetchedAt)}</span>
+          <span className="map-source-inline">
+            Sources: Michigan DNR trails{showBoatLaunches ? " · Michigan Boat Launches" : ""} · Updated {updatedLabel(universe.fetchedAt)}
+          </span>
         </div>
 
         {activeDestination && (
@@ -388,7 +458,9 @@ export function DestinationExplorer() {
 
           <footer>
             <span>{universe.access.note}</span>
-            <a href={universe.source.url}>Michigan DNR source →</a>
+            {showBoatLaunches && <span>{boatLaunches.note}</span>}
+            <a href={universe.source.url}>Michigan DNR trail source →</a>
+            {showBoatLaunches && <a href="https://chrisizworski.com/michigan-boat-launches/">Open the full boat-launch finder →</a>}
           </footer>
         </aside>
       </section>
