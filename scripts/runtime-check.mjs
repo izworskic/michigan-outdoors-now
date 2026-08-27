@@ -75,7 +75,8 @@ try {
   assert.equal(explorer.status, 200);
   const explorerHtml = await explorer.text();
   assert.match(explorerHtml, /Michigan outdoor universe/);
-  assert.match(explorerHtml, /Explore Michigan outdoors\. Not a shortlist\./);
+  assert.match(explorerHtml, /Explore Michigan outdoors\./);
+  assert.match(explorerHtml, /Not a shortlist\./);
   assert.match(explorerHtml, /Official statewide discovery/);
   assert.doesNotMatch(explorerHtml, /numbered pins|result-map-number|Show all 28 places|See all 28 places/);
 
