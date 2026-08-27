@@ -42,3 +42,18 @@ jobs:
 
       - name: Verify generated SEO output
         run: npm run check:seo
+
+      - name: Verify runtime behavior
+        run: npm run check:runtime
+
+      - name: Score usefulness
+        run: npm run score:usefulness
+
+      - name: Score search readiness
+        run: npm run score:search
+
+      - name: Score impact readiness
+        run: npm run score:impact
+
+      - name: Score platform quality
+        run: npm run score:platform

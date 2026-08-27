@@ -37,6 +37,33 @@ export type Destination = {
   officialUrl: string;
 };
 
+export type HourlyWeatherSignal = {
+  time: string;
+  temperature: number | null;
+  precipitationProbability: number | null;
+  windGust: number | null;
+  cloudCover: number | null;
+};
+
+export type DecisionStatus =
+  | "excellent"
+  | "good"
+  | "fair"
+  | "poor"
+  | "danger"
+  | "closed"
+  | "insufficient";
+
+export type DecisionConfidence = "high" | "medium" | "low";
+
+export type ActivityDecisionSummary = {
+  activity: ActivityId;
+  score: number | null;
+  status: DecisionStatus;
+  confidence: DecisionConfidence;
+  bestWindow: string | null;
+};
+
 export type WeatherSnapshot = {
   date: string;
   high: number | null;
@@ -48,6 +75,7 @@ export type WeatherSnapshot = {
   cloudCover: number | null;
   weatherCode: number | null;
   aqi: number | null;
+  hourly?: HourlyWeatherSignal[];
 };
 
 export type Plan = {
@@ -63,6 +91,10 @@ export type Plan = {
     | "officialUrl"
   >;
   score: number;
+  decisionStatus: DecisionStatus;
+  confidence: DecisionConfidence;
+  bestWindow: string | null;
+  activityScores: ActivityDecisionSummary[];
   distanceMiles: number;
   driveHours: number;
   reasons: string[];

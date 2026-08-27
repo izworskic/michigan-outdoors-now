@@ -4,6 +4,7 @@ import { origins } from "../data/origins";
 import { Planner } from "../components/planner";
 import { featuredGuideSlugs, guidesBySlug } from "../data/guides";
 import { jsonLd, personSchema, siteUrl } from "../lib/site";
+import { specialistTools } from "../data/specialist-tools";
 
 const frequentlyAsked = [
   {
@@ -45,6 +46,9 @@ export default function Home() {
           "Drive-window filtering",
           "Forecast, wind, and air-quality context",
           "Primary and weather-backup decisions",
+          "Activity-specific conditions scoring",
+          "Best three-hour decision windows",
+          "Live specialist handoffs for beaches, waterfalls, fall color, snow, and sky conditions",
           "Shareable planner setups",
         ],
         author: { "@id": personSchema["@id"] },
@@ -100,6 +104,31 @@ export default function Home() {
       <div className="content-wrap planner-wrap planner-wrap-primary">
         <Planner />
       </div>
+
+      <section className="specialist-section content-wrap" aria-labelledby="specialist-title">
+        <div className="section-kicker"><span>LIVE DECISION LAYER</span><i /></div>
+        <div className="specialist-heading">
+          <div>
+            <h2 id="specialist-title">Go straight to the live specialist.</h2>
+            <p>
+              The planner compares broad trip fit. These tools answer narrower Michigan decisions with
+              deeper live data when waves, water, snow, fall color, darkness, or river flow matter.
+            </p>
+          </div>
+          <Link className="text-link" href="/how-it-works">How the decision system works →</Link>
+        </div>
+        <div className="specialist-grid">
+          {specialistTools.map((tool) => (
+            <a className="specialist-card" href={tool.url} key={tool.id}>
+              <span>{tool.timing}</span>
+              <h3>{tool.name}</h3>
+              <p>{tool.question}</p>
+              <small>{tool.signals.join(" · ")}</small>
+              <strong>Open live tool →</strong>
+            </a>
+          ))}
+        </div>
+      </section>
 
       <section className="persona-section content-wrap" aria-labelledby="persona-title">
         <div className="section-kicker"><span>START WITH YOU</span><i /></div>

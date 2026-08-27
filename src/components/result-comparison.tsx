@@ -45,6 +45,8 @@ export function ResultComparison({
               <th scope="col">Rain</th>
               <th scope="col">Gusts</th>
               <th scope="col">AQI</th>
+              <th scope="col">Status</th>
+              <th scope="col">Best window</th>
               <th scope="col">Decision</th>
             </tr>
           </thead>
@@ -63,6 +65,8 @@ export function ResultComparison({
                   <td>{metric(plan.weather?.precipitationProbability, "%")}</td>
                   <td>{metric(plan.weather?.windGust, " mph")}</td>
                   <td>{metric(plan.weather?.aqi, "")}</td>
+                  <td><strong>{plan.decisionStatus}</strong><small>{plan.confidence} confidence</small></td>
+                  <td>{plan.bestWindow ?? "check full day"}</td>
                   <td>
                     <div className="comparison-actions">
                       <button

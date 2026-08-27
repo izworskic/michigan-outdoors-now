@@ -27,7 +27,10 @@ function DecisionCard({ label, plan }: { label: string; plan: Plan | null }) {
       <p>{label}</p>
       <h5>{plan.destination.name}</h5>
       <div className="decision-facts">
-        <span>{plan.score}/100 fit</span>
+        <span>{plan.score}/100 trip fit</span>
+        <span>{plan.decisionStatus} conditions</span>
+        <span>{plan.confidence} confidence</span>
+        {plan.bestWindow && <span>best {plan.bestWindow}</span>}
         <span>{formatDriveTime(plan.driveHours)}</span>
         {plan.weather?.precipitationProbability !== null &&
           plan.weather?.precipitationProbability !== undefined && (

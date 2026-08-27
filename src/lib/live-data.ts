@@ -62,6 +62,13 @@ export async function resolveMichiganOrigin(value: string): Promise<ResolvedOrig
 }
 
 type ForecastPayload = {
+  hourly?: {
+    time?: string[];
+    temperature_2m?: Array<number | null>;
+    precipitation_probability?: Array<number | null>;
+    wind_gusts_10m?: Array<number | null>;
+    cloud_cover?: Array<number | null>;
+  };
   daily?: {
     time?: string[];
     temperature_2m_max?: Array<number | null>;
@@ -91,6 +98,19 @@ function valueAt(values: Array<number | null> | undefined, index: number) {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function hourlySignals(payload: ForecastPayload | undefined, targetDate: string) {
+  const times = payload?.hourly?.time ?? [];
+  return times
+    .map((time, index) => ({
+      time,
+      temperature: valueAt(payload?.hourly?.temperature_2m, index),
+      precipitationProbability: valueAt(payload?.hourly?.precipitation_probability, index),
+      windGust: valueAt(payload?.hourly?.wind_gusts_10m, index),
+      cloudCover: valueAt(payload?.hourly?.cloud_cover, index),
+    }))
+    .filter((signal) => signal.time.startsWith(targetDate));
+}
+
 function dailyAqi(payload: AirPayload | undefined, targetDate: string) {
   const times = payload?.hourly?.time ?? [];
   const values = payload?.hourly?.us_aqi ?? [];
@@ -117,6 +137,7 @@ export async function fetchWeatherSnapshots(
     ...common,
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_gusts_10m_max,sunshine_duration,cloud_cover_mean",
+    hourly: "temperature_2m,precipitation_probability,wind_gusts_10m,cloud_cover",
     temperature_unit: "fahrenheit",
     wind_speed_unit: "mph",
     precipitation_unit: "inch",
@@ -173,6 +194,7 @@ export async function fetchWeatherSnapshots(
       cloudCover: valueAt(forecast.daily?.cloud_cover_mean, dayIndex),
       weatherCode: valueAt(forecast.daily?.weather_code, dayIndex),
       aqi: dailyAqi(air[locationIndex], targetDate),
+      hourly: hourlySignals(forecast, targetDate),
     });
   });
 
