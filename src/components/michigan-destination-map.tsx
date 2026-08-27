@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, Marker as MapLibreMarker } from "maplibre-gl";
+import { BOAT_LAUNCH_FINDER, type BoatLaunchGeoJson } from "../lib/boat-launches";
 import type { UniverseGeoJson, UniverseTrailProperties, UniverseTrailSystem } from "../lib/outdoor-universe";
 import type { Destination } from "../lib/types";
 
@@ -21,6 +22,8 @@ type MichiganDestinationMapProps = {
   closureCount?: number;
   rerouteCount?: number;
   trailLayerLabel?: string;
+  boatLaunchGeoJson?: BoatLaunchGeoJson | null;
+  boatLaunchCount?: number;
   userLocation?: LocationPoint;
 };
 
@@ -33,6 +36,10 @@ const closureSourceId = "official-dnr-closures";
 const closureLayerId = "official-dnr-closures-line";
 const rerouteSourceId = "official-dnr-reroutes";
 const rerouteLayerId = "official-dnr-reroutes-line";
+const boatLaunchSourceId = "michigan-boat-launches";
+const boatLaunchClusterLayerId = "michigan-boat-launch-clusters";
+const boatLaunchClusterCountLayerId = "michigan-boat-launch-cluster-count";
+const boatLaunchPointLayerId = "michigan-boat-launch-points";
 
 function emptyCollection(): UniverseGeoJson {
   return { type: "FeatureCollection", features: [] };
@@ -70,6 +77,8 @@ export function MichiganDestinationMap({
   closureCount = 0,
   rerouteCount = 0,
   trailLayerLabel,
+  boatLaunchGeoJson,
+  boatLaunchCount = 0,
   userLocation,
 }: MichiganDestinationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -198,6 +207,63 @@ export function MichiganDestinationMap({
         },
       });
     }
+
+    const launchData = boatLaunchGeoJson ?? { type: "FeatureCollection" as const, features: [] };
+    const existingBoatSource = map.getSource(boatLaunchSourceId) as GeoJSONSource | undefined;
+    if (existingBoatSource) existingBoatSource.setData(launchData as never);
+    else {
+      map.addSource(boatLaunchSourceId, {
+        type: "geojson",
+        data: launchData as never,
+        cluster: true,
+        clusterMaxZoom: 10,
+        clusterRadius: 46,
+      });
+    }
+
+    if (!map.getLayer(boatLaunchClusterLayerId)) {
+      map.addLayer({
+        id: boatLaunchClusterLayerId,
+        type: "circle",
+        source: boatLaunchSourceId,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": ["step", ["get", "point_count"], "#8fb8c6", 25, "#5f93a5", 100, "#315f7a"],
+          "circle-opacity": 0.88,
+          "circle-radius": ["step", ["get", "point_count"], 13, 25, 17, 100, 22],
+          "circle-stroke-color": "rgba(255,255,255,.9)",
+          "circle-stroke-width": 1.2,
+        },
+      });
+    }
+    if (!map.getLayer(boatLaunchClusterCountLayerId)) {
+      map.addLayer({
+        id: boatLaunchClusterCountLayerId,
+        type: "symbol",
+        source: boatLaunchSourceId,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-size": 10,
+        },
+        paint: { "text-color": "#132b3a" },
+      });
+    }
+    if (!map.getLayer(boatLaunchPointLayerId)) {
+      map.addLayer({
+        id: boatLaunchPointLayerId,
+        type: "circle",
+        source: boatLaunchSourceId,
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": "#b96d45",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 2.8, 10, 4.4, 13, 5.5],
+          "circle-stroke-color": "rgba(255,255,255,.95)",
+          "circle-stroke-width": 1.1,
+        },
+      });
+    }
+
     if (!map.getLayer(rerouteLayerId)) {
       map.addLayer({
         id: rerouteLayerId,
@@ -260,6 +326,67 @@ export function MichiganDestinationMap({
         .addTo(activeMap);
     };
 
+
+    const boatClusterClick = (event: MapLayerMouseEvent) => {
+      activeMap.flyTo({
+        center: event.lngLat,
+        zoom: Math.min(activeMap.getZoom() + 2, 11),
+        duration: 360,
+      });
+    };
+
+    const boatLaunchClick = (event: MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const properties = (feature?.properties ?? {}) as {
+        id?: string;
+        name?: string;
+        waterbody?: string;
+        county?: string;
+        launchStatus?: string;
+        lanes?: number | string | null;
+        trailerParking?: number | string | null;
+        piers?: number | string | null;
+        carryDown?: boolean | string;
+      };
+      const node = document.createElement("div");
+      node.className = "boat-launch-popup";
+
+      const eyebrow = document.createElement("span");
+      eyebrow.textContent = "Public boat access";
+      const title = document.createElement("strong");
+      title.textContent = properties.name || "Michigan boat launch";
+
+      const detail = document.createElement("p");
+      detail.textContent = [
+        properties.waterbody || "",
+        properties.county ? properties.county + " County" : "",
+        properties.launchStatus || "",
+      ].filter(Boolean).join(" · ");
+
+      const facts = document.createElement("small");
+      const lanes = Number(properties.lanes ?? 0);
+      const parking = Number(properties.trailerParking ?? 0);
+      const piers = Number(properties.piers ?? 0);
+      facts.textContent = [
+        lanes > 0 ? lanes + " lane" + (lanes === 1 ? "" : "s") : "",
+        parking > 0 ? parking + " trailer spaces" : "",
+        piers > 0 ? piers + " pier" + (piers === 1 ? "" : "s") : "",
+        properties.carryDown === true || properties.carryDown === "true" ? "carry-down access" : "",
+      ].filter(Boolean).join(" · ") || "Facility details vary by source record.";
+
+      const link = document.createElement("a");
+      link.href = BOAT_LAUNCH_FINDER;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Open Michigan Boat Launches →";
+
+      node.append(eyebrow, title, detail, facts, link);
+      new api.Popup({ closeButton: true, maxWidth: "350px" })
+        .setLngLat(event.lngLat)
+        .setDOMContent(node)
+        .addTo(activeMap);
+    };
+
     function accessClick(kind: "closure" | "reroute") {
       return (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
@@ -276,27 +403,39 @@ export function MichiganDestinationMap({
     const pointerOff = () => { activeMap.getCanvas().style.cursor = ""; };
 
     activeMap.on("click", trailSystemLayerId, trailSystemClick);
+    activeMap.on("click", boatLaunchClusterLayerId, boatClusterClick);
+    activeMap.on("click", boatLaunchPointLayerId, boatLaunchClick);
     activeMap.on("click", closureLayerId, closureClick);
     activeMap.on("click", rerouteLayerId, rerouteClick);
     activeMap.on("mouseenter", trailSystemLayerId, pointerOn);
+    activeMap.on("mouseenter", boatLaunchClusterLayerId, pointerOn);
+    activeMap.on("mouseenter", boatLaunchPointLayerId, pointerOn);
     activeMap.on("mouseenter", closureLayerId, pointerOn);
     activeMap.on("mouseenter", rerouteLayerId, pointerOn);
     activeMap.on("mouseleave", trailSystemLayerId, pointerOff);
+    activeMap.on("mouseleave", boatLaunchClusterLayerId, pointerOff);
+    activeMap.on("mouseleave", boatLaunchPointLayerId, pointerOff);
     activeMap.on("mouseleave", closureLayerId, pointerOff);
     activeMap.on("mouseleave", rerouteLayerId, pointerOff);
 
     return () => {
       activeMap.off("click", trailSystemLayerId, trailSystemClick);
+      activeMap.off("click", boatLaunchClusterLayerId, boatClusterClick);
+      activeMap.off("click", boatLaunchPointLayerId, boatLaunchClick);
       activeMap.off("click", closureLayerId, closureClick);
       activeMap.off("click", rerouteLayerId, rerouteClick);
       activeMap.off("mouseenter", trailSystemLayerId, pointerOn);
+      activeMap.off("mouseenter", boatLaunchClusterLayerId, pointerOn);
+      activeMap.off("mouseenter", boatLaunchPointLayerId, pointerOn);
       activeMap.off("mouseenter", closureLayerId, pointerOn);
       activeMap.off("mouseenter", rerouteLayerId, pointerOn);
       activeMap.off("mouseleave", trailSystemLayerId, pointerOff);
+      activeMap.off("mouseleave", boatLaunchClusterLayerId, pointerOff);
+      activeMap.off("mouseleave", boatLaunchPointLayerId, pointerOff);
       activeMap.off("mouseleave", closureLayerId, pointerOff);
       activeMap.off("mouseleave", rerouteLayerId, pointerOff);
     };
-  }, [mapReady, trailGeoJson, trailSystems, closuresGeoJson, reroutesGeoJson]);
+  }, [mapReady, trailGeoJson, trailSystems, closuresGeoJson, reroutesGeoJson, boatLaunchGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -362,11 +501,12 @@ export function MichiganDestinationMap({
 
   return (
     <div className="destination-map-frame">
-      <div ref={containerRef} className="destination-map" aria-label="Michigan outdoor map with full-planning places, statewide DNR trail systems and routes, temporary closures, and reroutes" />
+      <div ref={containerRef} className="destination-map" aria-label="Michigan outdoor map with full-planning places, statewide DNR trails, public boat launches, temporary closures, and reroutes" />
       <div className="map-legend" aria-label="Map legend">
         <span><i className="map-legend-decision" />Full trip planning</span>
         <span><i className="map-legend-system" />Trail system</span>
         <span><i className="map-legend-trail" />{trailLayerLabel ?? "DNR trail route"}</span>
+        {boatLaunchCount > 0 && <span><i className="map-legend-launch" />Boat launch</span>}
         {closureCount > 0 && <span><i className="map-legend-closure" />Closure</span>}
         {rerouteCount > 0 && <span><i className="map-legend-reroute" />Reroute</span>}
       </div>
