@@ -33,8 +33,27 @@ const trailWhere: Record<UniverseLayerId, string> = {
   railtrail: "TrailType='Railtrail'",
 };
 
-export const DNR_TRAIL_SERVICE =
-  "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21/query";
+const accessWhere: Record<UniverseLayerId, string> = {
+  hiking: "Hiking IS NOT NULL AND Hiking <> 'No'",
+  biking: "Biking IS NOT NULL AND Biking <> 'No'",
+  water: "WaterTrail IS NOT NULL AND WaterTrail <> 'No'",
+  skiing: "Skiing IS NOT NULL AND Skiing <> 'No'",
+  snowshoe: "Snowshoe IS NOT NULL AND Snowshoe <> 'No'",
+  orv: "((ORVRoute IS NOT NULL AND ORVRoute <> 'No') OR (ATVTrail IS NOT NULL AND ATVTrail <> 'No') OR (Motorcycle IS NOT NULL AND Motorcycle <> 'No'))",
+  snowmobile: "Snowmobile IS NOT NULL AND Snowmobile <> 'No'",
+  railtrail: "RailtrailType IN ('Railtrail','Rail With Trail')",
+};
+
+const DNR_TRAIL_ROOT =
+  "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer";
+
+export const DNR_TRAIL_SERVICE = `${DNR_TRAIL_ROOT}/21/query`;
+export const DNR_TRAIL_CLOSURES_SERVICE = `${DNR_TRAIL_ROOT}/0/query`;
+export const DNR_TRAIL_REROUTES_SERVICE = `${DNR_TRAIL_ROOT}/1/query`;
+
+const PAGE_SIZE = 2000;
+const MAX_TRAIL_PAGES = 12;
+const MAX_ACCESS_PAGES = 4;
 
 export type UniverseTrailProperties = {
   OBJECTID?: number;
@@ -47,6 +66,20 @@ export type UniverseTrailProperties = {
   SegmentLengthMiles?: number | null;
   SpecialRestrictionType?: string | null;
   SpecialDesignation?: string | null;
+  PublicComments?: string | null;
+  OpenClosedStatusNonmotor?: string | null;
+  OpenClosedStatusORV?: string | null;
+  OpenClosedStatusSnowmobile?: string | null;
+  Hiking?: string | null;
+  Biking?: string | null;
+  Skiing?: string | null;
+  Snowshoe?: string | null;
+  WaterTrail?: string | null;
+  ORVRoute?: string | null;
+  ATVTrail?: string | null;
+  Motorcycle?: string | null;
+  Snowmobile?: string | null;
+  RailtrailType?: string | null;
 };
 
 export type UniverseGeoJsonFeature = {
@@ -71,6 +104,16 @@ export type UniverseTrailSystem = {
   segments: number;
 };
 
+export type UniverseAccessState = {
+  status: "live" | "partial" | "unavailable";
+  closureCount: number;
+  rerouteCount: number;
+  closures: UniverseGeoJson;
+  reroutes: UniverseGeoJson;
+  partial: boolean;
+  note: string;
+};
+
 export type OutdoorUniverseResponse = {
   layer: UniverseLayerId;
   label: string;
@@ -85,27 +128,64 @@ export type OutdoorUniverseResponse = {
   systemCount: number;
   miles: number;
   partial: boolean;
+  pagesFetched: number;
   geojson: UniverseGeoJson;
   systems: UniverseTrailSystem[];
+  access: UniverseAccessState;
   note: string;
+};
+
+type PagedGeoJson = {
+  collection: UniverseGeoJson;
+  partial: boolean;
+  pagesFetched: number;
 };
 
 export function isUniverseLayerId(value: string): value is UniverseLayerId {
   return universeLayerIds.includes(value as UniverseLayerId);
 }
 
-export function buildDnrTrailQuery(layer: UniverseLayerId) {
+function buildArcGisQuery(
+  service: string,
+  where: string,
+  outFields: string,
+  offset = 0,
+) {
   const params = new URLSearchParams({
-    where: trailWhere[layer],
-    outFields:
-      "OBJECTID,TrailType,Name,TrailNamePrimary,PRDTrailUnit,RecreationSearchFacilityID,RecreationSearchTrailID,SegmentLengthMiles,SpecialRestrictionType,SpecialDesignation",
+    where,
+    outFields,
     returnGeometry: "true",
     outSR: "4326",
     geometryPrecision: "5",
-    resultRecordCount: "2000",
+    resultRecordCount: String(PAGE_SIZE),
+    resultOffset: String(offset),
+    orderByFields: "OBJECTID ASC",
     f: "geojson",
   });
-  return `${DNR_TRAIL_SERVICE}?${params.toString()}`;
+  return `${service}?${params.toString()}`;
+}
+
+export function buildDnrTrailQuery(layer: UniverseLayerId, offset = 0) {
+  return buildArcGisQuery(
+    DNR_TRAIL_SERVICE,
+    trailWhere[layer],
+    "OBJECTID,TrailType,Name,TrailNamePrimary,PRDTrailUnit,RecreationSearchFacilityID,RecreationSearchTrailID,SegmentLengthMiles,SpecialRestrictionType,SpecialDesignation",
+    offset,
+  );
+}
+
+export function buildDnrAccessQuery(
+  kind: "closures" | "reroutes",
+  layer: UniverseLayerId,
+  offset = 0,
+) {
+  const service = kind === "closures" ? DNR_TRAIL_CLOSURES_SERVICE : DNR_TRAIL_REROUTES_SERVICE;
+  return buildArcGisQuery(
+    service,
+    accessWhere[layer],
+    "OBJECTID,TrailNamePrimary,PublicComments,PRDTrailUnit,SegmentLengthMiles,OpenClosedStatusNonmotor,OpenClosedStatusORV,OpenClosedStatusSnowmobile,Hiking,Biking,Skiing,Snowshoe,WaterTrail,ORVRoute,ATVTrail,Motorcycle,Snowmobile,RailtrailType",
+    offset,
+  );
 }
 
 function trailName(feature: UniverseGeoJsonFeature) {
@@ -144,30 +224,113 @@ export function summarizeTrailSystems(collection: UniverseGeoJson) {
     .sort((a, b) => b.miles - a.miles || a.name.localeCompare(b.name));
 }
 
-export async function fetchOutdoorUniverse(layer: UniverseLayerId): Promise<OutdoorUniverseResponse> {
-  const fetchedAt = new Date().toISOString();
-  const sourceUrl = buildDnrTrailQuery(layer);
-  try {
-    const response = await fetch(sourceUrl, {
+async function fetchGeoJsonPages(
+  queryForOffset: (offset: number) => string,
+  maxPages: number,
+): Promise<PagedGeoJson> {
+  const features: UniverseGeoJsonFeature[] = [];
+  let pagesFetched = 0;
+  let partial = false;
+
+  for (let page = 0; page < maxPages; page += 1) {
+    const response = await fetch(queryForOffset(page * PAGE_SIZE), {
       headers: { Accept: "application/geo+json, application/json" },
       signal: AbortSignal.timeout(15_000),
-      next: { revalidate: 3600 },
+      next: { revalidate: 1800 },
     });
     if (!response.ok) throw new Error(`DNR trail service returned ${response.status}`);
 
-    const payload = (await response.json()) as Partial<UniverseGeoJson> & { error?: unknown };
+    const payload = (await response.json()) as Partial<UniverseGeoJson> & {
+      exceededTransferLimit?: boolean;
+      error?: unknown;
+    };
     if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
       throw new Error("DNR trail service did not return GeoJSON");
     }
-    const geojson: UniverseGeoJson = {
-      type: "FeatureCollection",
-      features: payload.features as UniverseGeoJsonFeature[],
-    };
+
+    const pageFeatures = payload.features as UniverseGeoJsonFeature[];
+    features.push(...pageFeatures);
+    pagesFetched += 1;
+
+    const serverSaysMore = payload.exceededTransferLimit === true;
+    if (pageFeatures.length < PAGE_SIZE && !serverSaysMore) {
+      return {
+        collection: { type: "FeatureCollection", features },
+        partial: false,
+        pagesFetched,
+      };
+    }
+  }
+
+  partial = true;
+  return {
+    collection: { type: "FeatureCollection", features },
+    partial,
+    pagesFetched,
+  };
+}
+
+function emptyAccess(note: string): UniverseAccessState {
+  return {
+    status: "unavailable",
+    closureCount: 0,
+    rerouteCount: 0,
+    closures: { type: "FeatureCollection", features: [] },
+    reroutes: { type: "FeatureCollection", features: [] },
+    partial: false,
+    note,
+  };
+}
+
+async function fetchAccessState(layer: UniverseLayerId): Promise<UniverseAccessState> {
+  const [closuresResult, reroutesResult] = await Promise.allSettled([
+    fetchGeoJsonPages((offset) => buildDnrAccessQuery("closures", layer, offset), MAX_ACCESS_PAGES),
+    fetchGeoJsonPages((offset) => buildDnrAccessQuery("reroutes", layer, offset), MAX_ACCESS_PAGES),
+  ]);
+
+  if (closuresResult.status === "rejected" && reroutesResult.status === "rejected") {
+    return emptyAccess("Michigan DNR temporary closure and reroute layers are temporarily unavailable.");
+  }
+
+  const closures = closuresResult.status === "fulfilled"
+    ? closuresResult.value
+    : { collection: { type: "FeatureCollection" as const, features: [] }, partial: false, pagesFetched: 0 };
+  const reroutes = reroutesResult.status === "fulfilled"
+    ? reroutesResult.value
+    : { collection: { type: "FeatureCollection" as const, features: [] }, partial: false, pagesFetched: 0 };
+  const partial =
+    closuresResult.status === "rejected" ||
+    reroutesResult.status === "rejected" ||
+    closures.partial ||
+    reroutes.partial;
+
+  return {
+    status: partial ? "partial" : "live",
+    closureCount: closures.collection.features.length,
+    rerouteCount: reroutes.collection.features.length,
+    closures: closures.collection,
+    reroutes: reroutes.collection,
+    partial,
+    note: partial
+      ? "Some DNR access-change data is incomplete. Verify the selected trail with the managing agency before leaving."
+      : "Temporary closures and reroutes come from Michigan DNR's public trail layers and are shown directly on the map.",
+  };
+}
+
+export async function fetchOutdoorUniverse(layer: UniverseLayerId): Promise<OutdoorUniverseResponse> {
+  const fetchedAt = new Date().toISOString();
+  try {
+    const [trailData, access] = await Promise.all([
+      fetchGeoJsonPages((offset) => buildDnrTrailQuery(layer, offset), MAX_TRAIL_PAGES),
+      fetchAccessState(layer),
+    ]);
+
+    const geojson = trailData.collection;
     const systems = summarizeTrailSystems(geojson);
     const miles = Number(
       geojson.features.reduce((sum, feature) => sum + trailMiles(feature), 0).toFixed(1),
     );
-    const partial = geojson.features.length >= 2000;
+
     return {
       layer,
       label: universeLayerLabels[layer],
@@ -175,18 +338,20 @@ export async function fetchOutdoorUniverse(layer: UniverseLayerId): Promise<Outd
       fetchedAt,
       source: {
         name: "Michigan DNR Trails Open Data",
-        url: "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21",
+        url: `${DNR_TRAIL_ROOT}/layers`,
         authority: "Michigan Department of Natural Resources",
       },
       featureCount: geojson.features.length,
       systemCount: systems.length,
       miles,
-      partial,
+      partial: trailData.partial,
+      pagesFetched: trailData.pagesFetched,
       geojson,
       systems,
-      note: partial
-        ? "Showing the first 2,000 simplified DNR trail segments for this layer. Zoom and filters remain useful, but this response may not include every segment."
-        : "Official statewide DNR trail geometry. Decision-ready dots use a separate, stricter live-intelligence dataset.",
+      access,
+      note: trailData.partial
+        ? `Loaded ${geojson.features.length.toLocaleString()} DNR trail segments across ${trailData.pagesFetched} pages, but the layer still exceeded the platform pagination ceiling. The map labels this as partial rather than implying complete coverage.`
+        : `Loaded the full returned ${universeLayerLabels[layer].toLowerCase()} layer across ${trailData.pagesFetched} DNR data page${trailData.pagesFetched === 1 ? "" : "s"}.`,
     };
   } catch {
     return {
@@ -196,15 +361,17 @@ export async function fetchOutdoorUniverse(layer: UniverseLayerId): Promise<Outd
       fetchedAt,
       source: {
         name: "Michigan DNR Trails Open Data",
-        url: "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21",
+        url: `${DNR_TRAIL_ROOT}/layers`,
         authority: "Michigan Department of Natural Resources",
       },
       featureCount: 0,
       systemCount: 0,
       miles: 0,
       partial: false,
+      pagesFetched: 0,
       geojson: { type: "FeatureCollection", features: [] },
       systems: [],
+      access: emptyAccess("Trail geometry is unavailable, so no access overlay is asserted."),
       note: "The official DNR trail layer is temporarily unavailable. Decision-ready places still remain on the map.",
     };
   }
