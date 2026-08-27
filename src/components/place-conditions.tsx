@@ -43,13 +43,11 @@ export function PlaceConditions({
 }: PlaceConditionsProps) {
   const [payload, setPayload] = useState<ConditionsPayload | null>(null);
   const [failed, setFailed] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
     const requestedDate = new URLSearchParams(window.location.search).get("date");
     const validDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : null;
-    setSelectedDate(validDate);
     const dateQuery = validDate ? `?date=${encodeURIComponent(validDate)}` : "";
     fetch(`/api/conditions/${encodeURIComponent(placeId)}${dateQuery}`, { signal: controller.signal })
       .then(async (response) => {
@@ -64,20 +62,20 @@ export function PlaceConditions({
     return () => controller.abort();
   }, [placeId]);
 
-  const dateLabel = selectedDate
+  const dateLabel = payload?.targetDate
     ? new Intl.DateTimeFormat("en-US", {
         weekday: "long",
         month: "short",
         day: "numeric",
         timeZone: "UTC",
-      }).format(new Date(`${selectedDate}T12:00:00Z`))
+      }).format(new Date(`${payload.targetDate}T12:00:00Z`))
     : null;
 
   return (
     <section className="place-conditions" aria-labelledby="place-conditions-title">
       <div className="place-conditions-heading">
         <div>
-          <p className="eyebrow">{dateLabel ? `Plan for ${dateLabel}` : "Today at a glance"}</p>
+          <p className="eyebrow">{dateLabel ? `Forecast for ${dateLabel}` : "Today at a glance"}</p>
           <h2 id="place-conditions-title">Planning signals for {placeName}</h2>
         </div>
         <span>{payload?.conditionsStatus === "live" ? "Live forecast" : "Planning check"}</span>
