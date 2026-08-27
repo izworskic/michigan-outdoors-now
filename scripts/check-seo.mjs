@@ -109,10 +109,9 @@ assert.match(await readFile(guideIndex, "utf8"), /Ten ways into one useful decis
 const exploreIndex = htmlFiles.find((file) => file.endsWith("/explore.html"));
 assert.ok(exploreIndex, "built destination explorer missing");
 const exploreHtml = await readFile(exploreIndex, "utf8");
-assert.match(exploreHtml, /Michigan outdoor universe/);
 assert.match(exploreHtml, /Explore Michigan outdoors\./);
 assert.match(exploreHtml, /Not a shortlist\./);
-assert.match(exploreHtml, /Official statewide discovery/);
+assert.match(exploreHtml, /Official DNR trails and access changes/);
 assert.match(exploreHtml, /Michigan DNR Trails Open Data/);
 assert.doesNotMatch(exploreHtml, /numbered pins|result-map-number|Show all 28 places|See all 28 places/);
 assert.match(exploreHtml, /CollectionPage/);
@@ -161,4 +160,4 @@ assert.ok(robotsPath, "built robots body was not found");
 const robots = await readFile(robotsPath, "utf8");
 assert.match(robots, /Disallow: \//);
 
-console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, a statewide DNR discovery map, 57 sitemap URLs, and preview noindex.`);
+console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, a map-first statewide DNR discovery surface with access changes, 57 sitemap URLs, and preview noindex.`);

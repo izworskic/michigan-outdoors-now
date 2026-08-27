@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { GeoJSONSource, Map as MapLibreMap, Marker as MapLibreMarker } from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, Marker as MapLibreMarker } from "maplibre-gl";
 import type { UniverseGeoJson, UniverseTrailProperties } from "../lib/outdoor-universe";
 import type { Destination } from "../lib/types";
 
@@ -183,7 +183,7 @@ export function MichiganDestinationMap({
     }
 
     function accessClick(kind: "closure" | "reroute") {
-      return (event: maplibregl.MapLayerMouseEvent) => {
+      return (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         const properties = (feature?.properties ?? {}) as UniverseTrailProperties;
         new mapApi.Popup({ closeButton: true, maxWidth: "340px" })

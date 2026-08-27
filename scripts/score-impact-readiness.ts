@@ -94,8 +94,8 @@ const usefulness = calculate([
       [8, has("src/app/places/[place]/page.tsx", '"@type": "Place"', "GeoCoordinates", "sameAs")],
       [8, has("src/components/destination-explorer.tsx", "aria-live", "aria-pressed") && has("src/components/planner.tsx", "<fieldset", "aria-live")],
       [7,
-        has("src/app/globals.css", "@media (max-width: 560px)", "prefers-reduced-motion", "destination-map") &&
-        has("src/components/destination-explorer.tsx", "data-mobile-view", "Choose map or discovery rail view")],
+        has("src/app/globals.css", "@media (max-width: 700px)", "prefers-reduced-motion", "universe-drawer", "74dvh") &&
+        has("src/components/destination-explorer.tsx", "browseOpen", "universe-drawer", "map-filter-menu")],
       [8, has("src/app/places/[place]/page.tsx", "relatedGuides") && has("src/lib/planner.ts", "relatedToolFor")],
     ],
   },
@@ -103,7 +103,7 @@ const usefulness = calculate([
     name: "Measurement and outcomes",
     checks: [
       [10, has("src/components/planner.tsx", "planner_started", "planner_completed", "outbound_official_opened") && has("src/components/destination-explorer.tsx", "explorer_filter_changed")],
-      [8, has("package.json", "check:seo", "check:runtime", "score:impact") && has("scripts/runtime-check.mjs", "coordinateRecommendation", "conditionsPayload")],
+      [8, has("package.json", "check:seo", "check:runtime", "score:impact", "score:interface") && has("scripts/runtime-check.mjs", "coordinateRecommendation", "conditionsPayload", "closureCount")],
       [7, has("docs/search-growth-plan.md", "10x", "qualified organic entries")],
       [5, gates.productionVerified === true],
       [5, gates.stableBaselineRecorded === true],
