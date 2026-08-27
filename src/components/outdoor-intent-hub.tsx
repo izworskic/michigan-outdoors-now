@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { specialistTools } from "../data/specialist-tools";
-import type { StatewideMode, StatewideResponse } from "../lib/statewide";
-import type { ActivityId, DateChoice, PlannerResponse } from "../lib/types";
+import type { StatewideMode } from "../lib/statewide";
+import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse } from "../lib/types";
 
 type IntentId = "today" | "weekend" | "place" | "activity";
 
@@ -16,20 +16,29 @@ type PlaceOption = {
   activities: ActivityId[];
 };
 
+type RunPlanOverrides = {
+  origin?: string;
+  originCoordinates?: PlannerRequest["originCoordinates"];
+  date?: DateChoice;
+  mode?: StatewideMode;
+  driveHours?: number;
+};
+
 const intents: Array<{ id: IntentId; eyebrow: string; title: string; detail: string }> = [
-  { id: "today", eyebrow: "Right now", title: "I want to get outside today", detail: "Show me the strongest options and the best time to go." },
-  { id: "weekend", eyebrow: "Plan ahead", title: "Help me plan this weekend", detail: "Show me what is worth the drive, plus a backup." },
+  { id: "today", eyebrow: "Right now", title: "I want to get outside today", detail: "Find the strongest options inside the distance I would actually travel." },
+  { id: "weekend", eyebrow: "Plan ahead", title: "Help me plan this weekend", detail: "Find something worth the drive, plus a backup." },
   { id: "place", eyebrow: "I have an idea", title: "I already know the place", detail: "Check the place I am considering before I commit." },
   { id: "activity", eyebrow: "Start with the activity", title: "I know what I want to do", detail: "Hike, beach, fish, bird, paddle, watch ships, or chase dark skies." },
 ];
 
 const genericActivities: Array<{ id: StatewideMode; label: string; detail: string }> = [
-  { id: "best", label: "Best overall", detail: "Give me the strongest general outdoor option." },
+  { id: "best", label: "Best overall", detail: "Strongest general outdoor options." },
   { id: "hiking", label: "Hiking", detail: "Comfortable weather and a useful daylight window." },
-  { id: "scenic", label: "Scenic day", detail: "Good weather for overlooks, waterfalls, drives, and photography." },
+  { id: "scenic", label: "Scenic day", detail: "Overlooks, waterfalls, drives, and photography." },
   { id: "dark-sky", label: "Dark sky", detail: "Cloud cover and weather that support a night outside." },
 ];
 
+const driveChoices = [1, 2, 3, 4, 5] as const;
 const specialistOrder = ["beaches", "buoys", "trout", "birding", "aurora", "freighters"] as const;
 
 function displayStatus(status: string) {
@@ -44,37 +53,45 @@ function scoreLabel(score: number) {
   return "Weak fit";
 }
 
-function weatherLine(response: StatewideResponse) {
-  const lead = response.picks[0];
-  if (!lead) return "";
+function driveTimeLabel(hours: number) {
+  const minutes = Math.round(hours * 60);
+  if (minutes < 60) return `${minutes} min`;
+  const wholeHours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  return remainder ? `${wholeHours} hr ${remainder} min` : `${wholeHours} hr`;
+}
+
+function planWeatherLine(plan: Plan) {
+  if (!plan.weather) return "Live weather was unavailable for this result; verify conditions before leaving.";
   const pieces: string[] = [];
-  if (lead.weather.high !== null) pieces.push(`${Math.round(lead.weather.high)}° high`);
-  if (lead.weather.precipitationProbability !== null) pieces.push(`${Math.round(lead.weather.precipitationProbability)}% rain`);
-  if (lead.weather.windGust !== null) pieces.push(`gusts ${Math.round(lead.weather.windGust)} mph`);
-  if (lead.weather.aqi !== null) pieces.push(`AQI ${Math.round(lead.weather.aqi)}`);
+  if (plan.weather.high !== null) pieces.push(`${Math.round(plan.weather.high)}° high`);
+  if (plan.weather.precipitationProbability !== null) pieces.push(`${Math.round(plan.weather.precipitationProbability)}% rain`);
+  if (plan.weather.windGust !== null) pieces.push(`gusts ${Math.round(plan.weather.windGust)} mph`);
+  if (plan.weather.aqi !== null) pieces.push(`AQI ${Math.round(plan.weather.aqi)}`);
   return pieces.join(" · ");
 }
 
-export function OutdoorIntentHub({
-  initialToday,
-  places,
-}: {
-  initialToday: StatewideResponse;
-  places: PlaceOption[];
-}) {
+function planWhy(plan: Plan) {
+  const useful = plan.reasons.filter((reason) => !reason.startsWith("About "));
+  return useful.slice(0, 2).join(" ") || plan.destination.summary;
+}
+
+function planWatch(plan: Plan) {
+  return plan.cautions[0] ??
+    "No major weather caution surfaced in the available inputs. Check official access and alerts before leaving.";
+}
+
+export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
   const [intent, setIntent] = useState<IntentId>("today");
-  const [statewide, setStatewide] = useState(initialToday);
   const [date, setDate] = useState<DateChoice>("today");
   const [mode, setMode] = useState<StatewideMode>("best");
-  const [loading, setLoading] = useState(false);
-  const [stateError, setStateError] = useState("");
   const [placeQuery, setPlaceQuery] = useState("");
-  const [localOpen, setLocalOpen] = useState(false);
   const [origin, setOrigin] = useState("");
+  const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
   const [driveHours, setDriveHours] = useState(2);
-  const [localLoading, setLocalLoading] = useState(false);
-  const [localError, setLocalError] = useState("");
-  const [localPlans, setLocalPlans] = useState<PlannerResponse | null>(null);
+  const [planning, setPlanning] = useState(false);
+  const [planError, setPlanError] = useState("");
+  const [plans, setPlans] = useState<PlannerResponse | null>(null);
 
   const matchingPlaces = useMemo(() => {
     const q = placeQuery.trim().toLowerCase();
@@ -84,103 +101,117 @@ export function OutdoorIntentHub({
       .slice(0, 8);
   }, [placeQuery, places]);
 
-  async function refreshStatewide(nextDate: DateChoice, nextMode: StatewideMode) {
-    setDate(nextDate);
-    setMode(nextMode);
-    setLoading(true);
-    setStateError("");
-    setLocalPlans(null);
-    try {
-      const response = await fetch(`/api/statewide?date=${nextDate}&mode=${nextMode}`);
-      if (!response.ok) throw new Error("Could not load conditions.");
-      setStatewide((await response.json()) as StatewideResponse);
-    } catch {
-      setStateError("Live statewide conditions are temporarily unavailable. Try a place check or one of the specialized live tools.");
-    } finally {
-      setLoading(false);
-    }
+  function selectedActivities(nextMode: StatewideMode): ActivityId[] {
+    if (nextMode === "hiking") return ["hiking"];
+    if (nextMode === "scenic") return ["scenic"];
+    if (nextMode === "dark-sky") return ["dark-sky"];
+    return ["hiking", "scenic"];
   }
 
-  async function chooseIntent(next: IntentId) {
-    setIntent(next);
-    setStateError("");
-    setLocalPlans(null);
-    if (next === "today") await refreshStatewide("today", mode);
-    if (next === "weekend") await refreshStatewide("weekend", mode);
-  }
+  async function runPlan(overrides: RunPlanOverrides = {}) {
+    const chosenOrigin = (overrides.origin ?? origin).trim();
+    const coordinates = overrides.originCoordinates ?? originCoordinates;
+    const chosenDate = overrides.date ?? date;
+    const chosenMode = overrides.mode ?? mode;
+    const chosenDriveHours = overrides.driveHours ?? driveHours;
 
-  async function chooseMode(nextMode: StatewideMode) {
-    setIntent(date === "weekend" ? "weekend" : "today");
-    await refreshStatewide(date, nextMode);
-  }
-
-  function useLocation() {
-    setLocalError("");
-    if (!navigator.geolocation) {
-      setLocalError("Location is unavailable in this browser. Type a Michigan city or ZIP instead.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        setOrigin("My location");
-        void runLocal({
-          origin: "My location",
-          originCoordinates: {
-            latitude: Number(coords.latitude.toFixed(5)),
-            longitude: Number(coords.longitude.toFixed(5)),
-          },
-        });
-      },
-      () => setLocalError("Location was not available. Type a Michigan city or ZIP instead."),
-      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 600_000 },
-    );
-  }
-
-  async function runLocal(
-    override?: { origin: string; originCoordinates?: { latitude: number; longitude: number } },
-  ) {
-    const chosenOrigin = override?.origin ?? origin.trim();
     if (!chosenOrigin) {
-      setLocalError("Enter a Michigan city or ZIP code.");
+      setPlanError("Tell us where you are starting in Michigan, or use your location.");
       return;
     }
-    setLocalLoading(true);
-    setLocalError("");
-    setLocalPlans(null);
-    try {
-      const selectedActivities: ActivityId[] =
-        mode === "hiking" ? ["hiking"] :
-        mode === "scenic" ? ["scenic"] :
-        mode === "dark-sky" ? ["dark-sky"] :
-        ["hiking", "scenic"];
 
+    setPlanning(true);
+    setPlanError("");
+    try {
       const response = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           origin: chosenOrigin,
-          originCoordinates: override?.originCoordinates,
-          date,
-          maxDriveHours: driveHours,
-          activities: selectedActivities,
+          ...(coordinates ? { originCoordinates: coordinates } : {}),
+          date: chosenDate,
+          maxDriveHours: chosenDriveHours,
+          activities: selectedActivities(chosenMode),
           kids: false,
           dog: false,
           accessible: false,
         }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error ?? "Could not personalize this.");
-      setLocalPlans(payload as PlannerResponse);
+      if (!response.ok || !("plans" in payload)) {
+        throw new Error(payload.error ?? "Could not build this plan.");
+      }
+      setPlans(payload as PlannerResponse);
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "Could not personalize this.");
+      setPlans(null);
+      setPlanError(error instanceof Error ? error.message : "Could not build this plan.");
     } finally {
-      setLocalLoading(false);
+      setPlanning(false);
     }
   }
 
-  const lead = statewide.picks[0];
-  const alternatives = statewide.picks.slice(1, 4);
-  const activeDateLabel = date === "weekend" ? "this weekend" : date;
+  function chooseIntent(next: IntentId) {
+    setIntent(next);
+    setPlanError("");
+    if (next !== "today" && next !== "weekend") return;
+
+    const nextDate: DateChoice = next === "weekend" ? "weekend" : "today";
+    setDate(nextDate);
+    if (plans && (origin.trim() || originCoordinates)) {
+      void runPlan({ date: nextDate });
+    } else {
+      setPlans(null);
+    }
+  }
+
+  function chooseMode(nextMode: StatewideMode) {
+    setMode(nextMode);
+    if (intent !== "today" && intent !== "weekend") {
+      setIntent("today");
+      setDate("today");
+    }
+    if (plans && (origin.trim() || originCoordinates)) {
+      void runPlan({ mode: nextMode, date: intent === "weekend" ? "weekend" : "today" });
+    }
+  }
+
+  function chooseDriveHours(hours: number) {
+    setDriveHours(hours);
+    if (plans && (origin.trim() || originCoordinates)) {
+      void runPlan({ driveHours: hours });
+    }
+  }
+
+  function useLocation() {
+    setPlanError("");
+    if (!navigator.geolocation) {
+      setPlanError("Location is unavailable in this browser. Type a Michigan city or ZIP instead.");
+      return;
+    }
+
+    setPlanning(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const coordinates = {
+          latitude: Number(coords.latitude.toFixed(5)),
+          longitude: Number(coords.longitude.toFixed(5)),
+        };
+        setOrigin("My location");
+        setOriginCoordinates(coordinates);
+        void runPlan({ origin: "My location", originCoordinates: coordinates });
+      },
+      () => {
+        setPlanning(false);
+        setPlanError("Location was not available. Type a Michigan city or ZIP instead.");
+      },
+      { enableHighAccuracy: false, timeout: 8_000, maximumAge: 600_000 },
+    );
+  }
+
+  const lead = plans?.plans[0] ?? null;
+  const alternatives = plans?.plans.slice(1, 3) ?? [];
+  const activeDateLabel = date === "weekend" ? "this weekend" : "today";
+  const modeLabel = genericActivities.find((item) => item.id === mode)?.label ?? "Best overall";
 
   return (
     <section className="persona-home" aria-labelledby="persona-home-title">
@@ -189,8 +220,8 @@ export function OutdoorIntentHub({
           <p className="persona-kicker">Michigan Outdoors Now</p>
           <h1 id="persona-home-title">What kind of Michigan day are you trying to have?</h1>
           <p>
-            Pick the situation that sounds like you. We’ll help narrow the state to a place worth going,
-            the best time to be there, and anything that could spoil the plan.
+            Tell us what you are trying to do, where you are starting, and how far you would actually travel.
+            We’ll narrow the options to your real trip range.
           </p>
         </div>
 
@@ -201,7 +232,7 @@ export function OutdoorIntentHub({
               type="button"
               className="persona-intent-card"
               data-active={intent === item.id}
-              onClick={() => void chooseIntent(item.id)}
+              onClick={() => chooseIntent(item.id)}
             >
               <span>{item.eyebrow}</span>
               <strong>{item.title}</strong>
@@ -213,134 +244,165 @@ export function OutdoorIntentHub({
 
       {(intent === "today" || intent === "weekend") && (
         <section className="persona-answer" aria-live="polite">
-          <div className="persona-answer-head">
-            <div>
-              <p>{intent === "weekend" ? "Worth planning around" : "Best bet right now"}</p>
-              <h2>{intent === "weekend" ? "Start with the weekend answer." : "Start with the answer."}</h2>
+          <section className="persona-trip-scope" aria-labelledby="trip-scope-title">
+            <div className="persona-trip-scope-copy">
+              <p className="persona-section-kicker">Set your real trip range</p>
+              <h2 id="trip-scope-title">Where are you starting, and how far would you go?</h2>
+              <p>
+                We only rank places inside your maximum one-way drive. Pick 4 hours and the search includes
+                everything from nearby through 4 hours away.
+              </p>
             </div>
-            <div className="persona-mode-chips" aria-label="Refine the kind of outing">
-              {genericActivities.map((item) => (
-                <button
-                  type="button"
-                  key={item.id}
-                  aria-pressed={mode === item.id}
-                  onClick={() => void chooseMode(item.id)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {stateError && <p className="persona-error">{stateError}</p>}
+            <div className="persona-trip-controls">
+              <label className="persona-origin-field">
+                <span>Starting city or ZIP</span>
+                <div>
+                  <input
+                    value={origin}
+                    onChange={(event) => {
+                      setOrigin(event.target.value);
+                      setOriginCoordinates(undefined);
+                      setPlans(null);
+                    }}
+                    placeholder="Bay City, 48706, Marquette…"
+                    autoComplete="postal-code"
+                  />
+                  <button type="button" onClick={useLocation} disabled={planning}>
+                    Use my location
+                  </button>
+                </div>
+              </label>
 
-          <div className={`persona-live-answer ${loading ? "is-loading" : ""}`}>
-            {lead ? (
-              <>
-                <article className="persona-lead-card">
-                  <div className="persona-lead-rating">
-                    <span>{scoreLabel(lead.score)}</span>
-                    <strong>{lead.score}</strong>
-                    <small>{displayStatus(lead.status)} · {lead.confidence} confidence</small>
-                  </div>
-                  <div className="persona-lead-main">
-                    <p className="persona-answer-label">For {activeDateLabel}</p>
-                    <h3>{lead.destination.name}</h3>
-                    <p className="persona-place-meta">{lead.destination.area} · {lead.activityLabel}</p>
+              <fieldset className="persona-drive-field">
+                <legend>Maximum one-way drive</legend>
+                <div>
+                  {driveChoices.map((hours) => (
+                    <button
+                      type="button"
+                      key={hours}
+                      aria-pressed={driveHours === hours}
+                      onClick={() => chooseDriveHours(hours)}
+                    >
+                      Up to {hours} {hours === 1 ? "hour" : "hours"}
+                    </button>
+                  ))}
+                </div>
+                <small>
+                  This is a radius, not a target. <strong>Up to 4 hours means 0–4 hours away.</strong>
+                </small>
+              </fieldset>
 
-                    <div className="persona-decision-grid">
-                      <div>
-                        <span>Go when</span>
-                        <strong>{lead.bestWindow ?? "Check the hourly detail"}</strong>
-                      </div>
-                      <div>
-                        <span>Why it works</span>
-                        <strong>{lead.why}</strong>
-                      </div>
-                      <div className="persona-watch">
-                        <span>Know before you go</span>
-                        <strong>{lead.watch}</strong>
-                      </div>
-                    </div>
-
-                    <p className="persona-weather-line">{weatherLine(statewide)}</p>
-                    <div className="persona-actions">
-                      <Link href={`/places/${lead.destination.id}`}>See the full plan →</Link>
-                      <button type="button" onClick={() => setLocalOpen((value) => !value)}>
-                        {localOpen ? "Hide closer options" : "Show me closer options"}
-                      </button>
-                      <Link href="/explore">Browse the Michigan map</Link>
-                    </div>
-                  </div>
-                </article>
-
-                {alternatives.length > 0 && (
-                  <div className="persona-alternatives">
-                    <p>Good backups</p>
-                    <div>
-                      {alternatives.map((pick) => (
-                        <Link href={`/places/${pick.destination.id}`} key={pick.destination.id}>
-                          <span>{pick.activityLabel} · {pick.score}/100</span>
-                          <strong>{pick.destination.name}</strong>
-                          <small>{pick.bestWindow ?? pick.why}</small>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {localOpen && (
-                  <section className="persona-local">
-                    <div>
-                      <p>Make this useful from where you are</p>
-                      <h3>How far are you actually willing to drive?</h3>
-                    </div>
-                    <div className="persona-local-form">
-                      <label>
-                        <span>Starting city or ZIP</span>
-                        <input value={origin} onChange={(event) => setOrigin(event.target.value)} placeholder="Bay City, 48706, Marquette…" />
-                      </label>
-                      <label>
-                        <span>Maximum drive</span>
-                        <select value={driveHours} onChange={(event) => setDriveHours(Number(event.target.value))}>
-                          <option value={1}>About 1 hour</option>
-                          <option value={2}>About 2 hours</option>
-                          <option value={3}>About 3 hours</option>
-                          <option value={5}>Up to 5 hours</option>
-                        </select>
-                      </label>
-                      <button type="button" onClick={() => void runLocal()} disabled={localLoading}>
-                        {localLoading ? "Finding options…" : "Find my best options"}
-                      </button>
-                      <button type="button" className="persona-location-button" onClick={useLocation} disabled={localLoading}>
-                        Use my location
-                      </button>
-                    </div>
-                    {localError && <p className="persona-error">{localError}</p>}
-                    {localPlans && (
-                      <div className="persona-local-results">
-                        {localPlans.plans.length ? localPlans.plans.map((plan) => (
-                          <Link href={`/places/${plan.destination.id}`} key={plan.destination.id}>
-                            <div>
-                              <span>{plan.driveHours} hr drive · {plan.score}/100</span>
-                              <strong>{plan.destination.name}</strong>
-                              <small>{plan.bestWindow ? `Best window: ${plan.bestWindow}` : plan.destination.summary}</small>
-                            </div>
-                            <p>{plan.cautions[0] ?? plan.reasons[0]}</p>
-                          </Link>
-                        )) : <p>No strong matches inside that drive window. Increase the drive time or try a different outing.</p>}
-                      </div>
-                    )}
-                  </section>
-                )}
-              </>
-            ) : (
-              <div className="persona-empty">
-                <h3>No live statewide answer is available right now.</h3>
-                <p>Check a specific place, browse the map, or use one of the specialized tools below.</p>
+              <div className="persona-scope-activity">
+                <span>What sounds good?</span>
+                <div className="persona-mode-chips" aria-label="Choose the kind of outing">
+                  {genericActivities.map((item) => (
+                    <button
+                      type="button"
+                      key={item.id}
+                      aria-pressed={mode === item.id}
+                      onClick={() => chooseMode(item.id)}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
+
+              <button
+                type="button"
+                className="persona-build-button"
+                onClick={() => void runPlan()}
+                disabled={planning}
+              >
+                {planning ? "Finding your options…" : `Find my best options within ${driveHours} hours`}
+              </button>
+            </div>
+          </section>
+
+          {planError && <p className="persona-error">{planError}</p>}
+
+          {!plans && !planning && !planError && (
+            <div className="persona-awaiting-plan">
+              <span>Next</span>
+              <strong>Set your starting point and travel limit.</strong>
+              <p>Then we’ll compare the strongest {modeLabel.toLowerCase()} options inside that entire range.</p>
+            </div>
+          )}
+
+          {plans && (
+            <div className="persona-live-answer">
+              {lead ? (
+                <>
+                  <div className="persona-answer-head">
+                    <div>
+                      <p>{intent === "weekend" ? "Worth planning around" : "Best inside your range"}</p>
+                      <h2>Your strongest option {activeDateLabel}.</h2>
+                    </div>
+                    <p className="persona-range-summary">
+                      Starting from <strong>{plans.origin.name}</strong> · searching everything up to{" "}
+                      <strong>{driveHours} {driveHours === 1 ? "hour" : "hours"}</strong> away
+                    </p>
+                  </div>
+
+                  <article className="persona-lead-card">
+                    <div className="persona-lead-rating">
+                      <span>{scoreLabel(lead.score)}</span>
+                      <strong>{lead.score}</strong>
+                      <small>{displayStatus(lead.decisionStatus)} · {lead.confidence} confidence</small>
+                    </div>
+                    <div className="persona-lead-main">
+                      <p className="persona-answer-label">{driveTimeLabel(lead.driveHours)} from your start · {modeLabel}</p>
+                      <h3>{lead.destination.name}</h3>
+                      <p className="persona-place-meta">{lead.destination.area} · {lead.distanceMiles} rough miles</p>
+
+                      <div className="persona-decision-grid">
+                        <div>
+                          <span>Go when</span>
+                          <strong>{lead.bestWindow ?? "Check the hourly detail"}</strong>
+                        </div>
+                        <div>
+                          <span>Why it works</span>
+                          <strong>{planWhy(lead)}</strong>
+                        </div>
+                        <div className="persona-watch">
+                          <span>Know before you go</span>
+                          <strong>{planWatch(lead)}</strong>
+                        </div>
+                      </div>
+
+                      <p className="persona-weather-line">{planWeatherLine(lead)}</p>
+                      <div className="persona-actions">
+                        <Link href={`/places/${lead.destination.id}`}>See the full plan →</Link>
+                        <a href={lead.mapUrl}>Open directions</a>
+                        <Link href="/explore">Browse the Michigan map</Link>
+                      </div>
+                    </div>
+                  </article>
+
+                  {alternatives.length > 0 && (
+                    <div className="persona-alternatives">
+                      <p>Good backups inside your range</p>
+                      <div>
+                        {alternatives.map((plan) => (
+                          <Link href={`/places/${plan.destination.id}`} key={plan.destination.id}>
+                            <span>{driveTimeLabel(plan.driveHours)} away · {plan.score}/100</span>
+                            <strong>{plan.destination.name}</strong>
+                            <small>{plan.bestWindow ? `Best window: ${plan.bestWindow}` : planWhy(plan)}</small>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="persona-empty">
+                  <h3>No strong match showed up inside your {driveHours}-hour range.</h3>
+                  <p>Try a wider travel limit, another activity, or check a specific place.</p>
+                </div>
+              )}
+            </div>
+          )}
         </section>
       )}
 
@@ -384,8 +446,8 @@ export function OutdoorIntentHub({
 
           <div className="persona-activity-grid">
             {genericActivities.slice(1).map((item) => (
-              <button type="button" key={item.id} onClick={() => void chooseMode(item.id)}>
-                <span>Find the best</span>
+              <button type="button" key={item.id} onClick={() => chooseMode(item.id)}>
+                <span>Find the best near me</span>
                 <strong>{item.label}</strong>
                 <small>{item.detail}</small>
               </button>
@@ -412,25 +474,25 @@ export function OutdoorIntentHub({
           <p className="persona-section-kicker">What this actually does for you</p>
           <h2 id="persona-proof-title">Less checking six tabs. More confidence in the plan.</h2>
           <p>
-            The point is not to show you more data. It is to combine the right signals for the outing you care about
-            and turn them into a practical choice.
+            The point is not to show you more data. It is to compare the places you would genuinely travel to,
+            then turn the right conditions into a practical choice.
           </p>
         </div>
         <div className="persona-proof-grid">
           <article>
             <span>1</span>
+            <h3>It respects your travel limit.</h3>
+            <p>A four-hour limit means every useful option from nearby through four hours away can compete for the recommendation.</p>
+          </article>
+          <article>
+            <span>2</span>
             <h3>It tells you when.</h3>
             <p>A good morning and a bad afternoon should not become one vague daily score. We look for the useful window.</p>
           </article>
           <article>
-            <span>2</span>
+            <span>3</span>
             <h3>It changes the data by activity.</h3>
             <p>Hiking cares about rain, heat and air. Beaches need waves and swim risk. Trout need river conditions. Dark skies need clouds.</p>
-          </article>
-          <article>
-            <span>3</span>
-            <h3>It tells you what could wreck the day.</h3>
-            <p>Closures, bad air, wind, storms, rough water, and missing data should change the recommendation—not hide behind a pretty score.</p>
           </article>
         </div>
       </section>
