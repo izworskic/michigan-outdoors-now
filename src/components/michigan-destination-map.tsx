@@ -182,11 +182,13 @@ export function MichiganDestinationMap({
       });
     }
 
+    const api = mapApi;
+
     function accessClick(kind: "closure" | "reroute") {
       return (event: MapLayerMouseEvent) => {
         const feature = event.features?.[0];
         const properties = (feature?.properties ?? {}) as UniverseTrailProperties;
-        new mapApi.Popup({ closeButton: true, maxWidth: "340px" })
+        new api.Popup({ closeButton: true, maxWidth: "340px" })
           .setLngLat(event.lngLat)
           .setDOMContent(popupNode(kind, properties))
           .addTo(map);
