@@ -250,6 +250,28 @@ function coordinateBounds(coordinates: unknown): CoordinateBounds | null {
     : null;
 }
 
+function coordinateAnchor(coordinates: unknown): [number, number] | null {
+  let anchor: [number, number] | null = null;
+
+  function visit(value: unknown) {
+    if (anchor || !Array.isArray(value)) return;
+    if (
+      value.length >= 2 &&
+      typeof value[0] === "number" &&
+      typeof value[1] === "number" &&
+      Number.isFinite(value[0]) &&
+      Number.isFinite(value[1])
+    ) {
+      anchor = [value[0], value[1]];
+      return;
+    }
+    for (const item of value) visit(item);
+  }
+
+  visit(coordinates);
+  return anchor;
+}
+
 function mergeBounds(existing: TrailSystemAccumulator, bounds: CoordinateBounds | null) {
   if (!bounds) return;
   existing.minLongitude = existing.minLongitude === null
@@ -274,6 +296,7 @@ export function summarizeTrailSystems(collection: UniverseGeoJson) {
     const type = feature.properties?.TrailType || "Trail";
     const unit = feature.properties?.PRDTrailUnit || null;
     const bounds = coordinateBounds(feature.geometry?.coordinates);
+    const anchor = coordinateAnchor(feature.geometry?.coordinates);
 
     if (existing) {
       existing.segments += 1;
@@ -286,8 +309,8 @@ export function summarizeTrailSystems(collection: UniverseGeoJson) {
         unit,
         miles: trailMiles(feature),
         segments: 1,
-        longitude: null,
-        latitude: null,
+        longitude: anchor ? Number(anchor[0].toFixed(5)) : null,
+        latitude: anchor ? Number(anchor[1].toFixed(5)) : null,
         minLongitude: null,
         maxLongitude: null,
         minLatitude: null,
@@ -305,14 +328,8 @@ export function summarizeTrailSystems(collection: UniverseGeoJson) {
       unit: system.unit,
       miles: Number(system.miles.toFixed(1)),
       segments: system.segments,
-      longitude:
-        system.minLongitude === null || system.maxLongitude === null
-          ? null
-          : Number(((system.minLongitude + system.maxLongitude) / 2).toFixed(5)),
-      latitude:
-        system.minLatitude === null || system.maxLatitude === null
-          ? null
-          : Number(((system.minLatitude + system.maxLatitude) / 2).toFixed(5)),
+      longitude: system.longitude,
+      latitude: system.latitude,
     }))
     .sort((a, b) => b.miles - a.miles || a.name.localeCompare(b.name));
 }
