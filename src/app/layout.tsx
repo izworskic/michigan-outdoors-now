@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { allowIndexing, jsonLd, personSchema, siteUrl } from "../lib/site";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
+import "./atlas.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#123d35",
+  themeColor: "#132b3a",
   colorScheme: "light",
 };
 
@@ -75,7 +76,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <span><strong>Michigan Outdoors</strong><em>NOW</em></span>
             </Link>
             <nav aria-label="Main navigation">
-              <Link href="/#planner">Build a plan</Link>
+              <Link href="/">Plan a day</Link>
               <Link href="/explore">Explore map</Link>
               <Link href="/ideas">Trip ideas</Link>
               <Link href="/how-it-works">How it works</Link>
