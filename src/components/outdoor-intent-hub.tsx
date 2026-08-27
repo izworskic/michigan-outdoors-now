@@ -1,12 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { specialistTools } from "../data/specialist-tools";
-import type { StatewideMode } from "../lib/statewide";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse } from "../lib/types";
-
-type IntentId = "today" | "weekend" | "place" | "activity";
 
 type PlaceOption = {
   id: string;
@@ -16,80 +13,162 @@ type PlaceOption = {
   activities: ActivityId[];
 };
 
+type AdventureId =
+  | "close"
+  | "water"
+  | "north"
+  | "quiet"
+  | "sunset"
+  | "river"
+  | "big"
+  | "dark"
+  | "weekend"
+  | "surprise";
+
+type Adventure = {
+  id: AdventureId;
+  eyebrow: string;
+  title: string;
+  detail: string;
+  driveHours: number;
+  date: DateChoice;
+  activities: ActivityId[];
+};
+
 type RunPlanOverrides = {
   origin?: string;
   originCoordinates?: PlannerRequest["originCoordinates"];
   date?: DateChoice;
-  mode?: StatewideMode;
   driveHours?: number;
+  activities?: ActivityId[];
 };
 
-const intents: Array<{ id: IntentId; title: string }> = [
-  { id: "today", title: "Today" },
-  { id: "weekend", title: "This weekend" },
-  { id: "place", title: "Check a place" },
-  { id: "activity", title: "Pick an activity" },
+const adventures: Adventure[] = [
+  {
+    id: "close",
+    eyebrow: "Easy escape",
+    title: "Keep it close",
+    detail: "Something good without giving half the day to the windshield.",
+    driveHours: 1,
+    date: "today",
+    activities: ["hiking", "scenic", "birding"],
+  },
+  {
+    id: "water",
+    eyebrow: "Blue on the map",
+    title: "Find water",
+    detail: "A shoreline, beach, lake, or paddle that fits the day.",
+    driveHours: 3,
+    date: "today",
+    activities: ["paddling", "beaches", "scenic"],
+  },
+  {
+    id: "north",
+    eyebrow: "Change the landscape",
+    title: "Head north",
+    detail: "Let the road get quieter and the woods get bigger.",
+    driveHours: 5,
+    date: "today",
+    activities: ["hiking", "scenic", "birding"],
+  },
+  {
+    id: "quiet",
+    eyebrow: "Less people",
+    title: "Disappear for a while",
+    detail: "Woods, birds, distance, and places that feel removed from the day.",
+    driveHours: 4,
+    date: "today",
+    activities: ["hiking", "birding", "scenic"],
+  },
+  {
+    id: "sunset",
+    eyebrow: "Use the last light",
+    title: "Chase sunset",
+    detail: "Go where the evening is part of the reason to make the drive.",
+    driveHours: 3,
+    date: "today",
+    activities: ["scenic", "beaches"],
+  },
+  {
+    id: "river",
+    eyebrow: "Follow moving water",
+    title: "Give me a river",
+    detail: "Trout water, paddling, forest roads, and a reason to linger.",
+    driveHours: 3,
+    date: "today",
+    activities: ["fishing", "paddling", "scenic"],
+  },
+  {
+    id: "big",
+    eyebrow: "No half measures",
+    title: "Make it a big day",
+    detail: "Open the radius. Show me something worth a serious drive.",
+    driveHours: 8,
+    date: "today",
+    activities: ["hiking", "scenic"],
+  },
+  {
+    id: "dark",
+    eyebrow: "After sunset",
+    title: "Wait for dark",
+    detail: "Big sky, low clouds, quiet roads, and a night worth staying out for.",
+    driveHours: 4,
+    date: "today",
+    activities: ["dark-sky", "scenic"],
+  },
+  {
+    id: "weekend",
+    eyebrow: "Go farther",
+    title: "Make a weekend of it",
+    detail: "Let both days compete and find something worth building the trip around.",
+    driveHours: 8,
+    date: "weekend",
+    activities: ["hiking", "scenic", "birding"],
+  },
+  {
+    id: "surprise",
+    eyebrow: "No plan",
+    title: "Surprise me",
+    detail: "Give Michigan room to make the case for somewhere I was not thinking about.",
+    driveHours: 6,
+    date: "today",
+    activities: ["hiking", "scenic", "birding"],
+  },
 ];
-
-const genericActivities: Array<{ id: StatewideMode; label: string; detail: string }> = [
-  { id: "best", label: "Best overall", detail: "Strongest general outdoor options." },
-  { id: "hiking", label: "Hiking", detail: "Comfortable weather and a useful daylight window." },
-  { id: "scenic", label: "Scenic day", detail: "Overlooks, waterfalls, drives, and photography." },
-  { id: "dark-sky", label: "Dark sky", detail: "Cloud cover and weather that support a night outside." },
-];
-
-const driveChoices = [1, 2, 3, 4, 5, 6, 7, 8] as const;
-const specialistOrder = ["beaches", "buoys", "trout", "birding", "aurora", "freighters"] as const;
 
 const michiganLandscapes = [
   {
     label: "Great Lakes shore",
     title: "Wind changes the whole day.",
-    detail: "The same forecast can mean calm water on one shoreline and rough surf on another. Lake-facing direction matters.",
+    detail: "The same forecast can mean calm water on one shoreline and rough surf on another.",
     href: "https://chrisizworski.com/great-lakes-beaches/",
-  },
-  {
-    label: "Dunes + west coast",
-    title: "Exposure is part of the plan.",
-    detail: "Sun, heat, sand, stairs, bluff wind, and sunset timing can matter as much as the headline temperature.",
-    href: "/ideas/hiking-day-trips",
   },
   {
     label: "River country",
     title: "Rain upstream matters later.",
-    detail: "For paddling and trout water, recent rain, flow, water temperature, and access can matter more than today's sky.",
+    detail: "For paddling and trout water, flow and water temperature can matter more than today's sky.",
     href: "https://michigantroutreport.com/",
-  },
-  {
-    label: "Inland lakes",
-    title: "Morning can be a different lake.",
-    detail: "Wind often builds through the day. A lake that is glass at 8 a.m. may be a poor paddle by noon.",
-    href: "/ideas/paddling-day-trips",
   },
   {
     label: "Northwoods + U.P.",
     title: "Distance changes the stakes.",
-    detail: "Longer drives, thinner services, fast-changing weather, and patchier cell coverage make backup plans more valuable.",
+    detail: "Long drives, thinner services, quick weather changes, and less cell coverage reward a backup plan.",
     href: "/explore",
   },
   {
     label: "Night sky",
     title: "Dark is not enough.",
-    detail: "Cloud cover, moonlight, haze, aurora activity, and how far north you are all shape whether the night is worth the drive.",
+    detail: "Clouds, moonlight, haze, aurora activity, and latitude shape whether the night is worth the drive.",
     href: "https://chrisizworski.com/northern-lights-michigan/",
   },
 ] as const;
 
-function displayStatus(status: string) {
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
 function scoreLabel(score: number) {
-  if (score >= 90) return "Excellent fit";
-  if (score >= 80) return "Strong fit";
-  if (score >= 70) return "Good option";
-  if (score >= 60) return "Mixed";
-  return "Weak fit";
+  if (score >= 90) return "Exceptional fit";
+  if (score >= 80) return "Strong pull";
+  if (score >= 70) return "Worth a look";
+  if (score >= 60) return "Could work";
+  return "A stretch";
 }
 
 function driveTimeLabel(hours: number) {
@@ -101,7 +180,7 @@ function driveTimeLabel(hours: number) {
 }
 
 function planWeatherLine(plan: Plan) {
-  if (!plan.weather) return "Live weather was unavailable for this result; verify conditions before leaving.";
+  if (!plan.weather) return "Live weather is limited for this one. Check conditions before leaving.";
   const pieces: string[] = [];
   if (plan.weather.high !== null) pieces.push(`${Math.round(plan.weather.high)}° high`);
   if (plan.weather.precipitationProbability !== null) pieces.push(`${Math.round(plan.weather.precipitationProbability)}% rain`);
@@ -116,47 +195,58 @@ function planWhy(plan: Plan) {
 }
 
 function planWatch(plan: Plan) {
-  return plan.cautions[0] ??
-    "No major weather caution surfaced in the available inputs. Check official access and alerts before leaving.";
+  return plan.cautions[0] ?? "Nothing major surfaced, but check official access and alerts before leaving.";
 }
 
 export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
-  const [intent, setIntent] = useState<IntentId>("today");
-  const [date, setDate] = useState<DateChoice>("today");
-  const [mode, setMode] = useState<StatewideMode>("best");
-  const [placeQuery, setPlaceQuery] = useState("");
   const [origin, setOrigin] = useState("");
   const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
-  const [driveHours, setDriveHours] = useState(2);
+  const [selectedAdventure, setSelectedAdventure] = useState<Adventure>(adventures[9]);
+  const [driveHours, setDriveHours] = useState(selectedAdventure.driveHours);
+  const [date, setDate] = useState<DateChoice>(selectedAdventure.date);
+  const [activities, setActivities] = useState<ActivityId[]>(selectedAdventure.activities);
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState("");
   const [plans, setPlans] = useState<PlannerResponse | null>(null);
+  const [placeQuery, setPlaceQuery] = useState("");
   const planRequestRef = useRef<AbortController | null>(null);
+  const originInputRef = useRef<HTMLInputElement | null>(null);
 
   const matchingPlaces = useMemo(() => {
     const q = placeQuery.trim().toLowerCase();
-    if (!q) return places.slice(0, 8);
+    if (!q) return [];
     return places
       .filter((place) => `${place.name} ${place.area}`.toLowerCase().includes(q))
-      .slice(0, 8);
+      .slice(0, 6);
   }, [placeQuery, places]);
 
-  function selectedActivities(nextMode: StatewideMode): ActivityId[] {
-    if (nextMode === "hiking") return ["hiking"];
-    if (nextMode === "scenic") return ["scenic"];
-    if (nextMode === "dark-sky") return ["dark-sky"];
-    return ["hiking", "scenic"];
-  }
+  const rangeBands = useMemo(() => {
+    const options = plans?.rangeOptions ?? [];
+    return Array.from({ length: driveHours }, (_, index) => {
+      const upper = index + 1;
+      const lower = index;
+      const bandOptions = options.filter((option) => {
+        if (upper === 1) return option.driveHours <= 1.05;
+        return option.driveHours > lower + 0.05 && option.driveHours <= upper + 0.05;
+      });
+      return {
+        upper,
+        label: upper === 1 ? "Close to home" : `${lower}–${upper} hours`,
+        options: bandOptions,
+      };
+    }).filter((band) => band.options.length > 0);
+  }, [driveHours, plans]);
 
   async function runPlan(overrides: RunPlanOverrides = {}) {
     const chosenOrigin = (overrides.origin ?? origin).trim();
     const coordinates = overrides.originCoordinates ?? originCoordinates;
     const chosenDate = overrides.date ?? date;
-    const chosenMode = overrides.mode ?? mode;
     const chosenDriveHours = overrides.driveHours ?? driveHours;
+    const chosenActivities = overrides.activities ?? activities;
 
     if (!chosenOrigin) {
-      setPlanError("Tell us where you are starting in Michigan, or use your location.");
+      setPlanError(`“${selectedAdventure.title}” sounds good. Tell us where you're starting and we'll take it from there.`);
+      originInputRef.current?.focus();
       return;
     }
 
@@ -165,6 +255,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
     planRequestRef.current = controller;
     setPlanning(true);
     setPlanError("");
+
     try {
       const response = await fetch("/api/recommendations", {
         method: "POST",
@@ -175,7 +266,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
           ...(coordinates ? { originCoordinates: coordinates } : {}),
           date: chosenDate,
           maxDriveHours: chosenDriveHours,
-          activities: selectedActivities(chosenMode),
+          activities: chosenActivities,
           kids: false,
           dog: false,
           accessible: false,
@@ -183,7 +274,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
       });
       const payload = await response.json();
       if (!response.ok || !("plans" in payload)) {
-        throw new Error(payload.error ?? "Could not build this plan.");
+        throw new Error(payload.error ?? "Could not build this adventure.");
       }
       if (planRequestRef.current !== controller) return;
       setPlans(payload as PlannerResponse);
@@ -191,7 +282,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       if (planRequestRef.current !== controller) return;
       setPlans(null);
-      setPlanError(error instanceof Error ? error.message : "Could not build this plan.");
+      setPlanError(error instanceof Error ? error.message : "Could not build this adventure.");
     } finally {
       if (planRequestRef.current === controller) {
         planRequestRef.current = null;
@@ -200,48 +291,34 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
     }
   }
 
-  function chooseIntent(next: IntentId) {
-    setIntent(next);
+  function chooseAdventure(adventure: Adventure) {
+    setSelectedAdventure(adventure);
+    setDriveHours(adventure.driveHours);
+    setDate(adventure.date);
+    setActivities(adventure.activities);
     setPlanError("");
-    if (next !== "today" && next !== "weekend") {
-      planRequestRef.current?.abort();
-      planRequestRef.current = null;
-      setPlanning(false);
-      setPlans(null);
-      return;
-    }
 
-    const nextDate: DateChoice = next === "weekend" ? "weekend" : "today";
-    setDate(nextDate);
-    if (plans && (origin.trim() || originCoordinates)) {
-      void runPlan({ date: nextDate });
+    if (origin.trim() || originCoordinates) {
+      void runPlan({
+        driveHours: adventure.driveHours,
+        date: adventure.date,
+        activities: adventure.activities,
+      });
     } else {
       setPlans(null);
+      originInputRef.current?.focus();
     }
   }
 
-  function chooseMode(nextMode: StatewideMode) {
-    setMode(nextMode);
-    if (intent !== "today" && intent !== "weekend") {
-      setIntent("today");
-      setDate("today");
-    }
-    if (plans && (origin.trim() || originCoordinates)) {
-      void runPlan({ mode: nextMode, date: intent === "weekend" ? "weekend" : "today" });
-    }
-  }
-
-  function chooseDriveHours(hours: number) {
-    setDriveHours(hours);
-    if (plans && (origin.trim() || originCoordinates)) {
-      void runPlan({ driveHours: hours });
-    }
+  function submitOrigin(event: FormEvent) {
+    event.preventDefault();
+    void runPlan();
   }
 
   function useLocation() {
     setPlanError("");
     if (!navigator.geolocation) {
-      setPlanError("Location is unavailable in this browser. Type a Michigan city or ZIP instead.");
+      setPlanError("Location is unavailable here. Type a Michigan city or ZIP instead.");
       return;
     }
 
@@ -254,7 +331,10 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
         };
         setOrigin("My location");
         setOriginCoordinates(coordinates);
-        void runPlan({ origin: "My location", originCoordinates: coordinates });
+        void runPlan({
+          origin: "My location",
+          originCoordinates: coordinates,
+        });
       },
       () => {
         setPlanning(false);
@@ -264,330 +344,269 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
     );
   }
 
+  function goFarther() {
+    const nextDrive = Math.min(8, driveHours + 2);
+    setDriveHours(nextDrive);
+    void runPlan({ driveHours: nextDrive });
+  }
+
+  function comeCloser() {
+    const nextDrive = Math.max(1, driveHours - 2);
+    setDriveHours(nextDrive);
+    void runPlan({ driveHours: nextDrive });
+  }
+
   const lead = plans?.plans[0] ?? null;
   const alternatives = plans?.plans.slice(1, 3) ?? [];
-  const activeDateLabel = date === "weekend" ? "this weekend" : "today";
-  const modeLabel = genericActivities.find((item) => item.id === mode)?.label ?? "Best overall";
-  const rangeBands = useMemo(() => {
-    const options = plans?.rangeOptions ?? [];
-    return Array.from({ length: driveHours }, (_, index) => {
-      const upper = index + 1;
-      const lower = index;
-      const bandOptions = options.filter((option) => {
-        if (upper === 1) return option.driveHours <= 1.05;
-        return option.driveHours > lower + 0.05 && option.driveHours <= upper + 0.05;
-      });
-      return {
-        upper,
-        label: upper === 1 ? "Within 1 hour" : `${lower}–${upper} hours`,
-        options: bandOptions,
-      };
-    }).filter((band) => band.options.length > 0);
-  }, [driveHours, plans]);
 
   return (
-    <section className="persona-home" aria-labelledby="persona-home-title">
-      <div className="persona-hero">
-        <div className="persona-hero-copy">
+    <section className="adventure-home" aria-labelledby="adventure-title">
+      <header className="adventure-hero">
+        <div className="adventure-hero-copy">
           <p className="persona-kicker">Michigan Outdoors Now</p>
-          <h1 id="persona-home-title">Find somewhere worth going.</h1>
-          <p>Start with where you are. We’ll narrow Michigan by drive time and the conditions that matter for the day.</p>
+          <h1 id="adventure-title">Michigan is big. Pick a pull.</h1>
+          <p>
+            Start where you are, then follow whatever sounds good. Water. North. Quiet. Sunset.
+            A river. A ridiculous drive. Change your mind whenever you want.
+          </p>
+
+          <form className="adventure-origin" onSubmit={submitOrigin}>
+            <label htmlFor="adventure-origin-input">Starting from</label>
+            <div>
+              <input
+                id="adventure-origin-input"
+                ref={originInputRef}
+                value={origin}
+                onChange={(event) => {
+                  planRequestRef.current?.abort();
+                  planRequestRef.current = null;
+                  setPlanning(false);
+                  setOrigin(event.target.value);
+                  setOriginCoordinates(undefined);
+                  setPlans(null);
+                  setPlanError("");
+                }}
+                placeholder="Bay City, Marquette, 48706…"
+                autoComplete="postal-code"
+              />
+              <button type="submit" disabled={planning}>{planning ? "Looking…" : "Go"}</button>
+            </div>
+            <button type="button" className="adventure-location-link" onClick={useLocation} disabled={planning}>
+              Use my current location
+            </button>
+          </form>
         </div>
 
-        <div className="persona-intent-tabs" aria-label="Choose how you want to plan">
-          {intents.map((item) => (
+        <div className="adventure-current-pull" aria-live="polite">
+          <span>Current pull</span>
+          <strong>{selectedAdventure.title}</strong>
+          <small>
+            {selectedAdventure.date === "weekend" ? "This weekend" : "Today"} · up to {driveHours}h one way
+          </small>
+        </div>
+      </header>
+
+      <section className="adventure-chooser" id="adventure-deck" aria-labelledby="choose-adventure-title">
+        <div className="adventure-chooser-head">
+          <div>
+            <p className="persona-section-kicker">Choose your adventure</p>
+            <h2 id="choose-adventure-title">What sounds good?</h2>
+          </div>
+          <p>No setup wizard. Pick a feeling. We’ll do the narrowing.</p>
+        </div>
+
+        <div className="adventure-deck">
+          {adventures.map((adventure) => (
             <button
-              key={item.id}
               type="button"
-              aria-pressed={intent === item.id}
-              onClick={() => chooseIntent(item.id)}
+              key={adventure.id}
+              data-adventure={adventure.id}
+              aria-pressed={selectedAdventure.id === adventure.id}
+              onClick={() => chooseAdventure(adventure)}
             >
-              {item.title}
+              <span>{adventure.eyebrow}</span>
+              <strong>{adventure.title}</strong>
+              <small>{adventure.detail}</small>
+              <b>{adventure.date === "weekend" ? "weekend" : `up to ${adventure.driveHours}h`} →</b>
             </button>
           ))}
         </div>
-      </div>
 
-      {(intent === "today" || intent === "weekend") && (
-        <section className="persona-answer" aria-live="polite">
-          <section className="persona-trip-scope" aria-labelledby="trip-scope-title">
-            <div className="persona-trip-scope-head">
-              <p className="persona-section-kicker">{intent === "weekend" ? "Plan this weekend" : "Go today"}</p>
-              <h2 id="trip-scope-title">Where are you starting?</h2>
-            </div>
+        {planError && <p className="adventure-nudge">{planError}</p>}
+      </section>
 
-            <div className="persona-trip-controls">
-              <label className="persona-origin-field">
-                <span>City or ZIP</span>
+      {plans && (
+        <section className="adventure-results" aria-live="polite">
+          {lead ? (
+            <>
+              <div className="adventure-result-head">
                 <div>
-                  <input
-                    value={origin}
-                    onChange={(event) => {
-                      planRequestRef.current?.abort();
-                      planRequestRef.current = null;
-                      setPlanning(false);
-                      setOrigin(event.target.value);
-                      setOriginCoordinates(undefined);
-                      setPlans(null);
-                    }}
-                    placeholder="Bay City, Marquette, 48706…"
-                    autoComplete="postal-code"
-                  />
-                  <button type="button" onClick={useLocation} disabled={planning}>
-                    Use current location
-                  </button>
+                  <p className="persona-section-kicker">{selectedAdventure.title}</p>
+                  <h2>This one is pulling ahead.</h2>
                 </div>
-              </label>
+                <p>
+                  From <strong>{plans.origin.name}</strong> · looking up to <strong>{driveHours}h</strong> away
+                </p>
+              </div>
 
-              <div className="persona-quick-filters">
-                <fieldset className="persona-drive-field">
-                  <legend>Drive up to</legend>
+              <article className="adventure-lead">
+                <div className="adventure-lead-story">
+                  <p>{scoreLabel(lead.score)} · {driveTimeLabel(lead.driveHours)} away</p>
+                  <h3>{lead.destination.name}</h3>
+                  <span>{lead.destination.area} · about {lead.distanceMiles} rough miles</span>
+                  <p className="adventure-lead-summary">{lead.destination.summary}</p>
+                  <p className="adventure-weather">{planWeatherLine(lead)}</p>
+                </div>
+
+                <div className="adventure-lead-reasons">
                   <div>
-                    {driveChoices.map((hours) => (
-                      <button
-                        type="button"
-                        key={hours}
-                        aria-label={`Up to ${hours} ${hours === 1 ? "hour" : "hours"} one way`}
-                        aria-pressed={driveHours === hours}
-                        onClick={() => chooseDriveHours(hours)}
-                      >
-                        {hours}h
-                      </button>
-                    ))}
+                    <span>Why now</span>
+                    <strong>{planWhy(lead)}</strong>
                   </div>
-                </fieldset>
-
-                <div className="persona-scope-activity">
-                  <span>Looking for</span>
-                  <div className="persona-mode-chips" aria-label="Choose the kind of outing">
-                    {genericActivities.map((item) => (
-                      <button
-                        type="button"
-                        key={item.id}
-                        aria-pressed={mode === item.id}
-                        onClick={() => chooseMode(item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
+                  <div>
+                    <span>Best window</span>
+                    <strong>{lead.bestWindow ?? "Check the hourly detail"}</strong>
+                  </div>
+                  <div>
+                    <span>One thing to watch</span>
+                    <strong>{planWatch(lead)}</strong>
                   </div>
                 </div>
-              </div>
 
-              <div className="persona-planner-action">
-                <span>{intent === "weekend" ? "This weekend" : "Today"} · up to {driveHours}h one way</span>
-                <button
-                  type="button"
-                  className="persona-build-button"
-                  onClick={() => void runPlan()}
-                  disabled={planning}
-                >
-                  {planning ? "Looking…" : "Show me where to go"}
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {planError && <p className="persona-error">{planError}</p>}
-
-          {!plans && !planning && !planError && (
-            <p className="persona-awaiting-plan">
-              Enter a starting point or use your location. That’s enough to begin.
-            </p>
-          )}
-
-          {plans && (
-            <div className="persona-live-answer">
-              {lead ? (
-                <>
-                  <div className="persona-answer-head">
-                    <div>
-                      <p>{intent === "weekend" ? "Worth planning around" : "Best inside your range"}</p>
-                      <h2>Your strongest option {activeDateLabel}.</h2>
-                    </div>
-                    <p className="persona-range-summary">
-                      Starting from <strong>{plans.origin.name}</strong> · searching everything up to{" "}
-                      <strong>{driveHours} {driveHours === 1 ? "hour" : "hours"}</strong> away
-                    </p>
-                  </div>
-
-                  <article className="persona-lead-card">
-                    <div className="persona-lead-rating">
-                      <span>{scoreLabel(lead.score)}</span>
-                      <strong>{lead.score}</strong>
-                      <small>{displayStatus(lead.decisionStatus)} · {lead.confidence} confidence</small>
-                    </div>
-                    <div className="persona-lead-main">
-                      <p className="persona-answer-label">
-                        {driveTimeLabel(lead.driveHours)} from your start · {modeLabel}
-                        {date === "weekend" && lead.weather?.date
-                          ? ` · best on ${new Intl.DateTimeFormat("en-US", {
-                              weekday: "long",
-                              month: "short",
-                              day: "numeric",
-                              timeZone: "UTC",
-                            }).format(new Date(`${lead.weather.date}T12:00:00Z`))}`
-                          : ""}
-                      </p>
-                      <h3>{lead.destination.name}</h3>
-                      <p className="persona-place-meta">{lead.destination.area} · {lead.distanceMiles} rough miles</p>
-
-                      <div className="persona-decision-grid">
-                        <div>
-                          <span>Go when</span>
-                          <strong>{lead.bestWindow ?? "Check the hourly detail"}</strong>
-                        </div>
-                        <div>
-                          <span>Why it works</span>
-                          <strong>{planWhy(lead)}</strong>
-                        </div>
-                        <div className="persona-watch">
-                          <span>Know before you go</span>
-                          <strong>{planWatch(lead)}</strong>
-                        </div>
-                      </div>
-
-                      <p className="persona-weather-line">{planWeatherLine(lead)}</p>
-                      <div className="persona-actions">
-                        <Link href={`/places/${lead.destination.id}?date=${encodeURIComponent(lead.weather?.date ?? plans.targetDate)}`}>See the full plan →</Link>
-                        <a href={lead.mapUrl}>Open directions</a>
-                        <Link href="/explore">Browse the Michigan map</Link>
-                      </div>
-                    </div>
-                  </article>
-
-                  {alternatives.length > 0 && (
-                    <div className="persona-alternatives">
-                      <p>Good backups inside your range</p>
-                      <div>
-                        {alternatives.map((plan) => (
-                          <Link
-                            href={`/places/${plan.destination.id}?date=${encodeURIComponent(plan.weather?.date ?? plans.targetDate)}`}
-                            key={plan.destination.id}
-                          >
-                            <span>{driveTimeLabel(plan.driveHours)} away · {plan.score}/100</span>
-                            <strong>{plan.destination.name}</strong>
-                            <small>{plan.bestWindow ? `Best window: ${plan.bestWindow}` : planWhy(plan)}</small>
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
+                <div className="adventure-actions">
+                  <Link href={`/places/${lead.destination.id}?date=${encodeURIComponent(lead.weather?.date ?? plans.targetDate)}`}>
+                    Go deeper
+                  </Link>
+                  <a href={lead.mapUrl}>Directions</a>
+                  {driveHours < 8 && (
+                    <button type="button" onClick={goFarther}>What if we kept driving?</button>
                   )}
-
-                  {(plans.rangeOptions?.length ?? 0) > 0 && (
-                    <details className="persona-range-catalog">
-                      <summary>
-                        See all {plans.rangeOptions.length} matching place{plans.rangeOptions.length === 1 ? "" : "s"} within {driveHours}h
-                      </summary>
-
-                      <div className="persona-range-bands">
-                        {rangeBands.map((band) => (
-                          <section key={band.upper} className="persona-range-band" aria-label={band.label}>
-                            <header>
-                              <strong>{band.label}</strong>
-                              <span>{band.options.length} place{band.options.length === 1 ? "" : "s"}</span>
-                            </header>
-                            <div>
-                              {band.options.map((option) => (
-                                <Link
-                                  key={option.destination.id}
-                                  href={`/places/${option.destination.id}?date=${encodeURIComponent(option.forecastDate ?? plans.targetDate)}`}
-                                >
-                                  <span>{option.destination.area}</span>
-                                  <strong>{option.destination.name}</strong>
-                                  <small>{driveTimeLabel(option.driveHours)} · about {option.distanceMiles} rough miles</small>
-                                </Link>
-                              ))}
-                            </div>
-                          </section>
-                        ))}
-                      </div>
-                    </details>
+                  {driveHours > 1 && (
+                    <button type="button" onClick={comeCloser}>Bring it closer</button>
                   )}
-                </>
-              ) : (
-                <div className="persona-empty">
-                  <h3>No strong match showed up inside your {driveHours}-hour range.</h3>
-                  <p>Try a wider travel limit, another activity, or check a specific place.</p>
+                  <a href="#adventure-deck">Change the vibe</a>
                 </div>
+              </article>
+
+              {alternatives.length > 0 && (
+                <section className="adventure-wander">
+                  <div>
+                    <p className="persona-section-kicker">Keep wandering</p>
+                    <h3>Two other ways the day could go.</h3>
+                  </div>
+                  <div className="adventure-wander-grid">
+                    {alternatives.map((plan) => (
+                      <Link
+                        href={`/places/${plan.destination.id}?date=${encodeURIComponent(plan.weather?.date ?? plans.targetDate)}`}
+                        key={plan.destination.id}
+                      >
+                        <span>{driveTimeLabel(plan.driveHours)} away</span>
+                        <strong>{plan.destination.name}</strong>
+                        <small>{plan.destination.area}</small>
+                        <p>{planWhy(plan)}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </section>
               )}
+
+              {(plans.rangeOptions?.length ?? 0) > 0 && (
+                <details className="adventure-all">
+                  <summary>
+                    Wander through all {plans.rangeOptions.length} matches inside {driveHours}h
+                  </summary>
+                  <div className="persona-range-bands">
+                    {rangeBands.map((band) => (
+                      <section key={band.upper} className="persona-range-band" aria-label={band.label}>
+                        <header>
+                          <strong>{band.label}</strong>
+                          <span>{band.options.length} place{band.options.length === 1 ? "" : "s"}</span>
+                        </header>
+                        <div>
+                          {band.options.map((option) => (
+                            <Link
+                              key={option.destination.id}
+                              href={`/places/${option.destination.id}?date=${encodeURIComponent(option.forecastDate ?? plans.targetDate)}`}
+                            >
+                              <span>{option.destination.area}</span>
+                              <strong>{option.destination.name}</strong>
+                              <small>{driveTimeLabel(option.driveHours)} · about {option.distanceMiles} rough miles</small>
+                            </Link>
+                          ))}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                </details>
+              )}
+            </>
+          ) : (
+            <div className="adventure-empty">
+              <h2>Nothing is making a strong case yet.</h2>
+              <p>Pick another pull or let the radius open up.</p>
+              {driveHours < 8 && <button type="button" onClick={goFarther}>Open the road farther</button>}
             </div>
           )}
         </section>
       )}
 
-      {intent === "place" && (
-        <section className="persona-place-search">
+      <section className="adventure-free-roam" aria-labelledby="free-roam-title">
+        <div className="adventure-free-roam-head">
           <div>
-            <p className="persona-section-kicker">Check the plan before you leave</p>
-            <h2>Where are you thinking about going?</h2>
-            <p>Search a place. We’ll take you straight to its conditions, best windows, access notes, and useful live data.</p>
+            <p className="persona-section-kicker">Ignore the suggestions</p>
+            <h2 id="free-roam-title">Roam your own way.</h2>
           </div>
-          <label>
-            <span>Place name</span>
-            <input
-              type="search"
-              value={placeQuery}
-              onChange={(event) => setPlaceQuery(event.target.value)}
-              placeholder="Pictured Rocks, Torch Lake, Tahquamenon…"
-              autoFocus
-            />
-          </label>
-          <div className="persona-place-results">
+          <div className="adventure-free-links">
+            <Link href="/explore">Open the Michigan atlas</Link>
+            <a href="#place-search">I already have a place</a>
+          </div>
+        </div>
+
+        <div className="adventure-signal-grid">
+          {specialistTools.filter((tool) => ["beaches", "trout", "birding", "aurora", "freighters", "weekend"].includes(tool.id)).map((tool) => (
+            <a href={tool.url} key={tool.id}>
+              <span>{tool.timing}</span>
+              <strong>{tool.name}</strong>
+              <small>{tool.question}</small>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section className="adventure-place-search" id="place-search">
+        <div>
+          <p className="persona-section-kicker">Already thinking about somewhere?</p>
+          <h2>Just check the place.</h2>
+        </div>
+        <label>
+          <span>Place name</span>
+          <input
+            type="search"
+            value={placeQuery}
+            onChange={(event) => setPlaceQuery(event.target.value)}
+            placeholder="Pictured Rocks, Tahquamenon, Torch Lake…"
+          />
+        </label>
+        {matchingPlaces.length > 0 && (
+          <div className="adventure-place-results">
             {matchingPlaces.map((place) => (
               <Link href={`/places/${place.id}`} key={place.id}>
                 <span>{place.area}</span>
                 <strong>{place.name}</strong>
                 <small>{place.summary}</small>
-                <b>Check this place →</b>
               </Link>
             ))}
           </div>
-        </section>
-      )}
-
-      {intent === "activity" && (
-        <section className="persona-activity-panel">
-          <div>
-            <p className="persona-section-kicker">Start with what sounds fun</p>
-            <h2>What do you want to do?</h2>
-            <p>Different activities need different data. We won’t judge a beach day, trout stream, aurora night, and hike with the same weather score.</p>
-          </div>
-
-          <div className="persona-activity-grid">
-            {genericActivities.slice(1).map((item) => (
-              <button type="button" key={item.id} onClick={() => chooseMode(item.id)}>
-                <span>Find the best near me</span>
-                <strong>{item.label}</strong>
-                <small>{item.detail}</small>
-              </button>
-            ))}
-
-            {specialistOrder.map((toolId) => {
-              const tool = specialistTools.find((candidate) => candidate.id === toolId);
-              if (!tool) return null;
-              return (
-                <a href={tool.url} key={tool.id}>
-                  <span>Live specialist</span>
-                  <strong>{tool.name}</strong>
-                  <small>{tool.question}</small>
-                  <b>Open tool →</b>
-                </a>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
+        )}
+      </section>
 
       <section className="persona-landscapes" aria-labelledby="michigan-landscape-title">
         <div className="persona-landscape-intro">
-          <p className="persona-section-kicker">Read Michigan before you pick a pin</p>
+          <p className="persona-section-kicker">Read Michigan</p>
           <h2 id="michigan-landscape-title">The state changes under you as you travel.</h2>
           <p>
-            Michigan is not one outdoor forecast. Shoreline, dunes, rivers, inland lakes, northwoods,
-            and the U.P. all reward different timing and different data. Use these lenses to understand
-            why a place rises or falls in the recommendations.
+            Shoreline, rivers, northwoods, and night sky all reward different timing. Sometimes the best
+            adventure is understanding what kind of Michigan you are driving into.
           </p>
           <Link href="/explore">Explore the statewide atlas →</Link>
         </div>
@@ -598,50 +617,6 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
               <strong>{item.title}</strong>
               <small>{item.detail}</small>
               <b>Go deeper →</b>
-            </a>
-          ))}
-        </div>
-      </section>
-
-      <section className="persona-proof" aria-labelledby="persona-proof-title">
-        <div className="persona-proof-head">
-          <p className="persona-section-kicker">What this actually does for you</p>
-          <h2 id="persona-proof-title">Less checking six tabs. More confidence in the plan.</h2>
-          <p>
-            The point is not to show you more data. It is to compare the places you would genuinely travel to,
-            then turn the right conditions into a practical choice.
-          </p>
-        </div>
-        <div className="persona-proof-grid">
-          <article>
-            <span>1</span>
-            <h3>It respects your travel limit.</h3>
-            <p>An eight-hour limit means every useful option from nearby through eight hours away can compete for the recommendation.</p>
-          </article>
-          <article>
-            <span>2</span>
-            <h3>It tells you when.</h3>
-            <p>A good morning and a bad afternoon should not become one vague daily score. We look for the useful window.</p>
-          </article>
-          <article>
-            <span>3</span>
-            <h3>It changes the data by activity.</h3>
-            <p>Hiking cares about rain, heat and air. Beaches need waves and swim risk. Trout need river conditions. Dark skies need clouds.</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="persona-coverage">
-        <div>
-          <p className="persona-section-kicker">Useful today</p>
-          <h2>One front door, several deeper tools.</h2>
-        </div>
-        <div className="persona-coverage-list">
-          {specialistTools.filter((tool) => tool.group !== "planning").map((tool) => (
-            <a href={tool.url} key={tool.id}>
-              <span>{tool.timing}</span>
-              <strong>{tool.name}</strong>
-              <small>{tool.signals.join(" · ")}</small>
             </a>
           ))}
         </div>
