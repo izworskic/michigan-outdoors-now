@@ -32,9 +32,16 @@ try {
   const homeHtml = await home.text();
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
-  assert.match(homeHtml, /Explore Michigan outdoors\./);
-  assert.match(homeHtml, /Official DNR trails and access changes/);
-  assert.doesNotMatch(homeHtml, /Not a shortlist\.|Where should you go outside today\?|Live statewide read|id="planner"/);
+  assert.match(homeHtml, /What kind of Michigan day are you trying to have\?/);
+  assert.match(homeHtml, /I want to get outside today/);
+  assert.match(homeHtml, /Help me plan this weekend/);
+  assert.match(homeHtml, /I already know the place/);
+  assert.match(homeHtml, /I know what I want to do/);
+  assert.match(homeHtml, /Go when/);
+  assert.match(homeHtml, /Why it works/);
+  assert.match(homeHtml, /Know before you go/);
+  assert.match(homeHtml, /Good backups/);
+  assert.doesNotMatch(homeHtml, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
   assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
   assert.equal(home.headers.get("x-powered-by"), null);
@@ -176,7 +183,7 @@ try {
   assert.ok(coordinatePayload.plans.length > 0);
 
   console.log(
-    `Runtime check passed: map-first home, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: persona-first home, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

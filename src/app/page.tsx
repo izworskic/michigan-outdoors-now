@@ -1,106 +1,110 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { DestinationExplorer } from "../components/destination-explorer";
+import { OutdoorIntentHub } from "../components/outdoor-intent-hub";
 import { destinations } from "../data/destinations";
+import { fetchWeatherSnapshots } from "../lib/live-data";
+import { targetDateFor } from "../lib/planner";
 import { jsonLd, personSchema, siteUrl } from "../lib/site";
+import { rankStatewideDestinations, type StatewideResponse } from "../lib/statewide";
+
+export const revalidate = 900;
 
 export const metadata: Metadata = {
-  title: "Michigan Outdoor Map: Trails, Closures and Decision-Ready Places",
+  title: "What Should I Do Outside in Michigan Today? | Michigan Outdoors Now",
   description:
-    "Explore Michigan with official DNR trail geometry, temporary closures and reroutes, plus decision-ready outdoor destinations.",
+    "Find a Michigan outdoor plan for today or this weekend, check a place before you go, or start with hiking, beaches, fishing, birding, dark skies and more.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Michigan Outdoors Now: Official Trails + Decision Intelligence",
+    title: "Michigan Outdoors Now — Find the right outdoor plan",
     description:
-      "A statewide Michigan outdoor map using official DNR trails, live access changes, and separate decision-ready places.",
+      "Where to go, when to go, why it works, and what could spoil the plan.",
     url: "/",
   },
   twitter: {
-    title: "Michigan Outdoors Now: Official Trails + Decision Intelligence",
+    title: "Michigan Outdoors Now — Find the right outdoor plan",
     description:
-      "Explore Michigan DNR trails, access changes and decision-ready outdoor places.",
+      "Where to go, when to go, why it works, and what could spoil the plan.",
   },
 };
 
-export default function Home() {
-  const pageUrl = siteUrl;
+async function initialToday(): Promise<StatewideResponse> {
+  const targetDate = targetDateFor("today");
+  let weatherByDestination = new Map();
+  try {
+    weatherByDestination = await fetchWeatherSnapshots(destinations, targetDate);
+  } catch {
+    // Render an honest unavailable state.
+  }
+  const picks = rankStatewideDestinations(weatherByDestination, "best");
+  return {
+    targetDate,
+    generatedAt: new Date().toISOString(),
+    mode: "best",
+    conditionsStatus: picks.length ? "live" : "unavailable",
+    picks,
+    note: picks.length
+      ? "Current weather and air-quality fit across selected Michigan destinations."
+      : "Live statewide conditions are temporarily unavailable.",
+  };
+}
+
+export default async function Home() {
+  const initial = await initialToday();
+  const placeOptions = destinations.map((destination) => ({
+    id: destination.id,
+    name: destination.name,
+    area: destination.area,
+    summary: destination.summary,
+    activities: destination.activities,
+  }));
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "WebApplication",
-        "@id": `${pageUrl}/#outdoor-map`,
+        "@id": `${siteUrl}/#outdoor-planner`,
         name: "Michigan Outdoors Now",
-        url: pageUrl,
+        url: siteUrl,
         applicationCategory: "TravelApplication",
         operatingSystem: "Any",
         description: metadata.description,
         author: { "@id": personSchema["@id"] },
-        mainEntity: { "@id": `${pageUrl}/#decision-ready` },
         featureList: [
-          "Official Michigan DNR statewide trail geometry",
-          "Temporary DNR trail closures and reroutes",
-          "Decision-ready Michigan outdoor places",
-          "Search, near-me, filters, and contextual browse drawer",
+          "Best Michigan outdoor options for today and this weekend",
+          "Best time window and practical watch-outs",
+          "Specific-place condition checks",
+          "Activity-specific live tools",
+          "Optional drive-time personalization",
         ],
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       },
       {
-        "@type": "Dataset",
-        name: "Michigan DNR Trails Open Data",
-        description:
-          "Official statewide trail geometry plus temporary closure and reroute layers used for outdoor discovery and access context.",
-        creator: { "@type": "GovernmentOrganization", name: "Michigan Department of Natural Resources" },
-        url: "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/layers",
-      },
-      {
-        "@type": "ItemList",
-        "@id": `${pageUrl}/#decision-ready`,
-        name: "Decision-ready Michigan outdoor destinations",
-        numberOfItems: destinations.length,
-        itemListElement: destinations.map((destination, index) => ({
-          "@type": "ListItem",
-          position: index + 1,
-          name: destination.name,
-          url: `${siteUrl}/places/${destination.id}`,
-        })),
+        "@type": "FAQPage",
+        mainEntity: [
+          {
+            "@type": "Question",
+            name: "How does Michigan Outdoors Now choose where to go?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "It compares current conditions using activity-specific rules, then shows the strongest option, best time window, watch-outs and alternatives.",
+            },
+          },
+          {
+            "@type": "Question",
+            name: "Does every activity use the same score?",
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: "No. Hiking, beaches, fishing, birding, paddling and dark-sky outings rely on different conditions and specialist data.",
+            },
+          },
+        ],
       },
     ],
   };
 
   return (
     <>
-      <header className="explore-command-head">
-        <div className="content-wrap">
-          <div>
-            <h1>Explore Michigan outdoors.</h1>
-            <p>Official DNR trails and access changes. Decision-ready places where the platform can go deeper.</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="content-wrap explore-map-wrap" id="destination-finder">
-        <DestinationExplorer />
-      </div>
-
-      <section className="explore-after-map content-wrap" aria-labelledby="explore-method-title">
-        <div>
-          <p className="eyebrow">Broad discovery. Narrow confidence.</p>
-          <h2 id="explore-method-title">The map can be comprehensive without pretending every line has a live score.</h2>
-        </div>
-        <div>
-          <p>
-            DNR trail geometry, temporary closures and reroutes drive discovery. Bright decision dots are the smaller
-            set where Michigan Outdoors Now has enough structured context for deeper conditions and trip planning.
-          </p>
-          <div className="explore-after-links">
-            <Link href="/ideas/outdoors-today">Outdoor ideas for today →</Link>
-            <Link href="/ideas">Browse trip ideas →</Link>
-            <Link href="/how-it-works">How the decision model works →</Link>
-          </div>
-        </div>
-      </section>
-
+      <OutdoorIntentHub initialToday={initial} places={placeOptions} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
     </>
   );

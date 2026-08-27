@@ -6,7 +6,7 @@ const root = new URL("../", import.meta.url);
 const baseline = JSON.parse(await readFile(new URL("benchmarks/platform-quality.json", root), "utf8"));
 const paths = [
   "src/lib/decision-engine.ts", "src/lib/live-data.ts", "src/lib/planner.ts", "src/lib/types.ts",
-  "src/data/specialist-tools.ts", "src/app/page.tsx", "src/components/statewide-decision-board.tsx",
+  "src/data/specialist-tools.ts", "src/app/page.tsx", "src/components/outdoor-intent-hub.tsx", "src/components/statewide-decision-board.tsx",
   "src/lib/statewide.ts", "src/components/result-comparison.tsx", "src/components/trip-decision.tsx",
   "src/app/globals.css", "src/app/explore/page.tsx", "src/components/destination-explorer.tsx",
   "src/components/michigan-destination-map.tsx", "src/lib/outdoor-universe.ts",
@@ -19,7 +19,7 @@ const dimensions: Array<[string, number, boolean]> = [
   ["decisionUsefulness", 20,
     has("src/lib/decision-engine.ts", "evaluateActivities", "bestWindowForActivity") &&
     has("src/lib/statewide.ts", "rankStatewideDestinations", "why", "watch") &&
-    has("src/components/statewide-decision-board.tsx", "Live statewide read", "Best window")
+    has("src/components/outdoor-intent-hub.tsx", "Go when", "Why it works", "Know before you go", "Good backups")
   ],
   ["dataQualityFreshness", 15, has("src/lib/live-data.ts", "forecast_days", "revalidate", "hourlySignals", "us_aqi")],
   ["activitySpecificIntelligence", 10, has("src/lib/decision-engine.ts", "evaluateActivity", "waterActivities", "dark-sky")],
@@ -28,15 +28,15 @@ const dimensions: Array<[string, number, boolean]> = [
     has("src/data/specialist-tools.ts", "Michigan Beach Conditions", "Michigan Trout Report", "Northern Lights Michigan", "Michigan Fall Color") &&
     has("src/app/explore/page.tsx", "Explore Michigan outdoors.", "Michigan DNR Trails Open Data")
   ],
-  ["technicalSeo", 10, has("src/app/page.tsx", "WebApplication", "Dataset", "ItemList", "jsonLd")],
+  ["technicalSeo", 10, has("src/app/page.tsx", "WebApplication", "FAQPage", "jsonLd")],
   ["mobileUx", 10, has("src/app/globals.css", "@media (max-width: 760px)", "@media (max-width: 560px)")],
   ["performanceResilience", 5, has("src/lib/live-data.ts", "AbortSignal.timeout", "Promise.allSettled", "revalidate")],
   ["explainabilityTrust", 5, has("src/lib/decision-engine.ts", "Decision status:", "confidence", "cautions")],
   ["platformIntegration", 5,
-    has("src/app/page.tsx", "DestinationExplorer", "Official DNR trails and access changes", "Michigan DNR Trails Open Data") &&
+    has("src/app/page.tsx", "OutdoorIntentHub", "initialToday") &&
+    has("src/components/outdoor-intent-hub.tsx", "I want to get outside today", "I already know the place", "specialistTools") &&
     has("src/lib/planner.ts", "great-lakes-beaches", "michigantroutreport.com", "northern-lights-michigan", "great-lakes-freighter-tracking") &&
-    has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse") &&
-    has("src/components/michigan-destination-map.tsx", "official-dnr-trails", "destination-pin-decision")
+    has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse")
   ]
 ];
 

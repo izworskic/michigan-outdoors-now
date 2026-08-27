@@ -30,10 +30,15 @@ assert.match(home, /Michigan Outdoors Now/);
 assert.match(home, /Chris Izworski/);
 assert.match(home, /noindex/);
 assert.match(home, /application\/ld\+json/);
-assert.match(home, /Explore Michigan outdoors\./);
-assert.match(home, /Official DNR trails and access changes/);
-assert.match(home, /Michigan DNR Trails Open Data/);
-assert.doesNotMatch(home, /Not a shortlist\.|Where should you go outside today\?|Live statewide read|id="planner"/);
+assert.match(home, /What kind of Michigan day are you trying to have\?/);
+assert.match(home, /I want to get outside today/);
+assert.match(home, /Help me plan this weekend/);
+assert.match(home, /I already know the place/);
+assert.match(home, /I know what I want to do/);
+assert.match(home, /Go when/);
+assert.match(home, /Why it works/);
+assert.match(home, /Know before you go/);
+assert.doesNotMatch(home, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
 assert.doesNotMatch(home, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
 
 const originSlugs = [
@@ -161,4 +166,4 @@ assert.ok(robotsPath, "built robots body was not found");
 const robots = await readFile(robotsPath, "utf8");
 assert.match(robots, /Disallow: \//);
 
-console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, a map-first statewide DNR discovery surface with access changes, 57 sitemap URLs, and preview noindex.`);
+console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, a persona-first planning homepage plus statewide DNR discovery surface with access changes, 57 sitemap URLs, and preview noindex.`);
