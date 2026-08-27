@@ -269,7 +269,7 @@ export function DestinationExplorer() {
         </label>
 
         <label className="map-layer-select">
-          <span>Official DNR map layer</span>
+          <span>Trail network</span>
           <select
             value={trailLayer}
             onChange={(event) => {
@@ -294,7 +294,7 @@ export function DestinationExplorer() {
           <summary>Filters{filterCount ? ` · ${filterCount}` : ""}</summary>
           <div className="map-filter-popover">
             <label>
-              <span>Decision activity</span>
+              <span>Trip-planning places</span>
               <select value={activity} onChange={(event) => { setActivity(event.target.value as ActivityId | "all"); safeTrack("explorer_filter_changed", { filter: "activity" }); }}>
                 <option value="all">Any activity</option>
                 {activityIds.map((activityId) => <option value={activityId} key={activityId}>{activityLabels[activityId]}</option>)}
