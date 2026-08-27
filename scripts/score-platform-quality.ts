@@ -22,7 +22,10 @@ const dimensions: Array<[string, number, boolean]> = [
   ["mobileUx", 10, has("src/app/globals.css", "@media (max-width: 760px)", "@media (max-width: 560px)")],
   ["performanceResilience", 5, has("src/lib/live-data.ts", "AbortSignal.timeout", "Promise.allSettled", "revalidate")],
   ["explainabilityTrust", 5, has("src/lib/decision-engine.ts", "Decision status:", "confidence", "cautions")],
-  ["platformIntegration", 5, has("src/app/page.tsx", "LIVE DECISION LAYER", "specialistTools")]
+  ["platformIntegration", 5,
+    has("src/app/page.tsx", "LIVE DECISION LAYER", "specialistTools") &&
+    has("src/lib/planner.ts", "best-michigan-beaches-today", "michigan-waterfall-conditions", "michigan-stargazing-tonight", "great-lakes-freighter-viewing")
+  ]
 ];
 
 const fatal: string[] = [];

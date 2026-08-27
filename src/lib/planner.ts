@@ -118,6 +118,12 @@ function relatedToolFor(destination: Destination, selected: ActivityId[]) {
   if (destination.id === "pictured-rocks") {
     return { label: "Pictured Rocks trip planner", url: "https://picturedrocks.chrisizworski.com/" };
   }
+  if (destination.id === "tahquamenon-falls") {
+    return { label: "Michigan waterfall conditions", url: "https://chrisizworski.com/michigan-waterfall-conditions/" };
+  }
+  if (selected.includes("beaches")) {
+    return { label: "Best Michigan beaches today", url: "https://chrisizworski.com/best-michigan-beaches-today/" };
+  }
   if (destination.id === "au-sable-mio" || destination.id === "rifle-river") {
     return { label: "Michigan trout report", url: "https://trout.chrisizworski.com/" };
   }
@@ -128,13 +134,12 @@ function relatedToolFor(destination: Destination, selected: ActivityId[]) {
     return { label: "Michigan birding report", url: "https://birding.chrisizworski.com/" };
   }
   if (selected.includes("dark-sky")) {
-    return { label: "Northern lights in Michigan", url: "https://chrisizworski.com/northern-lights-michigan/" };
+    return { label: "Michigan stargazing tonight", url: "https://chrisizworski.com/michigan-stargazing-tonight/" };
   }
-  if (
-    selected.includes("paddling") ||
-    selected.includes("beaches") ||
-    destination.activities.includes("freighters")
-  ) {
+  if (selected.includes("freighters") || destination.activities.includes("freighters")) {
+    return { label: "Great Lakes freighter viewing", url: "https://chrisizworski.com/great-lakes-freighter-viewing/" };
+  }
+  if (selected.includes("paddling")) {
     return { label: "Great Lakes buoy dashboard", url: "https://chrisizworski.com/great-lakes-buoys/" };
   }
   return { label: "More tools by Chris Izworski", url: "https://chrisizworski.com/tools" };
