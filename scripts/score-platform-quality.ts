@@ -52,7 +52,7 @@ if (!has("tests/specialist-tools.test.ts", "retired and removed specialist paths
 if (!has("tests/statewide.test.ts", "excludes specialist-only activity scoring", "does not invent scores")) fatal.push("statewide decision regressions missing");
 const explorerSource = files["src/components/destination-explorer.tsx"] + files["src/components/michigan-destination-map.tsx"] + files["src/app/explore/page.tsx"];
 if (/numbered pins|result-map-number|element\.textContent\s*=\s*String\(index \+ 1\)|Show all 28 places|See all 28 places/.test(explorerSource)) fatal.push("numbered-shortlist explorer resurfaced");
-if (!has("tests/outdoor-universe.test.ts", "official simplified Michigan DNR trail layer", "group segments")) fatal.push("outdoor-universe regressions missing");
+if (!has("tests/outdoor-universe.test.ts", "official DNR trail, closure, and reroute layers", "resultOffset", "group segments")) fatal.push("outdoor-universe regressions missing");
 
 const rows = dimensions.map(([key, weight, passed]) => ({ key, weight, score: passed ? weight : 0 }));
 const score = rows.reduce((sum, row) => sum + row.score, 0);
