@@ -1,7 +1,7 @@
 import { activityIds, type ActivityId, type DateChoice, type PlannerRequest } from "./types";
 
 const validDates = new Set<DateChoice>(["today", "tomorrow", "weekend"]);
-const validDriveHours = new Set([1, 2, 3, 5]);
+const validDriveHours = new Set([1, 2, 3, 4, 5]);
 
 export function serializePlannerFragment(request: PlannerRequest) {
   const params = new URLSearchParams({

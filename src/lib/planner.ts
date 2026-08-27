@@ -54,6 +54,10 @@ export function estimateDriveHours(distanceMiles: number) {
   return Math.max(0.2, distanceMiles / 50 + 0.18);
 }
 
+export function isWithinDriveRadius(driveHours: number, maxDriveHours: number) {
+  return driveHours <= maxDriveHours + 0.05;
+}
+
 export function isPlausibleMichiganCoordinate(latitude: number, longitude: number) {
   return (
     Number.isFinite(latitude) &&
@@ -167,7 +171,7 @@ export function rankDestinations(input: RankInput): Plan[] {
         sourceCount: weather ? 1 : 0,
       });
 
-      if (driveHours > input.maxDriveHours + 0.05) return null;
+      if (!isWithinDriveRadius(driveHours, input.maxDriveHours)) return null;
       if (selected.size > 0 && matchingActivities.length === 0) return null;
       if (input.kids && !destination.kidsFriendly) return null;
       if (input.dog && !destination.dogsAllowed) return null;

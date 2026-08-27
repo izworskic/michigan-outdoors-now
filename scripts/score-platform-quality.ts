@@ -33,8 +33,8 @@ const dimensions: Array<[string, number, boolean]> = [
   ["performanceResilience", 5, has("src/lib/live-data.ts", "AbortSignal.timeout", "Promise.allSettled", "revalidate")],
   ["explainabilityTrust", 5, has("src/lib/decision-engine.ts", "Decision status:", "confidence", "cautions")],
   ["platformIntegration", 5,
-    has("src/app/page.tsx", "OutdoorIntentHub", "initialToday") &&
-    has("src/components/outdoor-intent-hub.tsx", "I want to get outside today", "I already know the place", "specialistTools") &&
+    has("src/app/page.tsx", "OutdoorIntentHub", "placeOptions") &&
+    has("src/components/outdoor-intent-hub.tsx", "I want to get outside today", "Starting city or ZIP", "Up to 4 hours", "specialistTools") &&
     has("src/lib/planner.ts", "great-lakes-beaches", "michigantroutreport.com", "northern-lights-michigan", "great-lakes-freighter-tracking") &&
     has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse")
   ]

@@ -28,8 +28,12 @@ async function main() {
   penalties.push({ key: "intentRecognition", max: 20, loss: hasFourIntents ? 0 : 20 });
 
   const mapFirst = page.includes("DestinationExplorer") || page.includes("MichiganDestinationMap");
-  const usefulWithoutLocation = hub.includes("Start with the answer.") && hub.includes("Show me closer options");
-  penalties.push({ key: "timeToValue", max: 20, loss: mapFirst ? 20 : usefulWithoutLocation ? 0 : 10 });
+  const tripScopeFirst =
+    hub.includes("Where are you starting, and how far would you go?") &&
+    hub.includes("Starting city or ZIP") &&
+    hub.includes("Maximum one-way drive") &&
+    hub.includes("Find my best options within");
+  penalties.push({ key: "timeToValue", max: 20, loss: mapFirst ? 20 : tripScopeFirst ? 0 : 10 });
 
   const primaryText = (page + hub).toLowerCase();
   const jargon = ["decision-ready", "decision ready", "dnr layer", "structured context", "data model", "discovery universe"]
@@ -43,11 +47,13 @@ async function main() {
     hub.includes("Good backups");
   penalties.push({ key: "decisionCompleteness", max: 15, loss: completeDecision ? 0 : 15 });
 
-  const optionalLocal =
-    hub.includes("Show me closer options") &&
+  const clearTravelRadius =
     hub.includes("Use my location") &&
-    hub.includes("Starting city or ZIP");
-  penalties.push({ key: "personalizationFriction", max: 10, loss: optionalLocal ? 0 : 10 });
+    hub.includes("Maximum one-way drive") &&
+    hub.includes("Up to 4 hours") &&
+    hub.includes("0–4 hours away") &&
+    hub.includes("This is a radius, not a target.");
+  penalties.push({ key: "locationAndRadiusClarity", max: 10, loss: clearTravelRadius ? 0 : 10 });
 
   const activityTruth =
     hub.includes("Different activities need different data") &&
@@ -58,9 +64,9 @@ async function main() {
   penalties.push({ key: "activityTruth", max: 10, loss: activityTruth ? 0 : 10 });
 
   const recovery =
-    hub.includes("Good backups") &&
-    hub.includes("No live statewide answer is available") &&
-    hub.includes("No strong matches inside that drive window");
+    hub.includes("Good backups inside your range") &&
+    hub.includes("No strong match showed up inside your") &&
+    hub.includes("Try a wider travel limit");
   penalties.push({ key: "recoveryAlternatives", max: 5, loss: recovery ? 0 : 5 });
 
   const hierarchy =
@@ -75,6 +81,7 @@ async function main() {
   if (mapFirst) fatal.push("homepage starts with the map instead of user intent");
   if (!hasFourIntents) fatal.push("required user-intent paths missing");
   if (jargon.length >= 2) fatal.push("architecture jargon dominates primary user copy");
+  if (!tripScopeFirst || !clearTravelRadius) fatal.push("location and maximum travel radius are not explicit before recommendation");
   if (!completeDecision) fatal.push("primary answer lacks where/when/why/watch-out/alternative");
   if (!activityTruth) fatal.push("specialist-dependent activities are flattened");
 
