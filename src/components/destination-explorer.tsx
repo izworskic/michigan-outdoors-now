@@ -362,28 +362,33 @@ export function DestinationExplorer() {
         <div className="map-live-strip" aria-live="polite">
           <div>
             <span className="map-live-dot" aria-hidden="true" />
-            <strong>{trailLoading ? "Updating…" : universe.status === "live" ? universe.label : "DNR layer unavailable"}</strong>
+            <strong>{trailLoading ? "Updating trails…" : universe.status === "live" ? universe.label : "DNR trails unavailable"}</strong>
           </div>
           {!trailLoading && universe.status === "live" && (
             <>
               <span>{universe.systemCount.toLocaleString()} trail systems · {universe.featureCount.toLocaleString()} segments · {universe.miles.toLocaleString()} mi</span>
-              {showBoatLaunches && (
-                <span>
-                  {boatLaunchLoading
-                    ? "boat launches loading"
-                    : boatLaunches.status === "live"
-                      ? `${boatLaunches.count.toLocaleString()} public boat launches`
-                      : "boat launches unavailable"}
-                </span>
-              )}
               {closureCount > 0 && <span className="map-access-alert">{closureCount} closure{closureCount === 1 ? "" : "s"}</span>}
               {rerouteCount > 0 && <span>{rerouteCount} reroute{rerouteCount === 1 ? "" : "s"}</span>}
-              {universe.partial && <span>partial coverage</span>}
+              {universe.partial && <span>partial trail coverage</span>}
             </>
           )}
+          {showBoatLaunches && (
+            <span>
+              {boatLaunchLoading
+                ? "boat launches loading"
+                : boatLaunches.status === "live"
+                  ? `${boatLaunches.count.toLocaleString()} public boat launches`
+                  : "boat launches unavailable"}
+            </span>
+          )}
           <span className="map-source-inline">
-            Sources: Michigan DNR trails{showBoatLaunches ? " · Michigan Boat Launches" : ""} · Updated {updatedLabel(universe.fetchedAt)}
+            Michigan DNR trails · checked {updatedLabel(universe.fetchedAt)}
           </span>
+          {showBoatLaunches && (
+            <span className="map-source-inline">
+              Michigan Boat Launches · checked {updatedLabel(boatLaunches.fetchedAt)}
+            </span>
+          )}
         </div>
 
         {activeDestination && (
