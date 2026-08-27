@@ -11,6 +11,7 @@ import {
   rankDestinations,
   relatedToolFor,
   targetDateFor,
+  targetDatesFor,
 } from "../src/lib/planner.ts";
 import { parsePlannerFragment, serializePlannerFragment } from "../src/lib/planner-share.ts";
 import type { WeatherSnapshot } from "../src/lib/types.ts";
@@ -73,7 +74,9 @@ test("Detroit calendar choices use the Michigan date", () => {
   assert.equal(targetDateFor("weekend", saturdayAfternoon), "2026-07-18");
 
   const sundayAfternoon = new Date("2026-07-19T16:00:00.000Z");
-  assert.equal(targetDateFor("weekend", sundayAfternoon), "2026-07-25");
+  assert.equal(targetDateFor("weekend", sundayAfternoon), "2026-07-19");
+  assert.deepEqual(targetDatesFor("weekend", saturdayAfternoon), ["2026-07-18", "2026-07-19"]);
+  assert.deepEqual(targetDatesFor("weekend", sundayAfternoon), ["2026-07-19"]);
 });
 
 test("a drive limit is an inclusive maximum radius, not a target band", () => {
