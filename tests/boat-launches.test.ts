@@ -20,8 +20,8 @@ test("boat launch adapter preserves unknown numeric fields instead of turning th
         county: "Bay",
         waterScope: "great-lakes",
         launchStatus: "Open",
-        lanes: null,
-        trailerParking: null,
+        lanes: " ",
+        trailerParking: "   ",
         piers: "",
         carryDown: false,
         verificationStatus: "source-qualified",
@@ -44,6 +44,7 @@ test("boat launch adapter drops unusable records and keeps authoritative source 
     launches: [
       { id: "facility:good", name: "Good Launch", latitude: 44, longitude: -84 },
       { id: "facility:no-coordinates", name: "No Coordinates", latitude: null, longitude: null },
+      { id: "facility:blank-coordinates", name: "Blank Coordinates", latitude: " ", longitude: " " },
       { id: "", name: "No Stable ID", latitude: 44, longitude: -84 },
     ],
   });

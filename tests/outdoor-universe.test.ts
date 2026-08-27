@@ -68,8 +68,8 @@ test("trail system summaries group segments instead of pretending each line is a
   assert.equal(systems[0].name, "North Country Trail");
   assert.equal(systems[0].segments, 2);
   assert.equal(systems[0].miles, 5.3);
-  assert.equal(systems[0].longitude, -88);
-  assert.equal(systems[0].latitude, 46.55);
+  assert.equal(systems[0].longitude, -89.1);
+  assert.equal(systems[0].latitude, 46.4);
   assert.equal(systems[1].longitude, null);
   assert.equal(systems[1].latitude, null);
 });

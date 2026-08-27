@@ -264,13 +264,22 @@ export function getDetroitDate(now = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-export function targetDateFor(choice: DateChoice, now = new Date()) {
+export function targetDatesFor(choice: DateChoice, now = new Date()) {
   const today = getDetroitDate(now);
-  if (choice === "today") return today;
-  if (choice === "tomorrow") return addDays(today, 1);
+  if (choice === "today") return [today];
+  if (choice === "tomorrow") return [addDays(today, 1)];
 
   const [year, month, day] = today.split("-").map(Number);
   const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
-  const daysUntilSaturday = (6 - weekday + 7) % 7;
-  return addDays(today, daysUntilSaturday);
+
+  if (weekday === 6) return [today, addDays(today, 1)];
+  if (weekday === 0) return [today];
+
+  const daysUntilSaturday = 6 - weekday;
+  const saturday = addDays(today, daysUntilSaturday);
+  return [saturday, addDays(saturday, 1)];
+}
+
+export function targetDateFor(choice: DateChoice, now = new Date()) {
+  return targetDatesFor(choice, now)[0];
 }
