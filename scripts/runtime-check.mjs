@@ -32,18 +32,18 @@ try {
   const homeHtml = await home.text();
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
-  assert.match(homeHtml, /Michigan is big\. Pick a pull\./);
-  assert.match(homeHtml, /Choose your adventure/);
-  assert.match(homeHtml, /Keep it close/);
-  assert.match(homeHtml, /Find water/);
-  assert.match(homeHtml, /Head north/);
-  assert.match(homeHtml, /Disappear for a while/);
-  assert.match(homeHtml, /Chase sunset/);
-  assert.match(homeHtml, /Make it a big day/);
-  assert.match(homeHtml, /Make a weekend of it/);
-  assert.match(homeHtml, /Surprise me/);
-  assert.match(homeHtml, /Starting from/);
+  assert.match(homeHtml, /Go find something\./);
+  assert.match(homeHtml, /What are you after\?/);
+  assert.match(homeHtml, /Best now/);
+  assert.match(homeHtml, /Water/);
+  assert.match(homeHtml, /Trail/);
+  assert.match(homeHtml, /River/);
+  assert.match(homeHtml, /After dark/);
+  assert.match(homeHtml, /Long haul/);
+  assert.match(homeHtml, /Weekend/);
+  assert.match(homeHtml, /Start from a city or ZIP/);
   assert.match(homeHtml, /Use my current location/);
+  assert.match(homeHtml, /Drag the map\. Tap anything\./);
   assert.doesNotMatch(homeHtml, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
   assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
@@ -218,7 +218,7 @@ try {
   assert.ok(coordinatePayload.rangeOptions.every((option) => option.driveHours <= 2.1));
 
   console.log(
-    `Runtime check passed: choose-your-adventure home with branching exploration, cumulative drive-hour location bands, paginated DNR outdoor universe with access overlays, clustered statewide boat launches, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: persistent Michigan map canvas with branching exploration, cumulative drive-hour location bands, paginated DNR outdoor universe with access overlays, clustered statewide boat launches, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

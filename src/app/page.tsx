@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { OutdoorIntentHub } from "../components/outdoor-intent-hub";
-import { destinations } from "../data/destinations";
 import { jsonLd, personSchema, siteUrl } from "../lib/site";
 
 export const metadata: Metadata = {
@@ -22,13 +21,6 @@ export const metadata: Metadata = {
 };
 
 export default function Home() {
-  const placeOptions = destinations.map((destination) => ({
-    id: destination.id,
-    name: destination.name,
-    area: destination.area,
-    summary: destination.summary,
-    activities: destination.activities,
-  }));
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -85,7 +77,7 @@ export default function Home() {
 
   return (
     <>
-      <OutdoorIntentHub places={placeOptions} />
+      <OutdoorIntentHub />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
     </>
   );

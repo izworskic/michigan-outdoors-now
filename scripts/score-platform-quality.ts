@@ -19,7 +19,7 @@ const dimensions: Array<[string, number, boolean]> = [
   ["decisionUsefulness", 20,
     has("src/lib/decision-engine.ts", "evaluateActivities", "bestWindowForActivity") &&
     has("src/lib/statewide.ts", "rankStatewideDestinations", "why", "watch") &&
-    has("src/components/outdoor-intent-hub.tsx", "Why now", "Best window", "One thing to watch", "Keep wandering")
+    has("src/components/outdoor-intent-hub.tsx", "Why this one", "Directions", "Show another", "Also making a case")
   ],
   ["dataQualityFreshness", 15, has("src/lib/live-data.ts", "forecast_days", "revalidate", "hourlySignals", "us_aqi")],
   ["activitySpecificIntelligence", 10, has("src/lib/decision-engine.ts", "evaluateActivity", "waterActivities", "dark-sky")],
@@ -33,13 +33,13 @@ const dimensions: Array<[string, number, boolean]> = [
   ["performanceResilience", 5, has("src/lib/live-data.ts", "AbortSignal.timeout", "Promise.allSettled", "revalidate")],
   ["explainabilityTrust", 5, has("src/lib/decision-engine.ts", "Decision status:", "confidence", "cautions")],
   ["platformIntegration", 5,
-    has("src/app/page.tsx", "OutdoorIntentHub", "placeOptions") &&
-    has("src/components/outdoor-intent-hub.tsx", "Michigan is big. Pick a pull.", "Choose your adventure", "What if we kept driving?", "Change the vibe", "specialistTools") &&
+    has("src/app/page.tsx", "OutdoorIntentHub", "<OutdoorIntentHub />") &&
+    has("src/components/outdoor-intent-hub.tsx", "MichiganDestinationMap", "Go find something.", "What are you after?", "Go farther", "Stay closer", "specialistTools") &&
     has("src/lib/planner.ts", "great-lakes-beaches", "michigantroutreport.com", "northern-lights-michigan", "great-lakes-freighter-tracking") &&
     has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse", "longitude", "latitude") &&
     has("src/components/michigan-destination-map.tsx", "official-dnr-trail-systems", "trailSystemLayerId", "michigan-boat-launch-clusters", "michigan-boat-launch-points") &&
     has("src/lib/boat-launches.ts", "Michigan Boat Launches source-qualified inventory", "fails closed", "trailerParking") &&
-    has("src/components/outdoor-intent-hub.tsx", "michiganLandscapes", "What if we kept driving?", "Bring it closer", "Ignore the suggestions")
+    has("src/components/outdoor-intent-hub.tsx", "outdoor-universe?layer=hiking", "/api/boat-launches", "Full atlas", "Drag the map. Tap anything.")
   ]
 ];
 
