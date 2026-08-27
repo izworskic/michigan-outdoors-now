@@ -41,6 +41,45 @@ const genericActivities: Array<{ id: StatewideMode; label: string; detail: strin
 const driveChoices = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 const specialistOrder = ["beaches", "buoys", "trout", "birding", "aurora", "freighters"] as const;
 
+const michiganLandscapes = [
+  {
+    label: "Great Lakes shore",
+    title: "Wind changes the whole day.",
+    detail: "The same forecast can mean calm water on one shoreline and rough surf on another. Lake-facing direction matters.",
+    href: "https://chrisizworski.com/great-lakes-beaches/",
+  },
+  {
+    label: "Dunes + west coast",
+    title: "Exposure is part of the plan.",
+    detail: "Sun, heat, sand, stairs, bluff wind, and sunset timing can matter as much as the headline temperature.",
+    href: "/ideas/hiking-day-trips",
+  },
+  {
+    label: "River country",
+    title: "Rain upstream matters later.",
+    detail: "For paddling and trout water, recent rain, flow, water temperature, and access can matter more than today's sky.",
+    href: "https://michigantroutreport.com/",
+  },
+  {
+    label: "Inland lakes",
+    title: "Morning can be a different lake.",
+    detail: "Wind often builds through the day. A lake that is glass at 8 a.m. may be a poor paddle by noon.",
+    href: "/ideas/paddling-day-trips",
+  },
+  {
+    label: "Northwoods + U.P.",
+    title: "Distance changes the stakes.",
+    detail: "Longer drives, thinner services, fast-changing weather, and patchier cell coverage make backup plans more valuable.",
+    href: "/explore",
+  },
+  {
+    label: "Night sky",
+    title: "Dark is not enough.",
+    detail: "Cloud cover, moonlight, haze, aurora activity, and how far north you are all shape whether the night is worth the drive.",
+    href: "https://chrisizworski.com/northern-lights-michigan/",
+  },
+] as const;
+
 function displayStatus(status: string) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
@@ -469,6 +508,30 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
         </section>
       )}
 
+
+      <section className="persona-landscapes" aria-labelledby="michigan-landscape-title">
+        <div className="persona-landscape-intro">
+          <p className="persona-section-kicker">Read Michigan before you pick a pin</p>
+          <h2 id="michigan-landscape-title">The state changes under you as you travel.</h2>
+          <p>
+            Michigan is not one outdoor forecast. Shoreline, dunes, rivers, inland lakes, northwoods,
+            and the U.P. all reward different timing and different data. Use these lenses to understand
+            why a place rises or falls in the recommendations.
+          </p>
+          <Link href="/explore">Explore the statewide atlas →</Link>
+        </div>
+        <div className="persona-landscape-grid">
+          {michiganLandscapes.map((item) => (
+            <a href={item.href} key={item.label}>
+              <span>{item.label}</span>
+              <strong>{item.title}</strong>
+              <small>{item.detail}</small>
+              <b>Go deeper →</b>
+            </a>
+          ))}
+        </div>
+      </section>
+
       <section className="persona-proof" aria-labelledby="persona-proof-title">
         <div className="persona-proof-head">
           <p className="persona-section-kicker">What this actually does for you</p>
@@ -482,7 +545,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
           <article>
             <span>1</span>
             <h3>It respects your travel limit.</h3>
-            <p>A four-hour limit means every useful option from nearby through four hours away can compete for the recommendation.</p>
+            <p>An eight-hour limit means every useful option from nearby through eight hours away can compete for the recommendation.</p>
           </article>
           <article>
             <span>2</span>
