@@ -11,7 +11,7 @@ const headers = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ place: string }> },
 ) {
   const { place: slug } = await params;
@@ -20,7 +20,18 @@ export async function GET(
     return NextResponse.json({ error: "Unknown Michigan destination." }, { status: 404, headers });
   }
 
-  const targetDate = getDetroitDate();
+  const today = getDetroitDate();
+  const requestedDate = new URL(request.url).searchParams.get("date");
+  const maxDate = new Date(`${today}T12:00:00Z`);
+  maxDate.setUTCDate(maxDate.getUTCDate() + 10);
+  const maxDateString = maxDate.toISOString().slice(0, 10);
+  const targetDate =
+    requestedDate &&
+    /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) &&
+    requestedDate >= today &&
+    requestedDate <= maxDateString
+      ? requestedDate
+      : today;
   try {
     const snapshots = await fetchWeatherSnapshots([destination], targetDate);
     const weather = snapshots.get(destination.id) ?? null;
