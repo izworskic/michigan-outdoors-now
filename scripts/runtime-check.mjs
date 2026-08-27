@@ -188,6 +188,10 @@ try {
   assert.ok(payload.plans.length > 0 && payload.plans.length <= 3);
   assert.ok(payload.plans.every((plan) => plan.driveHours <= 8.1));
   assert.ok(payload.plans.every((plan) => plan.destination.activities.includes("hiking") || plan.destination.activities.includes("birding")));
+  assert.ok(Array.isArray(payload.rangeOptions));
+  assert.ok(payload.rangeOptions.length >= payload.plans.length);
+  assert.ok(payload.rangeOptions.every((option) => option.driveHours <= 8.1));
+  assert.ok(payload.rangeOptions.every((option) => option.destination?.id && option.destination?.name));
 
   const coordinateRecommendation = await fetch(`${origin}/api/recommendations`, {
     method: "POST",
@@ -208,9 +212,11 @@ try {
   const coordinatePayload = await coordinateRecommendation.json();
   assert.match(coordinatePayload.origin.name, /Bay City area/);
   assert.ok(coordinatePayload.plans.length > 0);
+  assert.ok(coordinatePayload.rangeOptions.length > 0);
+  assert.ok(coordinatePayload.rangeOptions.every((option) => option.driveHours <= 2.1));
 
   console.log(
-    `Runtime check passed: persona-first home, paginated DNR outdoor universe with access overlays, clustered statewide boat launches, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: persona-first home, cumulative drive-hour location bands, paginated DNR outdoor universe with access overlays, clustered statewide boat launches, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");
