@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { specialistTools } from "../data/specialist-tools";
 import type { StatewideMode } from "../lib/statewide";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse } from "../lib/types";
@@ -131,6 +131,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
   const [planning, setPlanning] = useState(false);
   const [planError, setPlanError] = useState("");
   const [plans, setPlans] = useState<PlannerResponse | null>(null);
+  const planRequestRef = useRef<AbortController | null>(null);
 
   const matchingPlaces = useMemo(() => {
     const q = placeQuery.trim().toLowerCase();
@@ -159,12 +160,16 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
       return;
     }
 
+    planRequestRef.current?.abort();
+    const controller = new AbortController();
+    planRequestRef.current = controller;
     setPlanning(true);
     setPlanError("");
     try {
       const response = await fetch("/api/recommendations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           origin: chosenOrigin,
           ...(coordinates ? { originCoordinates: coordinates } : {}),
@@ -180,19 +185,31 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
       if (!response.ok || !("plans" in payload)) {
         throw new Error(payload.error ?? "Could not build this plan.");
       }
+      if (planRequestRef.current !== controller) return;
       setPlans(payload as PlannerResponse);
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (planRequestRef.current !== controller) return;
       setPlans(null);
       setPlanError(error instanceof Error ? error.message : "Could not build this plan.");
     } finally {
-      setPlanning(false);
+      if (planRequestRef.current === controller) {
+        planRequestRef.current = null;
+        setPlanning(false);
+      }
     }
   }
 
   function chooseIntent(next: IntentId) {
     setIntent(next);
     setPlanError("");
-    if (next !== "today" && next !== "weekend") return;
+    if (next !== "today" && next !== "weekend") {
+      planRequestRef.current?.abort();
+      planRequestRef.current = null;
+      setPlanning(false);
+      setPlans(null);
+      return;
+    }
 
     const nextDate: DateChoice = next === "weekend" ? "weekend" : "today";
     setDate(nextDate);
@@ -271,6 +288,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
               type="button"
               className="persona-intent-card"
               data-active={intent === item.id}
+              aria-pressed={intent === item.id}
               onClick={() => chooseIntent(item.id)}
             >
               <span>{item.eyebrow}</span>
@@ -300,6 +318,9 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                   <input
                     value={origin}
                     onChange={(event) => {
+                      planRequestRef.current?.abort();
+                      planRequestRef.current = null;
+                      setPlanning(false);
                       setOrigin(event.target.value);
                       setOriginCoordinates(undefined);
                       setPlans(null);
@@ -391,7 +412,17 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                       <small>{displayStatus(lead.decisionStatus)} · {lead.confidence} confidence</small>
                     </div>
                     <div className="persona-lead-main">
-                      <p className="persona-answer-label">{driveTimeLabel(lead.driveHours)} from your start · {modeLabel}</p>
+                      <p className="persona-answer-label">
+                        {driveTimeLabel(lead.driveHours)} from your start · {modeLabel}
+                        {date === "weekend" && lead.weather?.date
+                          ? ` · best on ${new Intl.DateTimeFormat("en-US", {
+                              weekday: "long",
+                              month: "short",
+                              day: "numeric",
+                              timeZone: "UTC",
+                            }).format(new Date(`${lead.weather.date}T12:00:00Z`))}`
+                          : ""}
+                      </p>
                       <h3>{lead.destination.name}</h3>
                       <p className="persona-place-meta">{lead.destination.area} · {lead.distanceMiles} rough miles</p>
 
@@ -412,7 +443,7 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
 
                       <p className="persona-weather-line">{planWeatherLine(lead)}</p>
                       <div className="persona-actions">
-                        <Link href={`/places/${lead.destination.id}`}>See the full plan →</Link>
+                        <Link href={`/places/${lead.destination.id}?date=${encodeURIComponent(lead.weather?.date ?? plans.targetDate)}`}>See the full plan →</Link>
                         <a href={lead.mapUrl}>Open directions</a>
                         <Link href="/explore">Browse the Michigan map</Link>
                       </div>
@@ -424,7 +455,10 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                       <p>Good backups inside your range</p>
                       <div>
                         {alternatives.map((plan) => (
-                          <Link href={`/places/${plan.destination.id}`} key={plan.destination.id}>
+                          <Link
+                            href={`/places/${plan.destination.id}?date=${encodeURIComponent(plan.weather?.date ?? plans.targetDate)}`}
+                            key={plan.destination.id}
+                          >
                             <span>{driveTimeLabel(plan.driveHours)} away · {plan.score}/100</span>
                             <strong>{plan.destination.name}</strong>
                             <small>{plan.bestWindow ? `Best window: ${plan.bestWindow}` : planWhy(plan)}</small>
