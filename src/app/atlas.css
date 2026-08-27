@@ -180,3 +180,46 @@ body{background:#f8f5ef;color:#243139}
   .persona-landscape-grid{grid-template-columns:1fr}
   .persona-landscape-grid>a{min-height:170px}
 }
+
+
+.map-legend-launch{
+  width:8px;
+  height:8px;
+  border:1px solid rgba(255,255,255,.95);
+  border-radius:50%;
+  background:#b96d45;
+  box-shadow:0 0 0 1px rgba(36,49,57,.28);
+}
+.boat-launch-popup{
+  display:grid;
+  gap:5px;
+  min-width:230px;
+  padding:3px 1px;
+}
+.boat-launch-popup span{
+  color:#8f5136;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.boat-launch-popup strong{
+  color:#132b3a;
+  font-family:Georgia,serif;
+  font-size:19px;
+  font-weight:500;
+}
+.boat-launch-popup p,
+.boat-launch-popup small{
+  margin:0;
+  color:#69737a;
+  font-size:9px;
+  line-height:1.45;
+}
+.boat-launch-popup a{
+  margin-top:4px;
+  color:#28566a;
+  font-size:9px;
+  font-weight:850;
+  text-decoration:none;
+}

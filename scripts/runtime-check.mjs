@@ -109,6 +109,23 @@ try {
   assert.ok(Array.isArray(outdoorUniversePayload.access.closures.features));
   assert.ok(Array.isArray(outdoorUniversePayload.access.reroutes.features));
 
+  const boatLaunches = await fetch(`${origin}/api/boat-launches`, {
+    signal: AbortSignal.timeout(15_000),
+  });
+  assert.equal(boatLaunches.status, 200);
+  assert.match(boatLaunches.headers.get("x-robots-tag") ?? "", /noindex/);
+  const boatLaunchPayload = await boatLaunches.json();
+  assert.ok(["live", "unavailable"].includes(boatLaunchPayload.status));
+  assert.ok(Array.isArray(boatLaunchPayload.geojson.features));
+  if (boatLaunchPayload.status === "live") {
+    assert.equal(boatLaunchPayload.count, boatLaunchPayload.geojson.features.length);
+    assert.ok(boatLaunchPayload.count >= 1000);
+    assert.match(boatLaunchPayload.note, /source-qualified inventory/);
+  } else {
+    assert.equal(boatLaunchPayload.count, 0);
+    assert.equal(boatLaunchPayload.geojson.features.length, 0);
+  }
+
   const placePage = await fetch(`${origin}/places/tawas-point`);
   assert.equal(placePage.status, 200);
   assert.match(await placePage.text(), /Plan a day at/);
@@ -155,7 +172,7 @@ try {
     body: JSON.stringify({
       origin: "48708",
       date: "today",
-      maxDriveHours: 4,
+      maxDriveHours: 8,
       activities: ["hiking", "birding"],
       kids: true,
       dog: false,
@@ -193,7 +210,7 @@ try {
   assert.ok(coordinatePayload.plans.length > 0);
 
   console.log(
-    `Runtime check passed: persona-first home, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: persona-first home, paginated DNR outdoor universe with access overlays, clustered statewide boat launches, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

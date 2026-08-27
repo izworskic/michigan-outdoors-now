@@ -25,6 +25,25 @@ The homepage is evaluated against whether a normal person can reach a useful Mic
 3. I already know the place.
 4. I know what I want to do.
 
+## Statewide atlas contract
+
+The explorer must not visually imply that the curated full-planning places are the extent of Michigan outdoor access.
+
+The atlas can combine several source-backed layers with different meanings:
+
+- full trip-planning places
+- Michigan DNR trail systems and route geometry
+- temporary trail closures and reroutes
+- the existing Michigan Boat Launches source-qualified public-access inventory
+
+Boat launches are clustered at statewide zoom and resolve into individual access points as the user zooms. They are access infrastructure, not promoted into destination scores simply because a coordinate exists.
+
+The launch adapter inherits the source-truth rules of the existing launch tool: missing facility fields remain unknown rather than zero, and a source failure produces no guessed launch pins.
+
+## Travel-range contract
+
+The maximum one-way drive is an inclusive radius from 1 through 8 hours. Selecting 8 hours means every qualifying option from nearby through 8 hours away can compete; it does not target only the eighth hour.
+
 ## Fatal regressions
 
-A release fails if the homepage starts with the map, drops a required intent path, leaks architecture jargon into the main experience, omits part of the decision, or flattens specialist activities into one generic score.
+A release fails if the homepage starts with the map, drops a required intent path, leaks architecture jargon into the main experience, omits part of the decision, flattens specialist activities into one generic score, turns unknown launch attributes into zero, or reduces statewide discovery back to the curated place set alone.
