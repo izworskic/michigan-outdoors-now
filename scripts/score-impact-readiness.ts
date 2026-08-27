@@ -29,7 +29,9 @@ const paths = [
   "src/lib/planner.ts",
   "src/lib/live-data.ts",
   "src/lib/outdoor-universe.ts",
+  "src/lib/boat-launches.ts",
   "src/app/api/outdoor-universe/route.ts",
+  "src/app/api/boat-launches/route.ts",
   "scripts/check-seo.mjs",
   "scripts/runtime-check.mjs",
   "docs/search-growth-plan.md",
@@ -66,9 +68,10 @@ const usefulness = calculate([
     name: "Destination discovery",
     checks: [
       [10,
-        has("src/components/michigan-destination-map.tsx", "maplibre-gl", "tiles.openfreemap.org", "official-dnr-trails", "official-dnr-trail-systems", "destination-pin-decision") &&
-        has("src/components/destination-explorer.tsx", "explorer_filter_changed", "Find outdoor places near me", "Trail systems", "systemCount") &&
-        has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "fetchOutdoorUniverse", "longitude", "latitude")],
+        has("src/components/michigan-destination-map.tsx", "maplibre-gl", "tiles.openfreemap.org", "official-dnr-trails", "official-dnr-trail-systems", "michigan-boat-launch-clusters", "destination-pin-decision") &&
+        has("src/components/destination-explorer.tsx", "explorer_filter_changed", "Find outdoor places near me", "Trail systems", "Public boat launches", "systemCount") &&
+        has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "fetchOutdoorUniverse", "longitude", "latitude") &&
+        has("src/lib/boat-launches.ts", "BOAT_LAUNCH_API", "source-qualified inventory", "fails closed")],
       [8, destinations.length >= 28 && has("src/app/sitemap.ts", "destinations.map", "/places/${destination.id}")],
       [7, has("src/components/place-conditions.tsx", "Rain chance", "Peak gusts", "Air quality")],
       [5, has("src/app/places/[place]/page.tsx", "nearbyDestinations", "NEARBY ALTERNATIVES")],

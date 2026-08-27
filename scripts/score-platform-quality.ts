@@ -9,8 +9,8 @@ const paths = [
   "src/data/specialist-tools.ts", "src/app/page.tsx", "src/components/outdoor-intent-hub.tsx", "src/components/statewide-decision-board.tsx",
   "src/lib/statewide.ts", "src/components/result-comparison.tsx", "src/components/trip-decision.tsx",
   "src/app/globals.css", "src/app/explore/page.tsx", "src/components/destination-explorer.tsx",
-  "src/components/michigan-destination-map.tsx", "src/lib/outdoor-universe.ts",
-  "tests/decision-engine.test.ts", "tests/statewide.test.ts", "tests/specialist-tools.test.ts", "tests/outdoor-universe.test.ts"
+  "src/components/michigan-destination-map.tsx", "src/lib/outdoor-universe.ts", "src/lib/boat-launches.ts",
+  "tests/decision-engine.test.ts", "tests/statewide.test.ts", "tests/specialist-tools.test.ts", "tests/outdoor-universe.test.ts", "tests/boat-launches.test.ts"
 ];
 const files = Object.fromEntries(await Promise.all(paths.map(async (path) => [path, await readFile(new URL(path, root), "utf8")])));
 const has = (path: string, ...markers: string[]) => markers.every((marker) => files[path].includes(marker));
@@ -37,7 +37,8 @@ const dimensions: Array<[string, number, boolean]> = [
     has("src/components/outdoor-intent-hub.tsx", "I want to get outside today", "Starting city or ZIP", "Up to 8 hours", "specialistTools") &&
     has("src/lib/planner.ts", "great-lakes-beaches", "michigantroutreport.com", "northern-lights-michigan", "great-lakes-freighter-tracking") &&
     has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse", "longitude", "latitude") &&
-    has("src/components/michigan-destination-map.tsx", "official-dnr-trail-systems", "trailSystemLayerId") &&
+    has("src/components/michigan-destination-map.tsx", "official-dnr-trail-systems", "trailSystemLayerId", "michigan-boat-launch-clusters", "michigan-boat-launch-points") &&
+    has("src/lib/boat-launches.ts", "Michigan Boat Launches source-qualified inventory", "fails closed", "trailerParking") &&
     has("src/components/outdoor-intent-hub.tsx", "michiganLandscapes", "nearby through 8 hours away")
   ]
 ];
@@ -55,6 +56,7 @@ if (!has("tests/statewide.test.ts", "excludes specialist-only activity scoring",
 const explorerSource = files["src/components/destination-explorer.tsx"] + files["src/components/michigan-destination-map.tsx"] + files["src/app/explore/page.tsx"];
 if (/numbered pins|result-map-number|element\.textContent\s*=\s*String\(index \+ 1\)|Show all 28 places|See all 28 places/.test(explorerSource)) fatal.push("numbered-shortlist explorer resurfaced");
 if (!has("tests/outdoor-universe.test.ts", "official DNR trail, closure, and reroute layers", "resultOffset", "group segments")) fatal.push("outdoor-universe regressions missing");
+if (!has("tests/boat-launches.test.ts", "preserves unknown numeric fields", "drops unusable records")) fatal.push("boat-launch source-truth regressions missing");
 
 const rows = dimensions.map(([key, weight, passed]) => ({ key, weight, score: passed ? weight : 0 }));
 const score = rows.reduce((sum, row) => sum + row.score, 0);
