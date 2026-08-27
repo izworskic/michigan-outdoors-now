@@ -122,6 +122,7 @@ export type PlannerRequest = {
 export type PlannerResponse = {
   origin: { name: string; latitude: number; longitude: number };
   targetDate: string;
+  targetDates?: string[];
   generatedAt: string;
   conditionsStatus: "live" | "estimated";
   plans: Plan[];
