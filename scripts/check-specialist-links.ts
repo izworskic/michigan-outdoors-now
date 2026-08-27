@@ -1,4 +1,4 @@
-import { specialistTools } from "../src/data/specialist-tools.ts";
+import { specialistTools } from "../src/data/specialist-tools";
 
 async function main() {
   const failures: string[] = [];
