@@ -74,10 +74,9 @@ try {
   const explorer = await fetch(`${origin}/explore`);
   assert.equal(explorer.status, 200);
   const explorerHtml = await explorer.text();
-  assert.match(explorerHtml, /Michigan outdoor universe/);
   assert.match(explorerHtml, /Explore Michigan outdoors\./);
   assert.match(explorerHtml, /Not a shortlist\./);
-  assert.match(explorerHtml, /Official statewide discovery/);
+  assert.match(explorerHtml, /Official DNR trails and access changes/);
   assert.doesNotMatch(explorerHtml, /numbered pins|result-map-number|Show all 28 places|See all 28 places/);
 
   const outdoorUniverse = await fetch(`${origin}/api/outdoor-universe?layer=hiking`, {
@@ -89,6 +88,13 @@ try {
   assert.equal(outdoorUniversePayload.layer, "hiking");
   assert.match(outdoorUniversePayload.source.name, /Michigan DNR Trails Open Data/);
   assert.ok(Array.isArray(outdoorUniversePayload.geojson.features));
+  assert.ok(Number.isInteger(outdoorUniversePayload.pagesFetched));
+  assert.ok(outdoorUniversePayload.pagesFetched >= 1 || outdoorUniversePayload.status === "unavailable");
+  assert.ok(outdoorUniversePayload.access);
+  assert.ok(Number.isInteger(outdoorUniversePayload.access.closureCount));
+  assert.ok(Number.isInteger(outdoorUniversePayload.access.rerouteCount));
+  assert.ok(Array.isArray(outdoorUniversePayload.access.closures.features));
+  assert.ok(Array.isArray(outdoorUniversePayload.access.reroutes.features));
 
   const placePage = await fetch(`${origin}/places/tawas-point`);
   assert.equal(placePage.status, 200);
@@ -174,7 +180,7 @@ try {
   assert.ok(coordinatePayload.plans.length > 0);
 
   console.log(
-    `Runtime check passed: decision-first home, statewide ranking, official DNR outdoor universe, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: decision-first home, statewide ranking, paginated DNR outdoor universe with access overlays, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

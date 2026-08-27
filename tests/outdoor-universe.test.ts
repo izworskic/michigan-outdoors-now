@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DNR_TRAIL_CLOSURES_SERVICE,
+  DNR_TRAIL_REROUTES_SERVICE,
   DNR_TRAIL_SERVICE,
+  buildDnrAccessQuery,
   buildDnrTrailQuery,
   isUniverseLayerId,
   summarizeTrailSystems,
@@ -9,16 +12,31 @@ import {
   type UniverseGeoJson,
 } from "../src/lib/outdoor-universe.ts";
 
-test("the outdoor universe uses the official simplified Michigan DNR trail layer", () => {
-  assert.match(DNR_TRAIL_SERVICE, /DNRTrailsOPENDATA\/FeatureServer\/21\/query$/);
+test("the outdoor universe uses official DNR trail, closure, and reroute layers", () => {
+  assert.match(DNR_TRAIL_SERVICE, /FeatureServer\/21\/query$/);
+  assert.match(DNR_TRAIL_CLOSURES_SERVICE, /FeatureServer\/0\/query$/);
+  assert.match(DNR_TRAIL_REROUTES_SERVICE, /FeatureServer\/1\/query$/);
   assert.equal(universeLayerIds.length, 8);
+
   for (const layer of universeLayerIds) {
-    const url = new URL(buildDnrTrailQuery(layer));
-    assert.equal(url.searchParams.get("f"), "geojson");
-    assert.equal(url.searchParams.get("outSR"), "4326");
-    assert.equal(url.searchParams.get("resultRecordCount"), "2000");
-    assert.ok(url.searchParams.get("where"));
+    const first = new URL(buildDnrTrailQuery(layer));
+    const second = new URL(buildDnrTrailQuery(layer, 2000));
+    assert.equal(first.searchParams.get("f"), "geojson");
+    assert.equal(first.searchParams.get("outSR"), "4326");
+    assert.equal(first.searchParams.get("resultRecordCount"), "2000");
+    assert.equal(first.searchParams.get("resultOffset"), "0");
+    assert.equal(second.searchParams.get("resultOffset"), "2000");
+    assert.equal(first.searchParams.get("orderByFields"), "OBJECTID ASC");
+    assert.ok(first.searchParams.get("where"));
+
+    const closure = new URL(buildDnrAccessQuery("closures", layer));
+    const reroute = new URL(buildDnrAccessQuery("reroutes", layer));
+    assert.match(closure.pathname, /\/0\/query$/);
+    assert.match(reroute.pathname, /\/1\/query$/);
+    assert.ok(closure.searchParams.get("where"));
+    assert.ok(reroute.searchParams.get("where"));
   }
+
   assert.equal(isUniverseLayerId("hiking"), true);
   assert.equal(isUniverseLayerId("bogus"), false);
 });
