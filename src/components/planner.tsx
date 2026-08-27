@@ -172,7 +172,7 @@ export function Planner({
 
   function widenSearch() {
     const choices = [1, 2, 3, 4, 5, 6, 7, 8];
-    const next = choices.find((choice) => choice > maxDriveHours) ?? 5;
+    const next = choices.find((choice) => choice > maxDriveHours) ?? 8;
     setMaxDriveHours(next);
     setResponse(null);
     setSetupStatus(`Drive window widened to ${next} ${next === 1 ? "hour" : "hours"}. Build the plan again.`);
@@ -548,7 +548,7 @@ export function Planner({
               <h4>No strong match inside that drive window.</h4>
               <p>Use one of these quick recoveries, then build the plan again.</p>
               <div className="empty-actions">
-                {maxDriveHours < 5 && <button type="button" onClick={widenSearch}>Widen the drive window</button>}
+                {maxDriveHours < 8 && <button type="button" onClick={widenSearch}>Widen the drive window</button>}
                 {(kids || dog || accessible) && <button type="button" onClick={relaxRequirements}>Clear extra requirements</button>}
                 <Link href="/explore">Browse all 28 places</Link>
               </div>
