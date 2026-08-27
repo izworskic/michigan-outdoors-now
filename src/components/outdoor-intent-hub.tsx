@@ -268,6 +268,22 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
   const alternatives = plans?.plans.slice(1, 3) ?? [];
   const activeDateLabel = date === "weekend" ? "this weekend" : "today";
   const modeLabel = genericActivities.find((item) => item.id === mode)?.label ?? "Best overall";
+  const rangeBands = useMemo(() => {
+    const options = plans?.rangeOptions ?? [];
+    return Array.from({ length: driveHours }, (_, index) => {
+      const upper = index + 1;
+      const lower = index;
+      const bandOptions = options.filter((option) => {
+        if (upper === 1) return option.driveHours <= 1.05;
+        return option.driveHours > lower + 0.05 && option.driveHours <= upper + 0.05;
+      });
+      return {
+        upper,
+        label: upper === 1 ? "Within 1 hour" : `${lower}–${upper} hours`,
+        options: bandOptions,
+      };
+    }).filter((band) => band.options.length > 0);
+  }, [driveHours, plans]);
 
   return (
     <section className="persona-home" aria-labelledby="persona-home-title">
@@ -466,6 +482,45 @@ export function OutdoorIntentHub({ places }: { places: PlaceOption[] }) {
                         ))}
                       </div>
                     </div>
+                  )}
+
+                  {(plans.rangeOptions?.length ?? 0) > 0 && (
+                    <section className="persona-range-catalog" aria-labelledby="range-catalog-title">
+                      <div className="persona-range-catalog-head">
+                        <div>
+                          <p className="persona-section-kicker">Everything your radius opens up</p>
+                          <h3 id="range-catalog-title">
+                            {plans.rangeOptions.length} matching place{plans.rangeOptions.length === 1 ? "" : "s"} within {driveHours} {driveHours === 1 ? "hour" : "hours"}.
+                          </h3>
+                        </div>
+                        <p>
+                          The radius is cumulative. Wider searches keep the closer places and add new locations in the outer hour bands.
+                        </p>
+                      </div>
+
+                      <div className="persona-range-bands">
+                        {rangeBands.map((band) => (
+                          <section key={band.upper} className="persona-range-band" aria-label={band.label}>
+                            <header>
+                              <strong>{band.label}</strong>
+                              <span>{band.options.length} place{band.options.length === 1 ? "" : "s"}</span>
+                            </header>
+                            <div>
+                              {band.options.map((option) => (
+                                <Link
+                                  key={option.destination.id}
+                                  href={`/places/${option.destination.id}?date=${encodeURIComponent(option.forecastDate ?? plans.targetDate)}`}
+                                >
+                                  <span>{option.destination.area}</span>
+                                  <strong>{option.destination.name}</strong>
+                                  <small>{driveTimeLabel(option.driveHours)} · about {option.distanceMiles} rough miles</small>
+                                </Link>
+                              ))}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    </section>
                   )}
                 </>
               ) : (
