@@ -92,6 +92,15 @@ try {
   assert.equal(outdoorUniversePayload.layer, "hiking");
   assert.match(outdoorUniversePayload.source.name, /Michigan DNR Trails Open Data/);
   assert.ok(Array.isArray(outdoorUniversePayload.geojson.features));
+  assert.ok(Array.isArray(outdoorUniversePayload.systems));
+  if (outdoorUniversePayload.status === "live" && outdoorUniversePayload.systemCount > 0) {
+    assert.equal(outdoorUniversePayload.systems.length, outdoorUniversePayload.systemCount);
+    assert.ok(
+      outdoorUniversePayload.systems.some(
+        (system) => Number.isFinite(system.latitude) && Number.isFinite(system.longitude),
+      ),
+    );
+  }
   assert.ok(Number.isInteger(outdoorUniversePayload.pagesFetched));
   assert.ok(outdoorUniversePayload.pagesFetched >= 1 || outdoorUniversePayload.status === "unavailable");
   assert.ok(outdoorUniversePayload.access);
