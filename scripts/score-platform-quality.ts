@@ -19,7 +19,7 @@ const dimensions: Array<[string, number, boolean]> = [
   ["decisionUsefulness", 20,
     has("src/lib/decision-engine.ts", "evaluateActivities", "bestWindowForActivity") &&
     has("src/lib/statewide.ts", "rankStatewideDestinations", "why", "watch") &&
-    has("src/components/outdoor-intent-hub.tsx", "Go when", "Why it works", "Know before you go", "Good backups")
+    has("src/components/outdoor-intent-hub.tsx", "Why now", "Best window", "One thing to watch", "Keep wandering")
   ],
   ["dataQualityFreshness", 15, has("src/lib/live-data.ts", "forecast_days", "revalidate", "hourlySignals", "us_aqi")],
   ["activitySpecificIntelligence", 10, has("src/lib/decision-engine.ts", "evaluateActivity", "waterActivities", "dark-sky")],
@@ -39,7 +39,7 @@ const dimensions: Array<[string, number, boolean]> = [
     has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse", "longitude", "latitude") &&
     has("src/components/michigan-destination-map.tsx", "official-dnr-trail-systems", "trailSystemLayerId", "michigan-boat-launch-clusters", "michigan-boat-launch-points") &&
     has("src/lib/boat-launches.ts", "Michigan Boat Launches source-qualified inventory", "fails closed", "trailerParking") &&
-    has("src/components/outdoor-intent-hub.tsx", "michiganLandscapes", "nearby through 8 hours away")
+    has("src/components/outdoor-intent-hub.tsx", "michiganLandscapes", "What if we kept driving?", "Bring it closer", "Ignore the suggestions")
   ]
 ];
 
