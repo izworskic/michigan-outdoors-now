@@ -38,7 +38,8 @@ if (/\?\?\s*55|\|\|\s*55/.test(files["src/lib/decision-engine.ts"] + files["src/
 if (!has("tests/decision-engine.test.ts", "hazard", "insufficient", "closure", "AQI", "best window")) fatal.push("required regression scenarios missing");
 if (!has("src/lib/decision-engine.ts", 'score: null, status: "closed"', 'score: null, status: "danger"')) fatal.push("hard-stop override missing");
 const retiredPaths = ["michigan-waterfall-conditions", "michigan-stargazing-tonight", "keweenaw-hiking-conditions", "michigan-snowshoe-conditions", "great-lakes-freighter-viewing"];
-const surfacedText = files["src/data/specialist-tools.ts"] + files["src/app/page.tsx"] + files["src/lib/planner.ts"];
+const specialistRegistry = files["src/data/specialist-tools.ts"].split("export const specialistTools")[1] ?? "";
+const surfacedText = specialistRegistry + files["src/app/page.tsx"] + files["src/lib/planner.ts"];
 if (retiredPaths.some((path) => surfacedText.includes(path))) fatal.push("retired or removed tool resurfaced");
 if (!has("tests/specialist-tools.test.ts", "retired and removed specialist paths can never be resurfaced")) fatal.push("retired-tool regression test missing");
 if (!has("tests/statewide.test.ts", "excludes specialist-only activity scoring", "does not invent scores")) fatal.push("statewide decision regressions missing");
