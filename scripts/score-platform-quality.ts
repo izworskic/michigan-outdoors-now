@@ -34,7 +34,7 @@ const dimensions: Array<[string, number, boolean]> = [
   ["explainabilityTrust", 5, has("src/lib/decision-engine.ts", "Decision status:", "confidence", "cautions")],
   ["platformIntegration", 5,
     has("src/app/page.tsx", "OutdoorIntentHub", "placeOptions") &&
-    has("src/components/outdoor-intent-hub.tsx", "I want to get outside today", "Starting city or ZIP", "Up to 8 hours", "specialistTools") &&
+    has("src/components/outdoor-intent-hub.tsx", "Find somewhere worth going.", "City or ZIP", "Drive up to", "Show me where to go", "specialistTools") &&
     has("src/lib/planner.ts", "great-lakes-beaches", "michigantroutreport.com", "northern-lights-michigan", "great-lakes-freighter-tracking") &&
     has("src/lib/outdoor-universe.ts", "DNRTrailsOPENDATA", "universeLayerIds", "fetchOutdoorUniverse", "longitude", "latitude") &&
     has("src/components/michigan-destination-map.tsx", "official-dnr-trail-systems", "trailSystemLayerId", "michigan-boat-launch-clusters", "michigan-boat-launch-points") &&

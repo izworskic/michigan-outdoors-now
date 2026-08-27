@@ -22,18 +22,19 @@ async function main() {
   const penalties = [];
 
   const hasFourIntents =
-    hub.includes("I want to get outside today") &&
-    hub.includes("Help me plan this weekend") &&
-    hub.includes("I already know the place") &&
-    hub.includes("I know what I want to do");
+    hub.includes('title: "Today"') &&
+    hub.includes('title: "This weekend"') &&
+    hub.includes('title: "Check a place"') &&
+    hub.includes('title: "Pick an activity"') &&
+    hub.includes('className="persona-intent-tabs"');
   penalties.push({ key: "intentRecognition", max: 20, loss: hasFourIntents ? 0 : 20 });
 
   const mapFirst = page.includes("DestinationExplorer") || page.includes("MichiganDestinationMap");
   const tripScopeFirst =
-    hub.includes("Where are you starting, and how far would you go?") &&
-    hub.includes("Starting city or ZIP") &&
-    hub.includes("Maximum one-way drive") &&
-    hub.includes("Find my best options within");
+    hub.includes("Where are you starting?") &&
+    hub.includes("City or ZIP") &&
+    hub.includes("Drive up to") &&
+    hub.includes("Show me where to go");
   penalties.push({ key: "timeToValue", max: 20, loss: mapFirst ? 20 : tripScopeFirst ? 0 : 10 });
 
   const primaryText = (page + hub).toLowerCase();
@@ -49,11 +50,10 @@ async function main() {
   penalties.push({ key: "decisionCompleteness", max: 15, loss: completeDecision ? 0 : 15 });
 
   const clearTravelRadius =
-    hub.includes("Use my location") &&
-    hub.includes("Maximum one-way drive") &&
-    hub.includes("Up to 8 hours") &&
-    hub.includes("nearby through 8 hours away") &&
-    hub.includes("This is a radius, not a target.");
+    hub.includes("Use current location") &&
+    hub.includes("Drive up to") &&
+    hub.includes("const driveChoices = [1, 2, 3, 4, 5, 6, 7, 8]") &&
+    hub.includes("one way");
   penalties.push({ key: "locationAndRadiusClarity", max: 10, loss: clearTravelRadius ? 0 : 10 });
 
   const activityTruth =
@@ -71,9 +71,10 @@ async function main() {
   penalties.push({ key: "recoveryAlternatives", max: 5, loss: recovery ? 0 : 5 });
 
   const hierarchy =
-    css.includes(".persona-intent-grid") &&
+    css.includes(".persona-intent-tabs") &&
+    css.includes(".persona-quick-filters") &&
     css.includes(".persona-lead-card") &&
-    css.includes(".persona-landscapes") &&
+    css.includes(".persona-range-catalog>summary") &&
     css.includes("@media(max-width:700px)") &&
     page.includes("OutdoorIntentHub");
   penalties.push({ key: "visualHierarchy", max: 5, loss: hierarchy ? 0 : 5 });
@@ -81,9 +82,9 @@ async function main() {
   const total = penalties.reduce((sum, item) => sum + item.loss, 0);
   const fatal = [];
   if (mapFirst) fatal.push("homepage starts with the map instead of user intent");
-  if (!hasFourIntents) fatal.push("required user-intent paths missing");
+  if (!hasFourIntents) fatal.push("compact planning paths missing");
   if (jargon.length >= 2) fatal.push("architecture jargon dominates primary user copy");
-  if (!tripScopeFirst || !clearTravelRadius) fatal.push("location and maximum travel radius are not explicit before recommendation");
+  if (!tripScopeFirst || !clearTravelRadius) fatal.push("location and maximum travel radius are not clear before recommendation");
   if (!completeDecision) fatal.push("primary answer lacks where/when/why/watch-out/alternative");
   if (!activityTruth) fatal.push("specialist-dependent activities are flattened");
 
