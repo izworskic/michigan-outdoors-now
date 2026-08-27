@@ -120,11 +120,11 @@ export async function POST(request: Request) {
         dog: body.dog,
         accessible: body.accessible,
         weatherByDestination,
-      });
+      }, destinations.length);
     }),
   );
 
-  const plans = rankedPlanSets
+  const candidatePlans = rankedPlanSets
     .flat()
     .sort(
       (a, b) =>
@@ -136,8 +136,29 @@ export async function POST(request: Request) {
     .filter(
       (plan, index, all) =>
         all.findIndex((candidate) => candidate.destination.id === plan.destination.id) === index,
+    );
+
+  const plans = candidatePlans.slice(0, 3);
+  const rangeOptions = [...candidatePlans]
+    .sort(
+      (a, b) =>
+        a.driveHours - b.driveHours ||
+        b.score - a.score ||
+        a.destination.name.localeCompare(b.destination.name),
     )
-    .slice(0, 3);
+    .map((plan) => ({
+      destination: {
+        id: plan.destination.id,
+        name: plan.destination.name,
+        area: plan.destination.area,
+        summary: plan.destination.summary,
+      },
+      score: plan.score,
+      distanceMiles: plan.distanceMiles,
+      driveHours: plan.driveHours,
+      conditionsStatus: plan.conditionsStatus,
+      forecastDate: plan.weather?.date ?? null,
+    }));
 
   const hasLiveConditions = plans.some((plan) => plan.conditionsStatus === "live");
   const response: PlannerResponse = {
@@ -147,6 +168,7 @@ export async function POST(request: Request) {
     generatedAt: new Date().toISOString(),
     conditionsStatus: hasLiveConditions ? "live" : "estimated",
     plans,
+    rangeOptions,
     note: hasLiveConditions
       ? body.date === "weekend" && targetDates.length > 1
         ? "Both days of the current weekend were compared. Forecasts help rank options, but check official closures and local conditions before leaving."
@@ -162,6 +184,7 @@ export async function POST(request: Request) {
       activityCount: body.activities.length,
       needsCount: Number(body.kids) + Number(body.dog) + Number(body.accessible),
       planCount: plans.length,
+      rangeOptionCount: rangeOptions.length,
       conditionsStatus: response.conditionsStatus,
     }),
   );
