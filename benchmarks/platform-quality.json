@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "recordedAt": "2026-08-27",
+  "objective": "Make Michigan Outdoors Now a statewide decision platform that improves the user's outdoor decision rather than merely displaying raw data.",
+  "releaseThreshold": 85,
+  "flagshipTarget": 90,
+  "dimensions": [
+    {"key":"decisionUsefulness","weight":20},
+    {"key":"dataQualityFreshness","weight":15},
+    {"key":"activitySpecificIntelligence","weight":10},
+    {"key":"safetyUncertainty","weight":10},
+    {"key":"searchIntentFit","weight":10},
+    {"key":"technicalSeo","weight":10},
+    {"key":"mobileUx","weight":10},
+    {"key":"performanceResilience","weight":5},
+    {"key":"explainabilityTrust","weight":5},
+    {"key":"platformIntegration","weight":5}
+  ],
+  "fatalFailures": [
+    "Dangerous recommendation caused by missing or contradictory data",
+    "Missing required live data represented as an average numeric score",
+    "Stale safety data represented as current",
+    "Known closure or hazard ignored",
+    "Fabricated condition data",
+    "Broken primary planning interaction",
+    "Material mobile layout failure",
+    "Canonical or indexability regression on a successful existing surface",
+    "Recommendation explanation materially contradicts its inputs"
+  ],
+  "decisionDelta": {"0":"raw data only","1":"data with explanation","2":"good/bad interpretation","3":"activity recommendation","4":"activity plus best time plus explanation","5":"where plus what plus when with alternatives"},
+  "requiredScenarios": ["beach hazard override","paddling wind penalty and best window","missing-live-data no-score","AQI suppression","closure override","dark-sky cloud penalty"],
+  "marketMeasurement": "Source score is a release gate. Search Console and first-party behavior remain the market test after a clean observation window."
+}
