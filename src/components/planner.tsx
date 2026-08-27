@@ -295,7 +295,7 @@ export function Planner({
       <div className="planner-heading">
         <div>
           <p className="eyebrow">Build a Michigan plan</p>
-          <h2 id="planner-title">What kind of outside sounds good?</h2>
+          <h2 id="planner-title">{compactIntro ? "Make the statewide answer local to you." : "What kind of outside sounds good?"}</h2>
         </div>
         {!compactIntro && (
           <p>
@@ -306,7 +306,7 @@ export function Planner({
       </div>
 
       <form onSubmit={submit} onFocusCapture={trackStart} className="planner-form">
-        <fieldset className="quick-start">
+        {!compactIntro && <fieldset className="quick-start">
           <legend>Quick starts</legend>
           <p>Choose a useful starting point, then adjust it below.</p>
           <div className="preset-grid">
@@ -324,7 +324,7 @@ export function Planner({
             ))}
           </div>
           <p className="setup-status" aria-live="polite">{setupStatus}</p>
-        </fieldset>
+        </fieldset>}
 
         <div className="form-row form-row-primary">
           <label className="field field-origin">

@@ -8,17 +8,27 @@ export type SpecialistTool = {
   activities: ActivityId[];
   signals: string[];
   timing: string;
+  group: "live" | "seasonal" | "planning";
+  verifiedAt: string;
 };
 
+export const retiredSpecialistPaths = [
+  "michigan-waterfall-conditions",
+  "michigan-stargazing-tonight",
+  "keweenaw-hiking-conditions",
+  "michigan-snowshoe-conditions",
+  "great-lakes-freighter-viewing",
+] as const;
+
 export const specialistTools: SpecialistTool[] = [
-  { id: "beach-today", name: "Best Michigan Beaches Today", question: "Which Great Lakes beach has the strongest conditions today?", url: "https://chrisizworski.com/best-michigan-beaches-today/", activities: ["beaches", "paddling"], signals: ["weather", "waves", "water temperature", "swim-risk context"], timing: "Warm season" },
-  { id: "waterfalls", name: "Michigan Waterfall Conditions", question: "Which waterfalls are most worth the drive after recent rain?", url: "https://chrisizworski.com/michigan-waterfall-conditions/", activities: ["hiking", "scenic"], signals: ["USGS flow where mapped", "recent rain", "forecast precipitation", "access context"], timing: "Spring through fall" },
-  { id: "stargazing", name: "Michigan Stargazing Tonight", question: "Where are clouds and sky conditions best tonight?", url: "https://chrisizworski.com/michigan-stargazing-tonight/", activities: ["dark-sky", "scenic"], signals: ["cloud cover", "weather", "dark-sky locations", "night timing"], timing: "Year-round" },
-  { id: "aurora", name: "Northern Lights Michigan", question: "Is tonight worth a northern-lights drive?", url: "https://chrisizworski.com/northern-lights-michigan/", activities: ["dark-sky", "scenic"], signals: ["NOAA space weather", "clouds", "viewing geography", "night timing"], timing: "Year-round" },
-  { id: "fall-color", name: "Michigan Fall Color", question: "Where is color strongest and the weather worth the drive?", url: "https://chrisizworski.com/fall-color/", activities: ["hiking", "scenic"], signals: ["canopy observations", "weather", "regional progression", "weekend planning"], timing: "September–October" },
-  { id: "keweenaw-hiking", name: "Keweenaw Hiking Conditions", question: "Which Keweenaw hike fits today's weather and exposure?", url: "https://chrisizworski.com/keweenaw-hiking-conditions/", activities: ["hiking", "scenic"], signals: ["weather", "AQI", "exposure context", "hourly timing"], timing: "Spring through fall" },
-  { id: "snowshoe", name: "Michigan Snowshoe Conditions", question: "Where does the snow and weather support a winter outing?", url: "https://chrisizworski.com/michigan-snowshoe-conditions/", activities: ["hiking", "scenic"], signals: ["snowfall", "temperature", "wind", "forecast"], timing: "Winter" },
-  { id: "ice", name: "Michigan Ice Report", question: "What do accumulated cold and regional ice signals show?", url: "https://chrisizworski.com/michigan-ice/", activities: ["fishing", "scenic"], signals: ["freezing degree days", "regional ice context", "weather"], timing: "Winter" },
-  { id: "xc-ski", name: "Michigan Cross-Country Skiing", question: "Where are snow and trail conditions most promising?", url: "https://chrisizworski.com/michigan-cross-country-skiing/", activities: ["hiking", "scenic"], signals: ["snow", "trail-source context", "temperature", "wind"], timing: "Winter" },
-  { id: "freighters", name: "Great Lakes Freighter Viewing", question: "Where should I go to watch ships?", url: "https://chrisizworski.com/great-lakes-freighter-viewing/", activities: ["freighters", "scenic"], signals: ["ship context", "weather", "viewing locations", "timing"], timing: "Shipping season" }
+  { id: "beaches", name: "Michigan Beach Conditions", question: "Which Great Lakes beach is the best choice today?", url: "https://chrisizworski.com/great-lakes-beaches/", activities: ["beaches"], signals: ["BeachGuard", "NWS swim risk", "waves", "water temperature"], timing: "Year-round", group: "live", verifiedAt: "2026-08-27" },
+  { id: "buoys", name: "Great Lakes Buoys", question: "What are waves, wind, and water doing right now?", url: "https://chrisizworski.com/great-lakes-buoys/", activities: ["paddling", "fishing", "beaches"], signals: ["NOAA/NDBC waves", "wind", "water temperature"], timing: "Year-round", group: "live", verifiedAt: "2026-08-27" },
+  { id: "trout", name: "Michigan Trout Report", question: "Which trout water looks best today?", url: "https://michigantroutreport.com/", activities: ["fishing"], signals: ["USGS flow", "water temperature", "weather"], timing: "Year-round", group: "live", verifiedAt: "2026-08-27" },
+  { id: "birding", name: "Michigan Birding Report", question: "Where are the birds moving right now?", url: "https://michiganbirdingreport.com/", activities: ["birding"], signals: ["recent sightings", "migration context", "weather"], timing: "Year-round", group: "live", verifiedAt: "2026-08-27" },
+  { id: "aurora", name: "Northern Lights Michigan", question: "Is tonight worth an aurora drive?", url: "https://chrisizworski.com/northern-lights-michigan/", activities: ["dark-sky", "scenic"], signals: ["NOAA SWPC", "clouds", "moon", "viewing geography"], timing: "Year-round", group: "live", verifiedAt: "2026-08-27" },
+  { id: "freighters", name: "Great Lakes Ship Tracker", question: "Where are the freighters right now?", url: "https://chrisizworski.com/great-lakes-freighter-tracking/", activities: ["freighters", "scenic"], signals: ["AIS map", "corridor views", "nearby NOAA context"], timing: "Navigation season", group: "live", verifiedAt: "2026-08-27" },
+  { id: "fall-color", name: "Michigan Fall Color", question: "Where is color strongest and weather worth the drive?", url: "https://chrisizworski.com/fall-color/", activities: ["hiking", "scenic"], signals: ["canopy progression", "weather", "regional timing"], timing: "September–October", group: "seasonal", verifiedAt: "2026-08-27" },
+  { id: "ice", name: "Michigan Ice Report", question: "What do accumulated cold and Great Lakes ice signals show?", url: "https://chrisizworski.com/michigan-ice/", activities: ["fishing", "scenic"], signals: ["freezing degree days", "NOAA ice cover", "climatology"], timing: "Winter", group: "seasonal", verifiedAt: "2026-08-27" },
+  { id: "xc-ski", name: "Michigan Cross-Country Skiing", question: "Where are snow and trail conditions most promising?", url: "https://chrisizworski.com/michigan-cross-country-skiing/", activities: ["hiking", "scenic"], signals: ["snow", "trail context", "temperature", "wind"], timing: "Winter", group: "seasonal", verifiedAt: "2026-08-27" },
+  { id: "weekend", name: "Michigan Outdoor Weekend", question: "What is worth building a whole weekend around?", url: "https://weekend.chrisizworski.com/", activities: ["hiking", "paddling", "fishing", "beaches", "birding", "scenic"], signals: ["trip shape", "live-tool handoffs", "reservation links"], timing: "Year-round", group: "planning", verifiedAt: "2026-08-27" },
 ];

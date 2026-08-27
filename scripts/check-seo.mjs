@@ -30,6 +30,9 @@ assert.match(home, /Michigan Outdoors Now/);
 assert.match(home, /Chris Izworski/);
 assert.match(home, /noindex/);
 assert.match(home, /application\/ld\+json/);
+assert.match(home, /Where should you go outside today\?/);
+assert.match(home, /Live statewide read/);
+assert.doesNotMatch(home, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
 
 const originSlugs = [
   "bay-city",

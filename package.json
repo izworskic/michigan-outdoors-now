@@ -13,8 +13,9 @@
     "score:usefulness": "node scripts/score-usefulness.mjs",
     "score:search": "node --import tsx scripts/score-search-readiness.ts",
     "score:impact": "node --import tsx scripts/score-impact-readiness.ts",
-    "check": "npm run lint && npm run test && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact && npm run score:platform",
-    "score:platform": "node --import tsx scripts/score-platform-quality.ts"
+    "check": "npm run lint && npm run test && npm run check:specialists && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact && npm run score:platform",
+    "score:platform": "node --import tsx scripts/score-platform-quality.ts",
+    "check:specialists": "node --import tsx scripts/check-specialist-links.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
