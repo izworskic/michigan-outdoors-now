@@ -41,7 +41,7 @@ try {
   assert.match(homeHtml, /City or ZIP/);
   assert.match(homeHtml, /Drive up to/);
   assert.match(homeHtml, /Show me where to go/);
-  assert.match(homeHtml, /nearby through 8 hours away/);
+  assert.match(homeHtml, /aria-label="Up to 8 hours one way"/);
   assert.doesNotMatch(homeHtml, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
   assert.doesNotMatch(homeHtml, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
   assert.match(home.headers.get("x-robots-tag") ?? "", /noindex/);
