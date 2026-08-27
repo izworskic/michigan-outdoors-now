@@ -74,8 +74,6 @@ export function DestinationExplorer() {
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    setTrailLoading(true);
-
     fetch(`/api/outdoor-universe?layer=${trailLayer}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Trail layer unavailable");
@@ -220,6 +218,7 @@ export function DestinationExplorer() {
                 key={layer}
                 aria-pressed={trailLayer === layer}
                 onClick={() => {
+                  if (layer !== trailLayer) setTrailLoading(true);
                   setTrailLayer(layer);
                   safeTrack("explorer_universe_layer_changed", { layer });
                 }}
