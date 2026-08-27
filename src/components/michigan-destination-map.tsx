@@ -183,6 +183,7 @@ export function MichiganDestinationMap({
     }
 
     const api = mapApi;
+    const activeMap = map;
 
     function accessClick(kind: "closure" | "reroute") {
       return (event: MapLayerMouseEvent) => {
@@ -191,28 +192,28 @@ export function MichiganDestinationMap({
         new api.Popup({ closeButton: true, maxWidth: "340px" })
           .setLngLat(event.lngLat)
           .setDOMContent(popupNode(kind, properties))
-          .addTo(map);
+          .addTo(activeMap);
       };
     }
     const closureClick = accessClick("closure");
     const rerouteClick = accessClick("reroute");
-    const pointerOn = () => { map.getCanvas().style.cursor = "pointer"; };
-    const pointerOff = () => { map.getCanvas().style.cursor = ""; };
+    const pointerOn = () => { activeMap.getCanvas().style.cursor = "pointer"; };
+    const pointerOff = () => { activeMap.getCanvas().style.cursor = ""; };
 
-    map.on("click", closureLayerId, closureClick);
-    map.on("click", rerouteLayerId, rerouteClick);
-    map.on("mouseenter", closureLayerId, pointerOn);
-    map.on("mouseenter", rerouteLayerId, pointerOn);
-    map.on("mouseleave", closureLayerId, pointerOff);
-    map.on("mouseleave", rerouteLayerId, pointerOff);
+    activeMap.on("click", closureLayerId, closureClick);
+    activeMap.on("click", rerouteLayerId, rerouteClick);
+    activeMap.on("mouseenter", closureLayerId, pointerOn);
+    activeMap.on("mouseenter", rerouteLayerId, pointerOn);
+    activeMap.on("mouseleave", closureLayerId, pointerOff);
+    activeMap.on("mouseleave", rerouteLayerId, pointerOff);
 
     return () => {
-      map.off("click", closureLayerId, closureClick);
-      map.off("click", rerouteLayerId, rerouteClick);
-      map.off("mouseenter", closureLayerId, pointerOn);
-      map.off("mouseenter", rerouteLayerId, pointerOn);
-      map.off("mouseleave", closureLayerId, pointerOff);
-      map.off("mouseleave", rerouteLayerId, pointerOff);
+      activeMap.off("click", closureLayerId, closureClick);
+      activeMap.off("click", rerouteLayerId, rerouteClick);
+      activeMap.off("mouseenter", closureLayerId, pointerOn);
+      activeMap.off("mouseenter", rerouteLayerId, pointerOn);
+      activeMap.off("mouseleave", closureLayerId, pointerOff);
+      activeMap.off("mouseleave", rerouteLayerId, pointerOff);
     };
   }, [mapReady, trailGeoJson, closuresGeoJson, reroutesGeoJson]);
 
