@@ -1146,3 +1146,511 @@ body{background:#f8f5ef;color:#243139}
   .adventure-signal-grid{border-left:0}
   .adventure-signal-grid a{border-left:1px solid var(--line)}
 }
+
+
+/* Persistent Michigan exploration canvas */
+.michigan-canvas{
+  position:relative;
+  min-height:100dvh;
+  overflow:hidden;
+  background:#dce7e8;
+  color:#17262b;
+}
+.michigan-canvas-map{
+  position:absolute;
+  inset:0;
+}
+.michigan-canvas-map .destination-map-frame,
+.michigan-canvas-map .destination-map{
+  width:100%;
+  height:100dvh;
+  min-height:100dvh;
+  border-radius:0;
+}
+.michigan-canvas-map .map-legend{display:none}
+.michigan-canvas-map .maplibregl-ctrl-bottom-right{
+  bottom:90px;
+  right:14px;
+}
+.michigan-canvas-map::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:linear-gradient(180deg,rgba(9,31,40,.18) 0,transparent 18%,transparent 78%,rgba(9,31,40,.15) 100%);
+}
+.canvas-topbar{
+  position:absolute;
+  z-index:20;
+  top:18px;
+  left:18px;
+  right:18px;
+  display:grid;
+  grid-template-columns:auto minmax(340px,620px) auto;
+  gap:12px;
+  align-items:center;
+  pointer-events:none;
+}
+.canvas-topbar>*{pointer-events:auto}
+.canvas-brand{
+  display:grid;
+  gap:2px;
+  min-width:205px;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:10px;
+  background:rgba(248,247,241,.92);
+  box-shadow:0 12px 32px rgba(20,46,54,.13);
+  backdrop-filter:blur(14px);
+}
+.canvas-brand span{
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.11em;
+  text-transform:uppercase;
+  color:#586d72;
+}
+.canvas-brand strong{
+  font:500 18px/1 Georgia,serif;
+  letter-spacing:-.025em;
+}
+.canvas-origin{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto auto;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.82);
+  border-radius:12px;
+  background:rgba(255,255,255,.94);
+  box-shadow:0 14px 38px rgba(20,46,54,.14);
+  backdrop-filter:blur(16px);
+}
+.canvas-origin input{
+  min-width:0;
+  min-height:46px;
+  padding:9px 14px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#17262b;
+  font-size:14px;
+}
+.canvas-origin button{
+  min-height:46px;
+  padding:8px 12px;
+  border:0;
+  border-left:1px solid rgba(31,61,69,.11);
+  background:transparent;
+  color:#193d48;
+  font-size:9px;
+  font-weight:820;
+  cursor:pointer;
+}
+.canvas-origin button:last-child{
+  width:44px;
+  padding:0;
+  font-size:17px;
+}
+.canvas-origin button:hover:not(:disabled){background:rgba(24,59,75,.06)}
+.canvas-links{
+  justify-self:end;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.canvas-links>a,
+.canvas-links>details>summary{
+  min-height:36px;
+  display:flex;
+  align-items:center;
+  padding:7px 10px;
+  border:1px solid rgba(255,255,255,.76);
+  border-radius:9px;
+  background:rgba(248,247,241,.92);
+  box-shadow:0 10px 28px rgba(20,46,54,.10);
+  color:#193d48;
+  font-size:9px;
+  font-weight:820;
+  text-decoration:none;
+  cursor:pointer;
+  backdrop-filter:blur(12px);
+}
+.canvas-links>details{position:relative}
+.canvas-links>details>summary{list-style:none}
+.canvas-links>details>summary::-webkit-details-marker{display:none}
+.canvas-links>details>div{
+  position:absolute;
+  top:42px;
+  right:0;
+  width:220px;
+  display:grid;
+  padding:7px;
+  border:1px solid rgba(31,61,69,.12);
+  border-radius:10px;
+  background:rgba(250,249,245,.98);
+  box-shadow:0 18px 42px rgba(20,46,54,.18);
+}
+.canvas-links>details a{
+  padding:9px 10px;
+  border-radius:7px;
+  color:#193d48;
+  font-size:9px;
+  font-weight:740;
+  text-decoration:none;
+}
+.canvas-links>details a:hover{background:#eef3f3}
+.canvas-pulls{
+  position:absolute;
+  z-index:18;
+  left:18px;
+  right:18px;
+  bottom:18px;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:14px;
+  align-items:center;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.78);
+  border-radius:13px;
+  background:rgba(249,248,243,.93);
+  box-shadow:0 16px 42px rgba(20,46,54,.16);
+  backdrop-filter:blur(18px);
+}
+.canvas-pulls-label{
+  display:grid;
+  gap:2px;
+  min-width:130px;
+}
+.canvas-pulls-label span{
+  color:#2c4349;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.canvas-pulls-label small{
+  color:#728186;
+  font-size:7px;
+}
+.canvas-pulls-rail{
+  display:flex;
+  gap:4px;
+  min-width:0;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.canvas-pulls-rail::-webkit-scrollbar{display:none}
+.canvas-pulls-rail button{
+  flex:0 0 auto;
+  min-height:34px;
+  padding:7px 11px;
+  border:1px solid transparent;
+  border-radius:999px;
+  background:transparent;
+  color:#365158;
+  font-size:9px;
+  font-weight:780;
+  cursor:pointer;
+}
+.canvas-pulls-rail button:hover{background:rgba(24,59,75,.07)}
+.canvas-pulls-rail button[aria-pressed="true"]{
+  background:#173b4b;
+  color:#fff;
+}
+.canvas-message{
+  position:absolute;
+  z-index:22;
+  top:82px;
+  left:50%;
+  transform:translateX(-50%);
+  max-width:min(520px,calc(100% - 36px));
+  margin:0;
+  padding:9px 12px;
+  border-radius:8px;
+  background:rgba(128,54,40,.92);
+  color:#fff;
+  box-shadow:0 12px 28px rgba(35,28,25,.16);
+  font-size:9px;
+  font-weight:720;
+}
+.canvas-sheet{
+  position:absolute;
+  z-index:19;
+  top:82px;
+  right:18px;
+  bottom:78px;
+  width:min(360px,calc(100% - 36px));
+  display:flex;
+  flex-direction:column;
+  overflow:auto;
+  padding:22px;
+  border:1px solid rgba(255,255,255,.82);
+  border-radius:14px;
+  background:rgba(249,248,243,.96);
+  box-shadow:0 22px 60px rgba(20,46,54,.22);
+  backdrop-filter:blur(20px);
+}
+.canvas-sheet-close{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:30px;
+  height:30px;
+  display:grid;
+  place-content:center;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#62757a;
+  font-size:20px;
+  cursor:pointer;
+}
+.canvas-sheet-kicker{
+  margin:0 34px 0 0;
+  color:#9a593a;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.canvas-sheet h1{
+  margin:9px 0 4px;
+  font:500 clamp(34px,4vw,52px)/.93 Georgia,serif;
+  letter-spacing:-.05em;
+}
+.canvas-sheet-area{
+  margin:0;
+  color:#728186;
+  font-size:9px;
+}
+.canvas-sheet-summary{
+  margin:18px 0 0;
+  color:#344c52;
+  font-size:12px;
+  line-height:1.62;
+}
+.canvas-now{
+  display:grid;
+  gap:7px;
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid rgba(31,61,69,.13);
+}
+.canvas-now>span,
+.canvas-other-picks>span{
+  color:#728186;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.canvas-now strong{
+  font-size:11px;
+  line-height:1.5;
+}
+.canvas-now small{
+  color:#728186;
+  font:8px/1.5 monospace;
+}
+.canvas-sheet-actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:18px;
+}
+.canvas-sheet-actions a,
+.canvas-sheet-actions button{
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border:1px solid rgba(31,61,69,.15);
+  border-radius:7px;
+  background:#fff;
+  color:#193d48;
+  font-size:9px;
+  font-weight:800;
+  text-decoration:none;
+  cursor:pointer;
+}
+.canvas-sheet-actions a:first-child{
+  border-color:#173b4b;
+  background:#173b4b;
+  color:#fff;
+}
+.canvas-branch{
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px;
+  margin-top:14px;
+}
+.canvas-branch button{
+  min-height:30px;
+  padding:5px 8px;
+  border:0;
+  border-bottom:1px solid rgba(31,61,69,.2);
+  background:transparent;
+  color:#365158;
+  font-size:8px;
+  font-weight:780;
+  cursor:pointer;
+}
+.canvas-other-picks{
+  display:grid;
+  gap:6px;
+  margin-top:auto;
+  padding-top:22px;
+}
+.canvas-other-picks>button{
+  display:grid;
+  gap:2px;
+  padding:9px 0;
+  border:0;
+  border-top:1px solid rgba(31,61,69,.12);
+  background:transparent;
+  color:#1c343a;
+  text-align:left;
+  cursor:pointer;
+}
+.canvas-other-picks strong{
+  font:500 17px/1.05 Georgia,serif;
+}
+.canvas-other-picks small{
+  color:#728186;
+  font-size:8px;
+}
+.canvas-first-use{
+  position:absolute;
+  z-index:14;
+  left:24px;
+  bottom:84px;
+  display:grid;
+  gap:3px;
+  max-width:280px;
+  padding:10px 12px;
+  border-radius:9px;
+  background:rgba(248,247,241,.9);
+  box-shadow:0 10px 26px rgba(20,46,54,.11);
+  backdrop-filter:blur(10px);
+}
+.canvas-first-use strong{
+  font:500 16px/1.05 Georgia,serif;
+}
+.canvas-first-use span{
+  color:#64787d;
+  font-size:8px;
+  line-height:1.45;
+}
+.canvas-return-pick{
+  position:absolute;
+  z-index:18;
+  right:24px;
+  bottom:84px;
+  min-height:34px;
+  padding:7px 10px;
+  border:1px solid rgba(255,255,255,.75);
+  border-radius:9px;
+  background:rgba(248,247,241,.94);
+  box-shadow:0 10px 28px rgba(20,46,54,.12);
+  color:#193d48;
+  font-size:9px;
+  font-weight:800;
+  cursor:pointer;
+}
+@media(max-width:900px){
+  .canvas-topbar{
+    grid-template-columns:auto 1fr;
+  }
+  .canvas-origin{
+    grid-column:1/-1;
+    grid-row:2;
+  }
+  .canvas-links{
+    grid-column:2;
+    grid-row:1;
+  }
+  .canvas-sheet{
+    top:132px;
+  }
+}
+@media(max-width:700px){
+  .michigan-canvas{
+    min-height:100svh;
+  }
+  .michigan-canvas-map .destination-map-frame,
+  .michigan-canvas-map .destination-map{
+    height:100svh;
+    min-height:100svh;
+  }
+  .canvas-topbar{
+    top:10px;
+    left:10px;
+    right:10px;
+    gap:7px;
+  }
+  .canvas-brand{
+    min-width:0;
+    padding:8px 10px;
+  }
+  .canvas-brand span{font-size:7px}
+  .canvas-brand strong{font-size:15px}
+  .canvas-links>a{display:none}
+  .canvas-links>details>summary{
+    min-height:32px;
+    padding:6px 9px;
+  }
+  .canvas-origin input{
+    min-height:42px;
+    font-size:13px;
+  }
+  .canvas-origin button{min-height:42px}
+  .canvas-pulls{
+    left:8px;
+    right:8px;
+    bottom:8px;
+    grid-template-columns:1fr;
+    gap:6px;
+    padding:8px;
+    border-radius:12px;
+  }
+  .canvas-pulls-label{
+    display:none;
+  }
+  .canvas-pulls-rail button{
+    min-height:32px;
+    padding:6px 10px;
+  }
+  .canvas-sheet{
+    top:auto;
+    left:8px;
+    right:8px;
+    bottom:56px;
+    width:auto;
+    max-height:54svh;
+    padding:18px;
+    border-radius:14px 14px 10px 10px;
+  }
+  .canvas-sheet h1{
+    font-size:36px;
+  }
+  .canvas-sheet-summary{
+    font-size:11px;
+  }
+  .canvas-other-picks{
+    margin-top:18px;
+  }
+  .canvas-first-use{
+    left:10px;
+    bottom:64px;
+    max-width:230px;
+  }
+  .canvas-message{
+    top:104px;
+  }
+  .canvas-return-pick{
+    right:10px;
+    bottom:64px;
+  }
+  .michigan-canvas-map .maplibregl-ctrl-bottom-right{
+    bottom:58px;
+  }
+}
