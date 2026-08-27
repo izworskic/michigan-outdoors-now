@@ -39,7 +39,7 @@ assert.match(home, /Where are you starting\?/);
 assert.match(home, /City or ZIP/);
 assert.match(home, /Drive up to/);
 assert.match(home, /Show me where to go/);
-assert.match(home, /nearby through 8 hours away/);
+assert.match(home, /aria-label="Up to 8 hours one way"/);
 assert.doesNotMatch(home, /Not a shortlist\.|Decision-ready places where the platform can go deeper|Official DNR map layer/);
 assert.doesNotMatch(home, /michigan-waterfall-conditions|michigan-stargazing-tonight|keweenaw-hiking-conditions|michigan-snowshoe-conditions|great-lakes-freighter-viewing/);
 
