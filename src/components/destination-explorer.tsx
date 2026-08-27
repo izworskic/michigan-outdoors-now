@@ -30,7 +30,7 @@ function safeTrack(name: string, properties?: Record<string, string | number | b
   try {
     track(name, properties);
   } catch {
-    // Discovery must work even when analytics are blocked.
+    // The explorer remains usable when analytics are blocked.
   }
 }
 
@@ -42,17 +42,33 @@ function emptyUniverse(layer: UniverseLayerId): OutdoorUniverseResponse {
     fetchedAt: "",
     source: {
       name: "Michigan DNR Trails Open Data",
-      url: "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21",
+      url: "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/layers",
       authority: "Michigan Department of Natural Resources",
     },
     featureCount: 0,
     systemCount: 0,
     miles: 0,
     partial: false,
+    pagesFetched: 0,
     geojson: { type: "FeatureCollection", features: [] },
     systems: [],
+    access: {
+      status: "unavailable",
+      closureCount: 0,
+      rerouteCount: 0,
+      closures: { type: "FeatureCollection", features: [] },
+      reroutes: { type: "FeatureCollection", features: [] },
+      partial: false,
+      note: "Loading DNR access data.",
+    },
     note: "Loading the official DNR trail layer.",
   };
+}
+
+function updatedLabel(iso: string) {
+  if (!iso) return "updating";
+  const date = new Date(iso);
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
 export function DestinationExplorer() {
@@ -63,17 +79,19 @@ export function DestinationExplorer() {
   const [dog, setDog] = useState(false);
   const [accessible, setAccessible] = useState(false);
   const [activeId, setActiveId] = useState("");
-  const [mobileView, setMobileView] = useState<"map" | "discover">("map");
   const [location, setLocation] = useState<LocationPoint>();
   const [locationStatus, setLocationStatus] = useState("");
   const [locating, setLocating] = useState(false);
   const [trailLayer, setTrailLayer] = useState<UniverseLayerId>("hiking");
   const [universe, setUniverse] = useState<OutdoorUniverseResponse>(() => emptyUniverse("hiking"));
   const [trailLoading, setTrailLoading] = useState(true);
+  const [browseOpen, setBrowseOpen] = useState(false);
+  const [browseTab, setBrowseTab] = useState<"decisions" | "trails">("decisions");
 
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
+
     fetch(`/api/outdoor-universe?layer=${trailLayer}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Trail layer unavailable");
@@ -127,9 +145,9 @@ export function DestinationExplorer() {
   }, [query, universe.geojson]);
 
   const activeDestination = visible.find((destination) => destination.id === activeId);
-  const practicalFilterCount = Number(kids) + Number(dog) + Number(accessible);
-  const hasFilters = Boolean(query || activity !== "all" || region !== "all" || practicalFilterCount);
-  const trailSystemsToShow = filteredTrailSystems.slice(0, query ? 80 : 30);
+  const filterCount =
+    Number(activity !== "all") + Number(region !== "all") + Number(kids) + Number(dog) + Number(accessible);
+  const trailSystemsToShow = filteredTrailSystems.slice(0, query ? 80 : 40);
 
   const activate = useCallback((destinationId: string) => {
     setActiveId(destinationId);
@@ -137,7 +155,6 @@ export function DestinationExplorer() {
   }, []);
 
   function clearFilters() {
-    setQuery("");
     setActivity("all");
     setRegion("all");
     setKids(false);
@@ -149,7 +166,7 @@ export function DestinationExplorer() {
   function useMyLocation() {
     setLocationStatus("");
     if (!navigator.geolocation) {
-      setLocationStatus("Location is unavailable in this browser. You can still search by place or region.");
+      setLocationStatus("Location is unavailable in this browser.");
       return;
     }
 
@@ -159,17 +176,17 @@ export function DestinationExplorer() {
         const latitude = Number(coords.latitude.toFixed(5));
         const longitude = Number(coords.longitude.toFixed(5));
         if (!isPlausibleMichiganCoordinate(latitude, longitude)) {
-          setLocationStatus("Your location appears outside Michigan. Choose a region or search for a Michigan place instead.");
+          setLocationStatus("Your location appears outside Michigan.");
           setLocating(false);
           return;
         }
         setLocation({ latitude, longitude });
-        setLocationStatus("Decision-ready places are sorted near you. Your coordinates are not saved or added to the URL.");
+        setLocationStatus("Decision-ready places are sorted near you.");
         setLocating(false);
         safeTrack("explorer_device_location_used");
       },
       () => {
-        setLocationStatus("Location was not available. Allow it in your browser or use search and region filters.");
+        setLocationStatus("Location was not available. Search still works.");
         setLocating(false);
       },
       { enableHighAccuracy: false, timeout: 8_000, maximumAge: 600_000 },
@@ -178,10 +195,9 @@ export function DestinationExplorer() {
 
   function showOnMap(destinationId: string) {
     activate(destinationId);
-    setMobileView("map");
+    setBrowseOpen(false);
     window.setTimeout(() => {
-      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-      document.getElementById("destination-map-panel")?.scrollIntoView({ behavior, block: "start" });
+      document.getElementById("destination-map-panel")?.scrollIntoView({ block: "nearest" });
     }, 0);
   }
 
@@ -190,206 +206,191 @@ export function DestinationExplorer() {
     return Math.round(haversineMiles(location.latitude, location.longitude, latitude, longitude));
   }
 
+  const closureCount = universe.access.closureCount;
+  const rerouteCount = universe.access.rerouteCount;
+
   return (
-    <section className="explorer-shell universe-explorer" aria-labelledby="explorer-title">
-      <div className="explorer-controls universe-controls">
-        <div className="explorer-heading">
-          <div>
-            <p className="eyebrow">Michigan outdoor universe</p>
-            <h2 id="explorer-title">Discover broadly. Decide strictly.</h2>
-            <p className="universe-intro">
-              The map no longer pretends a small curated list is the whole state. Official Michigan DNR trail geometry
-              provides the discovery layer; brighter dots mark places where this platform has enough structured data
-              to make a stronger trip decision.
-            </p>
-          </div>
-          <button type="button" className="explorer-location-button" onClick={useMyLocation} disabled={locating}>
-            <span aria-hidden="true">◎</span>{locating ? "Finding you…" : location ? "Decision dots sorted near you" : "Find decision-ready places near me"}
-          </button>
-        </div>
-        <p className="explorer-location-status" aria-live="polite">{locationStatus}</p>
+    <section className="explorer-shell explorer-map-shell" aria-label="Explore Michigan outdoors">
+      <div className="map-command-bar">
+        <label className="map-search">
+          <span>Search Michigan</span>
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            type="search"
+            placeholder="Trail, park, river, dunes…"
+          />
+        </label>
 
-        <div className="universe-layer-picker" aria-label="Choose official DNR trail layer">
+        <label className="map-layer-select">
           <span>Official DNR map layer</span>
-          <div>
+          <select
+            value={trailLayer}
+            onChange={(event) => {
+              const layer = event.target.value as UniverseLayerId;
+              if (layer !== trailLayer) setTrailLoading(true);
+              setTrailLayer(layer);
+              safeTrack("explorer_universe_layer_changed", { layer });
+            }}
+          >
             {universeLayerIds.map((layer) => (
-              <button
-                type="button"
-                key={layer}
-                aria-pressed={trailLayer === layer}
-                onClick={() => {
-                  if (layer !== trailLayer) setTrailLoading(true);
-                  setTrailLayer(layer);
-                  safeTrack("explorer_universe_layer_changed", { layer });
-                }}
-              >
-                {universeLayerLabels[layer]}
-              </button>
+              <option value={layer} key={layer}>{universeLayerLabels[layer]}</option>
             ))}
-          </div>
-        </div>
+          </select>
+        </label>
 
-        <div className="universe-stats" aria-live="polite">
-          <div><strong>{visible.length}</strong><span>decision-ready matches</span></div>
-          <div><strong>{trailLoading ? "…" : universe.featureCount.toLocaleString()}</strong><span>DNR trail segments</span></div>
-          <div><strong>{trailLoading ? "…" : universe.systemCount.toLocaleString()}</strong><span>trail systems</span></div>
-          <div><strong>{trailLoading ? "…" : universe.miles.toLocaleString()}</strong><span>mapped miles in layer</span></div>
-        </div>
+        <button type="button" className="map-command-button map-near-button" onClick={useMyLocation} disabled={locating}>
+          <span aria-hidden="true">◎</span>
+          {locating ? "Finding…" : location ? "Near me" : "Find decision-ready places near me"}
+        </button>
 
-        <div className="explorer-primary-filters">
-          <label className="explorer-search-field">
-            <span>Search everything shown</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} type="search" placeholder="Place, trail, river, dunes…" />
-          </label>
-          <label>
-            <span>Decision-ready activity</span>
-            <select value={activity} onChange={(event) => { setActivity(event.target.value as ActivityId | "all"); safeTrack("explorer_filter_changed", { filter: "activity" }); }}>
-              <option value="all">Any activity</option>
-              {activityIds.map((activityId) => <option value={activityId} key={activityId}>{activityLabels[activityId]}</option>)}
-            </select>
-          </label>
-          <label>
-            <span>Decision-ready region</span>
-            <select value={region} onChange={(event) => setRegion(event.target.value as RegionId | "all")}>
-              <option value="all">Anywhere in Michigan</option>
-              {regionIds.map((regionId) => <option value={regionId} key={regionId}>{regionLabels[regionId]}</option>)}
-            </select>
-          </label>
-        </div>
-
-        <details className="explorer-more-filters">
-          <summary>Family, dog & access filters for decision-ready places{practicalFilterCount ? ` (${practicalFilterCount} on)` : ""}</summary>
-          <div>
-            <label><input type="checkbox" checked={kids} onChange={(event) => setKids(event.target.checked)} /><span>Family fit</span></label>
-            <label><input type="checkbox" checked={dog} onChange={(event) => setDog(event.target.checked)} /><span>Dog-compatible</span></label>
-            <label><input type="checkbox" checked={accessible} onChange={(event) => setAccessible(event.target.checked)} /><span>Lower-barrier possibilities</span></label>
+        <details className="map-filter-menu">
+          <summary>Filters{filterCount ? ` · ${filterCount}` : ""}</summary>
+          <div className="map-filter-popover">
+            <label>
+              <span>Decision activity</span>
+              <select value={activity} onChange={(event) => { setActivity(event.target.value as ActivityId | "all"); safeTrack("explorer_filter_changed", { filter: "activity" }); }}>
+                <option value="all">Any activity</option>
+                {activityIds.map((activityId) => <option value={activityId} key={activityId}>{activityLabels[activityId]}</option>)}
+              </select>
+            </label>
+            <label>
+              <span>Region</span>
+              <select value={region} onChange={(event) => setRegion(event.target.value as RegionId | "all")}>
+                <option value="all">All Michigan</option>
+                {regionIds.map((regionId) => <option value={regionId} key={regionId}>{regionLabels[regionId]}</option>)}
+              </select>
+            </label>
+            <div className="map-checks" aria-label="Family, dog & access filters">
+              <label><input type="checkbox" checked={kids} onChange={(event) => setKids(event.target.checked)} /><span>Family fit</span></label>
+              <label><input type="checkbox" checked={dog} onChange={(event) => setDog(event.target.checked)} /><span>Dog-compatible</span></label>
+              <label><input type="checkbox" checked={accessible} onChange={(event) => setAccessible(event.target.checked)} /><span>Lower-barrier</span></label>
+            </div>
+            {filterCount > 0 && <button type="button" onClick={clearFilters}>Clear filters</button>}
           </div>
         </details>
 
-        <div className="explorer-toolbar">
-          <p>
-            <strong>{universe.status === "live" ? universe.label : "DNR layer unavailable"}</strong>
-            <span> · {visible.length} decision-ready place{visible.length === 1 ? "" : "s"}</span>
-            {location && <span> · nearest first</span>}
-          </p>
-          <div className="explorer-toolbar-actions">
-            {hasFilters && <button type="button" className="clear-filter-button" onClick={clearFilters}>Clear place filters</button>}
-            <div className="explorer-view-toggle" aria-label="Choose map or discovery rail view">
-              <button type="button" aria-pressed={mobileView === "map"} onClick={() => setMobileView("map")}>Map</button>
-              <button type="button" aria-pressed={mobileView === "discover"} onClick={() => setMobileView("discover")}>Discover</button>
-            </div>
+        <button
+          type="button"
+          className="map-command-button map-browse-button"
+          aria-expanded={browseOpen}
+          onClick={() => {
+            setBrowseOpen((value) => !value);
+            safeTrack("explorer_browse_toggled");
+          }}
+        >
+          Browse
+        </button>
+      </div>
+
+      <p className="map-location-status" aria-live="polite">{locationStatus}</p>
+
+      <section className="explorer-map-panel" id="destination-map-panel" aria-label="Michigan outdoor universe map">
+        <MichiganDestinationMap
+          activeId={activeId}
+          destinations={visible}
+          onActivate={activate}
+          trailGeoJson={filteredTrailGeoJson}
+          closuresGeoJson={universe.access.closures}
+          reroutesGeoJson={universe.access.reroutes}
+          closureCount={closureCount}
+          rerouteCount={rerouteCount}
+          trailLayerLabel={universe.label}
+          userLocation={location}
+        />
+
+        <div className="map-live-strip" aria-live="polite">
+          <div>
+            <span className="map-live-dot" aria-hidden="true" />
+            <strong>{trailLoading ? "Updating…" : universe.status === "live" ? universe.label : "DNR layer unavailable"}</strong>
           </div>
+          {!trailLoading && universe.status === "live" && (
+            <>
+              <span>{universe.featureCount.toLocaleString()} segments · {universe.miles.toLocaleString()} mi</span>
+              {closureCount > 0 && <span className="map-access-alert">{closureCount} closure{closureCount === 1 ? "" : "s"}</span>}
+              {rerouteCount > 0 && <span>{rerouteCount} reroute{rerouteCount === 1 ? "" : "s"}</span>}
+              {universe.partial && <span>partial coverage</span>}
+            </>
+          )}
+          <span className="map-source-inline">Source: Michigan DNR · Updated {updatedLabel(universe.fetchedAt)}</span>
         </div>
-      </div>
 
-      <div className="explorer-workspace universe-workspace" data-mobile-view={mobileView}>
-        <section className="explorer-map-panel" id="destination-map-panel" aria-label="Michigan outdoor universe map">
-          <MichiganDestinationMap
-            activeId={activeId}
-            destinations={visible}
-            onActivate={activate}
-            trailGeoJson={filteredTrailGeoJson}
-            trailLayerLabel={universe.label}
-            userLocation={location}
-          />
-          {!activeDestination && (
-            <div className="map-instruction universe-map-instruction">
-              <strong>Dots are decisions. Lines are discovery.</strong>
-              <span>Tap a bright dot for a decision-ready place. Change the DNR layer above to explore the statewide trail network.</span>
+        {activeDestination && (
+          <article className="map-selection">
+            <button type="button" className="map-selection-close" onClick={() => setActiveId("")} aria-label="Close selected place">×</button>
+            <span>Decision ready · {regionLabels[destinationRegion(activeDestination)]}</span>
+            <h3>{activeDestination.name}</h3>
+            <p>{activeDestination.summary}</p>
+            <div>
+              <Link href={`/places/${activeDestination.id}`}>Conditions & trip decision →</Link>
             </div>
-          )}
-          {activeDestination && (
-            <article className="map-selection">
-              <button type="button" className="map-selection-close" onClick={() => setActiveId("")} aria-label="Close selected place">×</button>
-              <span>Decision-ready · {regionLabels[destinationRegion(activeDestination)]} · {activeDestination.area}</span>
-              <h3>{activeDestination.name}</h3>
-              <p>{activeDestination.summary}</p>
-              <div>
-                <Link href={`/places/${activeDestination.id}`}>Conditions & trip decision →</Link>
-              </div>
-            </article>
-          )}
-        </section>
+          </article>
+        )}
 
-        <aside className="explorer-results universe-discovery-rail" aria-label="Michigan outdoor discovery rail">
-          <section className="universe-rail-section">
-            <div className="universe-rail-heading">
-              <div>
-                <span>Decision-ready</span>
-                <h3>Places with deeper intelligence</h3>
-              </div>
-              <strong>{visible.length}</strong>
+        <aside className="universe-drawer" data-open={browseOpen} aria-hidden={!browseOpen}>
+          <header>
+            <div>
+              <span>Explore this map</span>
+              <strong>{query ? `Matches for “${query}”` : universe.label}</strong>
             </div>
-            {visible.length ? (
-              <div className="decision-ready-list">
-                {visible.slice(0, 18).map((destination) => {
-                  const distance = distanceFromUser(destination.latitude, destination.longitude);
-                  return (
-                    <article id={`place-${destination.id}`} data-active={activeId === destination.id} key={destination.id}>
-                      <button type="button" className="result-map-dot" onClick={() => showOnMap(destination.id)} aria-label={`Show ${destination.name} on the map`}>
-                        <span aria-hidden="true" />
-                      </button>
-                      <div className="explorer-result-copy">
-                        <div className="explorer-card-top">
-                          <span>{regionLabels[destinationRegion(destination)]}</span>
-                          <small>{distance === null ? destination.area : `~${distance} mi away`}</small>
-                        </div>
-                        <h3>{destination.name}</h3>
-                        <p>{destination.summary}</p>
-                        <div className="explorer-card-actions">
-                          <Link href={`/places/${destination.id}`} onClick={() => safeTrack("explorer_place_opened")}>Open decision →</Link>
-                          <button type="button" onClick={() => showOnMap(destination.id)}>Show dot</button>
-                        </div>
-                      </div>
+            <button type="button" onClick={() => setBrowseOpen(false)} aria-label="Close browse drawer">×</button>
+          </header>
+          <div className="universe-drawer-tabs" role="tablist" aria-label="Browse map results">
+            <button type="button" role="tab" aria-selected={browseTab === "decisions"} onClick={() => setBrowseTab("decisions")}>
+              Decision ready <span>{visible.length}</span>
+            </button>
+            <button type="button" role="tab" aria-selected={browseTab === "trails"} onClick={() => setBrowseTab("trails")}>
+              DNR trails <span>{filteredTrailSystems.length}</span>
+            </button>
+          </div>
+
+          <div className="universe-drawer-body">
+            {browseTab === "decisions" ? (
+              visible.length ? (
+                <div className="decision-ready-list">
+                  {visible.slice(0, 30).map((destination) => {
+                    const distance = distanceFromUser(destination.latitude, destination.longitude);
+                    return (
+                      <article key={destination.id}>
+                        <button type="button" className="drawer-place-button" onClick={() => showOnMap(destination.id)}>
+                          <span>{regionLabels[destinationRegion(destination)]}{distance === null ? "" : ` · ~${distance} mi`}</span>
+                          <strong>{destination.name}</strong>
+                          <small>{destination.summary}</small>
+                        </button>
+                        <Link href={`/places/${destination.id}`}>Open decision →</Link>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="drawer-empty"><strong>No decision-ready match.</strong><span>Clear a filter or browse the DNR trail systems.</span></div>
+              )
+            ) : (
+              universe.status === "live" && trailSystemsToShow.length ? (
+                <div className="trail-system-list">
+                  {trailSystemsToShow.map((system) => (
+                    <article key={system.name}>
+                      <span>{system.type}</span>
+                      <strong>{system.name}</strong>
+                      <small>{system.unit || "Michigan DNR trail network"} · {system.miles.toLocaleString()} mi</small>
                     </article>
-                  );
-                })}
-                {visible.length > 18 && <p className="universe-more-note">{visible.length - 18} more decision-ready matches remain on the map. Use search or filters to narrow them.</p>}
-              </div>
-            ) : (
-              <div className="explorer-empty">
-                <h3>No decision-ready place matches every filter.</h3>
-                <p>The official DNR discovery layer remains visible. Clear a place filter to restore decision dots.</p>
-                <button type="button" onClick={clearFilters}>Clear place filters</button>
-              </div>
+                  ))}
+                  {filteredTrailSystems.length > trailSystemsToShow.length && (
+                    <p>Showing {trailSystemsToShow.length} of {filteredTrailSystems.length.toLocaleString()}. Search to narrow.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="drawer-empty"><strong>{trailLoading ? "Loading DNR trails…" : "No trail-system match."}</strong></div>
+              )
             )}
-          </section>
+          </div>
 
-          <section className="universe-rail-section universe-trail-section">
-            <div className="universe-rail-heading">
-              <div>
-                <span>Official Michigan DNR</span>
-                <h3>{universe.label}</h3>
-              </div>
-              <strong>{universe.systemCount.toLocaleString()}</strong>
-            </div>
-            <p className="universe-source-note">{universe.note}</p>
-            {universe.status === "live" && trailSystemsToShow.length ? (
-              <div className="trail-system-list">
-                {trailSystemsToShow.map((system) => (
-                  <article key={system.name}>
-                    <span>{system.type}</span>
-                    <h4>{system.name}</h4>
-                    <p>{system.unit || "Michigan DNR trail network"}</p>
-                    <small>{system.miles.toLocaleString()} mapped mi · {system.segments} segment{system.segments === 1 ? "" : "s"}</small>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="universe-source-unavailable">
-                <strong>{trailLoading ? "Loading official DNR geometry…" : "Official trail layer temporarily unavailable."}</strong>
-                <span>Decision-ready dots continue to work independently.</span>
-              </div>
-            )}
-            {filteredTrailSystems.length > trailSystemsToShow.length && (
-              <p className="universe-more-note">
-                Showing {trailSystemsToShow.length} of {filteredTrailSystems.length.toLocaleString()} matching trail systems. Search by trail name to narrow the rail; all returned geometry remains on the map.
-              </p>
-            )}
-            <a className="universe-source-link" href={universe.source.url}>Michigan DNR source layer →</a>
-          </section>
+          <footer>
+            <span>{universe.access.note}</span>
+            <a href={universe.source.url}>Michigan DNR source →</a>
+          </footer>
         </aside>
-      </div>
+      </section>
     </section>
   );
 }
