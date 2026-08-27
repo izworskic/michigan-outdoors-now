@@ -9,7 +9,7 @@
   --paper-light:#f8f5ef;
   --paper-deep:#ded2c1;
   --ink:#243139;
-  --ink-muted:#69737a;
+  --ink-muted:#5f676c;
   --orange:#b96d45;
   --orange-dark:#8f5136;
   --line:rgba(36,49,57,.18);
@@ -42,10 +42,10 @@ body{background:#f8f5ef;color:#243139}
 }
 .persona-build-button{
   border-color:#8f5136;
-  background:#b96d45;
+  background:#8f5136;
   color:#fffaf4;
 }
-.persona-build-button:hover:not(:disabled){background:#a75e3d}
+.persona-build-button:hover:not(:disabled){background:#7d462f}
 .persona-lead-rating{background:#dce8e9}
 .persona-watch{background:#f4e9df}
 .persona-watch strong{color:#724932}
