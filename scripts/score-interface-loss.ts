@@ -63,8 +63,8 @@ async function main() {
   penalties.push({ key: "locationAndRadiusClarity", max: 10, loss: clearTravelRadius ? 0 : 10 });
 
   const activityTruth =
-    hub.includes('activities: ["paddling", "beaches", "scenic"]') &&
-    hub.includes('activities: ["fishing", "paddling", "scenic"]') &&
+    hub.includes('activities: ["beaches", "paddling", "scenic"]') &&
+    hub.includes('activities: ["fishing", "paddling"]') &&
     hub.includes('activities: ["dark-sky", "scenic"]') &&
     specialists.includes("Michigan Beach Conditions") &&
     specialists.includes("Michigan Trout Report") &&
