@@ -15,7 +15,6 @@ type PlaceConditionsProps = {
   placeName: string;
   waterSensitive: boolean;
   darkSky: boolean;
-  date?: string;
 };
 
 function metric(value: number | null | undefined, suffix = "") {
@@ -41,14 +40,17 @@ export function PlaceConditions({
   placeName,
   waterSensitive,
   darkSky,
-  date,
 }: PlaceConditionsProps) {
   const [payload, setPayload] = useState<ConditionsPayload | null>(null);
   const [failed, setFailed] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
-    const dateQuery = date ? `?date=${encodeURIComponent(date)}` : "";
+    const requestedDate = new URLSearchParams(window.location.search).get("date");
+    const validDate = requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate) ? requestedDate : null;
+    setSelectedDate(validDate);
+    const dateQuery = validDate ? `?date=${encodeURIComponent(validDate)}` : "";
     fetch(`/api/conditions/${encodeURIComponent(placeId)}${dateQuery}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Conditions unavailable");
@@ -60,15 +62,15 @@ export function PlaceConditions({
         setFailed(true);
       });
     return () => controller.abort();
-  }, [placeId, date]);
+  }, [placeId]);
 
-  const dateLabel = date
+  const dateLabel = selectedDate
     ? new Intl.DateTimeFormat("en-US", {
         weekday: "long",
         month: "short",
         day: "numeric",
         timeZone: "UTC",
-      }).format(new Date(`${date}T12:00:00Z`))
+      }).format(new Date(`${selectedDate}T12:00:00Z`))
     : null;
 
   return (
