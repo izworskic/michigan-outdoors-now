@@ -92,7 +92,7 @@ const usefulness = calculate([
       [8, has("src/components/planner.tsx", "navigator.share", "clipboard.writeText")],
       [8, destinations.every((destination) => destination.accessNote.length >= 80) && has("src/app/places/[place]/page.tsx", "Practical fit before the drive")],
       [8, has("src/app/places/[place]/page.tsx", '"@type": "Place"', "GeoCoordinates", "sameAs")],
-      [8, has("src/components/destination-explorer.tsx", "aria-live", "aria-pressed") && has("src/components/planner.tsx", "<fieldset", "aria-live")],
+      [8, has("src/components/destination-explorer.tsx", "aria-live", "aria-expanded", "aria-selected", 'role="tab"') && has("src/components/planner.tsx", "<fieldset", "aria-live")],
       [7,
         has("src/app/globals.css", "@media (max-width: 700px)", "prefers-reduced-motion", "universe-drawer", "74dvh") &&
         has("src/components/destination-explorer.tsx", "browseOpen", "universe-drawer", "map-filter-menu")],
