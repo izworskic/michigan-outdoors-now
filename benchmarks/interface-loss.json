@@ -1,8 +1,8 @@
 {
   "recordedAt": "2026-08-27",
-  "baselineLoss": 100,
-  "releaseTarget": 25,
-  "flagshipTarget": 15,
+  "baselineLoss": 88,
+  "releaseTarget": 18,
+  "flagshipTarget": 10,
   "direction": "lower-is-better",
-  "note": "Baseline is the pre-redesign /explore experience: large explanatory hero, four coverage cards, persistent layer controls, persistent filters, permanent split map/list rail, and no live closure/reroute overlay."
+  "note": "Baseline is the map-first root experience, which forced users to understand the map/data architecture before the product understood their planning situation."
 }
