@@ -87,3 +87,20 @@ ChrisIzworski.com remains the portfolio source of truth for:
 - cross-tool promotion
 
 This keeps the tool's event/funnel implementation close to the product while central strategy remains coordinated across the whole owned network.
+
+
+## Automated Search Console collection
+
+`.github/workflows/growth-intelligence.yml` runs weekly and can also be triggered manually.
+
+When `GSC_SERVICE_ACCOUNT_JSON` is configured with read access to the Search Console property, the workflow:
+1. queries final Search Console data for the latest complete 28-day window;
+2. requests `page × query` dimensions for the Michigan Outdoors Now host;
+3. normalizes each row into the same shape used by `report:growth`;
+4. produces a growth report artifact retained for 45 days.
+
+`GSC_SITE_URL` may be set when the authorized Search Console property is not the default `sc-domain:chrisizworski.com`.
+
+If credentials are absent, the workflow exits cleanly and records that collection is inactive. It never substitutes synthetic Search Console data.
+
+The product-event side remains intentionally separate because Vercel custom events are the source of truth for downstream behavior. The committed product baseline stays empty until attributed events actually exist.
