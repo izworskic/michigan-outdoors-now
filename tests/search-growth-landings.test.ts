@@ -27,7 +27,7 @@ test("no accepted landing duplicates its top-four result signature for the same 
   }
 });
 
-test("launch cluster avoids beach and freighter cannibalization", () => {
+test("launch cluster avoids beach, freighter, and birding cannibalization", () => {
   const slugs = new Set(searchLandingIntents.map((intent) => intent.slug));
 
   assert.ok(!slugs.has("beaches"));
