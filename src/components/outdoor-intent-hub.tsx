@@ -273,6 +273,24 @@ export function OutdoorIntentHub() {
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
   const leadPlan = plans?.plans[0] ?? null;
 
+  const fromHerePlaces = useMemo(() => {
+    if (!activeDestination) return [];
+    return destinations
+      .filter((destination) => destination.id !== activeDestination.id)
+      .map((destination) => ({
+        destination,
+        distanceMiles: haversineMiles(
+          activeDestination.latitude,
+          activeDestination.longitude,
+          destination.latitude,
+          destination.longitude,
+        ),
+      }))
+      .sort((a, b) => a.distanceMiles - b.distanceMiles)
+      .slice(0, 4);
+  }, [activeDestination]);
+
+
   const nearbyPlaces = useMemo(
     () =>
       destinations
@@ -595,6 +613,38 @@ export function OutdoorIntentHub() {
               </div>
             </>
           ) : null}
+
+          {activeDestination && fromHerePlaces.length > 0 && (
+            <div className="canvas-from-here">
+              <div className="canvas-from-here-head">
+                <span>Keep wandering from here</span>
+                <strong>Turn this into a second stop.</strong>
+              </div>
+
+              <div className="canvas-from-here-list">
+                {fromHerePlaces.map(({ destination, distanceMiles }) => (
+                  <button
+                    type="button"
+                    key={destination.id}
+                    onClick={() => setActiveId(destination.id)}
+                  >
+                    <strong>{destination.name}</strong>
+                    <small>~{Math.round(distanceMiles)} mi away · {destination.area}</small>
+                  </button>
+                ))}
+              </div>
+
+              <a
+                className="canvas-overnight"
+                href="https://www.michigan.gov/recsearch/locator"
+                target="_blank"
+                rel="noopener"
+              >
+                <span>Stay out</span>
+                <strong>Find a Michigan DNR campground for the night →</strong>
+              </a>
+            </div>
+          )}
         </aside>
       )}
 
