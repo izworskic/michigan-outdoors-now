@@ -130,6 +130,7 @@ export function OutdoorIntentHub() {
   const discoveryRequestRef = useRef<AbortController | null>(null);
   const signalCacheRef = useRef(new Map<string, SpecialistSignal[]>());
   const originInputRef = useRef<HTMLInputElement | null>(null);
+  const wishInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!trailRequested) return;
@@ -257,9 +258,31 @@ export function OutdoorIntentHub() {
     }
   }, [driveHours, origin, originCoordinates, pull]);
 
+  function focusWishInput() {
+    window.requestAnimationFrame(() => wishInputRef.current?.focus());
+  }
+
+  function clearOpenResults() {
+    requestRef.current?.abort();
+    discoveryRequestRef.current?.abort();
+    setPlans(null);
+    setDiscovery(null);
+    setActiveId("");
+    setActiveDiscoveryId("");
+    setAroundOpen(false);
+  }
+
   function submitOrigin(event: FormEvent) {
     event.preventDefault();
-    void run();
+    if (!origin.trim() && !originCoordinates) {
+      setMessage("Enter a Michigan city or ZIP, or use your current location.");
+      originInputRef.current?.focus();
+      return;
+    }
+
+    clearOpenResults();
+    setMessage("");
+    focusWishInput();
   }
 
   async function runDiscovery(queryOverride?: string, driveOverride = driveHours) {
@@ -379,10 +402,12 @@ export function OutdoorIntentHub() {
           latitude: Number(coords.latitude.toFixed(5)),
           longitude: Number(coords.longitude.toFixed(5)),
         };
+        clearOpenResults();
         setOrigin("My location");
         setOriginCoordinates(coordinates);
         setUserLocation(coordinates);
-        void run(pull, driveHours, "My location", coordinates);
+        setPlanning(false);
+        focusWishInput();
       },
       () => {
         setPlanning(false);
@@ -551,11 +576,15 @@ export function OutdoorIntentHub() {
             value={origin}
             onChange={(event) => {
               requestRef.current?.abort();
+              discoveryRequestRef.current?.abort();
               setOrigin(event.target.value);
               setOriginCoordinates(undefined);
+              setUserLocation(undefined);
               setPlans(null);
               setDiscovery(null);
+              setActiveId("");
               setActiveDiscoveryId("");
+              setAroundOpen(false);
               setMessage("");
             }}
             placeholder="Start from a city or ZIP"
@@ -623,8 +652,18 @@ export function OutdoorIntentHub() {
           </div>
           <div className="canvas-wish-input">
             <input
+              ref={wishInputRef}
               value={wish}
-              onChange={(event) => setWish(event.target.value)}
+              onFocus={() => {
+                setActiveId("");
+                setActiveDiscoveryId("");
+              }}
+              onChange={(event) => {
+                setWish(event.target.value);
+                setActiveId("");
+                setActiveDiscoveryId("");
+                setMessage("");
+              }}
               placeholder="Quiet waterfall, short hike, not crowded…"
               aria-label="Describe the Michigan outdoor experience you want"
               maxLength={180}
