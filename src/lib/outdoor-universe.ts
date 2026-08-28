@@ -171,7 +171,7 @@ export function buildDnrTrailQuery(layer: UniverseLayerId, offset = 0) {
   return buildArcGisQuery(
     DNR_TRAIL_SERVICE,
     trailWhere[layer],
-    "OBJECTID,TrailType,Name,TrailNamePrimary,PRDTrailUnit,RecreationSearchFacilityID,RecreationSearchTrailID,SegmentLengthMiles,SpecialRestrictionType,SpecialDesignation",
+    "OBJECTID,TrailType,Name,TrailNamePrimary,PRDTrailUnit,SegmentLengthMiles",
     offset,
   );
 }
@@ -185,7 +185,7 @@ export function buildDnrAccessQuery(
   return buildArcGisQuery(
     service,
     accessWhere[layer],
-    "OBJECTID,TrailNamePrimary,PublicComments,PRDTrailUnit,SegmentLengthMiles,OpenClosedStatusNonmotor,OpenClosedStatusORV,OpenClosedStatusSnowmobile,Hiking,Biking,Skiing,Snowshoe,WaterTrail,ORVRoute,ATVTrail,Motorcycle,Snowmobile,RailtrailType",
+    "OBJECTID,TrailNamePrimary,PublicComments,PRDTrailUnit,SegmentLengthMiles",
     offset,
   );
 }
