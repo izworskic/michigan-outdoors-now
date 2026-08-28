@@ -1569,6 +1569,65 @@ export function OutdoorIntentHub() {
         </aside>
       )}
 
+      {dayPlanOpen && dayPlan && (
+        <aside className="canvas-day-plan" aria-label="Built day plan" aria-live="polite">
+          <div className="canvas-day-plan-head">
+            <div>
+              <span>Build my day</span>
+              <strong>{dayPlan.source === "routed" ? "A routed order for the places you kept." : "A fallback order while routing is unavailable."}</strong>
+            </div>
+            <button type="button" onClick={() => setDayPlanOpen(false)} aria-label="Close day plan">×</button>
+          </div>
+
+          <div className="canvas-day-plan-summary">
+            <strong>{driveTimeLabel(dayPlan.totalDriveMinutes / 60)} total driving</strong>
+            <span>{dayPlan.totalDriveMiles} {dayPlan.source === "routed" ? "road" : "rough"} mi · {dayPlan.stops.length} stops</span>
+          </div>
+
+          <ol className="canvas-day-plan-stops">
+            {dayPlan.stops.map((stop) => {
+              const leg = dayPlan.legs.find((candidate) => candidate.toId === stop.id);
+              const sourcePlace = comparisonPlaces.find((candidate) => candidate.id === stop.id);
+              return (
+                <li key={stop.id}>
+                  <div className="canvas-day-plan-leg">
+                    <span>{stop.order === 1 ? "From your start" : "From previous stop"}</span>
+                    <strong>
+                      {leg ? `${driveTimeLabel(leg.driveMinutes / 60)} · ${leg.distanceMiles} mi` : "Travel unavailable"}
+                    </strong>
+                  </div>
+                  <div className="canvas-day-plan-stop-copy">
+                    <span>{stop.arrivalLabel}–{stop.leaveLabel} · ~{stop.suggestedMinutes} min there</span>
+                    <h2>{stop.name}</h2>
+                    <p>{stop.area}</p>
+                  </div>
+                  <div className="canvas-day-plan-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDayPlanOpen(false);
+                        activateDiscovery(stop.id);
+                      }}
+                    >
+                      Open this stop
+                    </button>
+                    {sourcePlace && (
+                      <a href={sourcePlace.directionsUrl} target="_blank" rel="noopener">Directions</a>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          <p className="canvas-day-plan-note">{dayPlan.note}</p>
+          <div className="canvas-day-plan-footer">
+            <button type="button" onClick={() => setDayPlanOpen(false)}>Back to the map</button>
+            <button type="button" onClick={() => setCompareOpen(true)}>Reorder the choices</button>
+          </div>
+        </aside>
+      )}
+
       {compareOpen && comparisonPlaces.length > 0 && (
         <aside className="canvas-compare" aria-label="Compare outdoor possibilities" aria-live="polite">
           <div className="canvas-compare-head">
@@ -1578,6 +1637,14 @@ export function OutdoorIntentHub() {
             </div>
             <button type="button" onClick={() => setCompareOpen(false)} aria-label="Close comparison">×</button>
           </div>
+          {comparisonPlaces.length >= 2 && (
+            <div className="canvas-compare-build">
+              <button type="button" onClick={() => void buildMyDay()} disabled={dayPlanning}>
+                {dayPlanning ? "Routing the day…" : "Build my day"}
+              </button>
+              <small>Order two or three kept places to reduce driving from your starting point.</small>
+            </div>
+          )}
           <div className="canvas-compare-grid">
             {comparisonPlaces.map((place) => (
               <article key={place.id}>
