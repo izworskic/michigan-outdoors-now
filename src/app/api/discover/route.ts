@@ -30,6 +30,7 @@ type DiscoverRequest = {
   };
   query: string;
   maxDriveHours: number;
+  minDriveHours?: number;
 };
 
 type OverpassElement = {
@@ -72,6 +73,11 @@ function isDiscoverRequest(value: unknown): value is DiscoverRequest {
     Number.isInteger(request.maxDriveHours) &&
     (request.maxDriveHours as number) >= 1 &&
     (request.maxDriveHours as number) <= 8 &&
+    (request.minDriveHours === undefined ||
+      (typeof request.minDriveHours === "number" &&
+        Number.isFinite(request.minDriveHours) &&
+        request.minDriveHours >= 0 &&
+        request.minDriveHours < (request.maxDriveHours as number))) &&
     validCoordinates
   );
 }
@@ -154,6 +160,7 @@ function osmPlaces(
     originLatitude: number;
     originLongitude: number;
     maxDriveHours: number;
+    minDriveHours: number;
     intent: ReturnType<typeof interpretOutdoorQuery>;
   },
 ): DiscoveryPlace[] {
@@ -202,6 +209,8 @@ function osmPlaces(
       name,
       website,
     });
+
+    if (metrics.driveHours + 0.05 < args.minDriveHours) continue;
 
     const categoryName = categoryLabel(category);
     const traits = args.intent.traits
@@ -287,6 +296,7 @@ export async function POST(request: Request) {
   if (!origin) return invalid("Enter a Michigan city or ZIP code.");
 
   const intent = interpretOutdoorQuery(body.query);
+  const minDriveHours = Math.max(0, body.minDriveHours ?? 0);
 
   // Curated results are the guaranteed first layer. Public POI enrichment is
   // optional and strictly time-bounded so a useful response never waits on it.
@@ -296,7 +306,7 @@ export async function POST(request: Request) {
     originLatitude: origin.latitude,
     originLongitude: origin.longitude,
     maxDriveHours: body.maxDriveHours,
-  });
+  }).filter((place) => place.driveHours + 0.05 >= minDriveHours);
 
   const selectors = overpassSelectorsFor(intent);
   const overpassQuery = buildOverpassQuery(
@@ -311,6 +321,7 @@ export async function POST(request: Request) {
         originLatitude: origin.latitude,
         originLongitude: origin.longitude,
         maxDriveHours: body.maxDriveHours,
+        minDriveHours,
         intent,
       })
     : [];
@@ -332,6 +343,7 @@ export async function POST(request: Request) {
     JSON.stringify({
       event: "semantic_discovery_completed",
       maxDriveHours: body.maxDriveHours,
+      minDriveHours,
       categoryCount: intent.categories.length,
       activityCount: intent.activities.length,
       livePlaceCount: live.length,
