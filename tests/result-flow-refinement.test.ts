@@ -49,7 +49,7 @@ test("discovery detail sits above the persistent dock on phone and desktop", asy
   const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
 
   assert.match(css, /\.canvas-sheet-discovery\{\s*bottom:154px;/);
-  assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{\s*bottom:148px;\s*max-height:44svh;/);
+  assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{[\s\S]*?position:fixed;[\s\S]*?bottom:148px;[\s\S]*?max-height:44svh;/);
 });
 
 
