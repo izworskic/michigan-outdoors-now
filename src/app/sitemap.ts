@@ -15,9 +15,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...origins.map((origin) => ({ url: `${siteUrl}/from/${origin.slug}` })),
     ...searchLandings.map((landing) => ({
       url: `${siteUrl}/from/${landing.origin.slug}/${landing.intent.slug}`,
-      lastModified: new Date("2026-08-28"),
-      changeFrequency: "weekly" as const,
-      priority: 0.75,
     })),
     ...destinations.map((destination) => ({ url: `${siteUrl}/places/${destination.id}` })),
   ];
