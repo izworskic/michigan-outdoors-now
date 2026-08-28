@@ -543,7 +543,9 @@ export function MichiganDestinationMap({
 
     publishViewport();
     map.on("moveend", publishViewport);
-    return () => map.off("moveend", publishViewport);
+    return () => {
+      map.off("moveend", publishViewport);
+    };
   }, [mapReady, onViewportChange]);
 
   useEffect(() => {
