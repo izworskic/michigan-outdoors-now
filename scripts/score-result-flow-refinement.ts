@@ -58,7 +58,7 @@ async function main() {
       runtime.includes("farther-band discovery returned a place inside the previous travel range"),
     rangeStateVisible:
       hub.includes("Farther-out results") &&
-      hub.includes("Up to " + "$" + "{driveHours} hr from your start") &&
+      hub.includes("Up to " + "$" + "{driveHours} hr · " + "$" + "{discovery.query}") &&
       hub.includes("Show all within {driveHours} hr"),
     responsiveNonOverlap:
       css.includes(".has-active-discovery .canvas-sheet-discovery{") &&
