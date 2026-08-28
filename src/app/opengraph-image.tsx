@@ -26,8 +26,8 @@ export default function OpenGraphImage() {
           <span style={{ color: "#f59f55" }}>MICHIGAN</span> OUTDOORS NOW
         </div>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", flexDirection: "column", fontFamily: "Georgia, serif", fontSize: 84, lineHeight: .98, letterSpacing: -3, maxWidth: 810 }}>Less searching.<br />More outside.</div>
-          <div style={{ marginTop: 30, fontSize: 27, color: "#d5e7df" }}>Three practical Michigan plans shaped by your drive and current conditions.</div>
+          <div style={{ display: "flex", flexDirection: "column", fontFamily: "Georgia, serif", fontSize: 84, lineHeight: .98, letterSpacing: -3, maxWidth: 810 }}>Find the Michigan day<br />worth taking.</div>
+          <div style={{ marginTop: 30, fontSize: 27, color: "#d5e7df" }}>Compare Michigan places by drive, weather, trail access and current trip confidence.</div>
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", fontSize: 22 }}>
           <span>Built by Chris Izworski</span><span style={{ color: "#f59f55", letterSpacing: 3 }}>EXPLORE MICHIGAN →</span>
