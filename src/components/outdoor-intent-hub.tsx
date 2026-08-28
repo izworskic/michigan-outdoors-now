@@ -113,6 +113,103 @@ function placeWeatherLine(intelligence: PlaceIntelligence | null) {
   return parts.join(" · ");
 }
 
+type DecisionArgument = {
+  headline: string;
+  evidence: string;
+  tradeoff: string;
+  alternative: DiscoveryPlace | null;
+};
+
+function firstUsefulSentence(text: string) {
+  const trimmed = text.trim();
+  const boundary = trimmed.search(/[.!?](?:\s|$)/);
+  return boundary >= 0 ? trimmed.slice(0, boundary + 1) : trimmed;
+}
+
+function buildDecisionArgument(
+  place: DiscoveryPlace,
+  places: DiscoveryPlace[],
+): DecisionArgument {
+  const alternative =
+    places
+      .filter((candidate) => candidate.id !== place.id)
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.driveHours - b.driveHours ||
+          a.name.localeCompare(b.name),
+      )[0] ?? null;
+
+  if (!alternative) {
+    return {
+      headline: `Pick ${place.name} if this is the kind of day you described.`,
+      evidence: firstUsefulSentence(place.why),
+      tradeoff: place.curatedPlaceId
+        ? "It has deeper planning coverage in Michigan Outdoors Now."
+        : "It is still a mapped lead, so verify route specifics before committing.",
+      alternative: null,
+    };
+  }
+
+  const driveDeltaMinutes = Math.round((place.driveHours - alternative.driveHours) * 60);
+  const matchAdvantage = place.score >= alternative.score + 4;
+  const depthAdvantage = Boolean(place.curatedPlaceId && !alternative.curatedPlaceId);
+
+  let tradeoff: string;
+  if (driveDeltaMinutes >= 10) {
+    tradeoff = `${place.name} costs about ${driveDeltaMinutes} more drive minutes than ${alternative.name}. Choose ${alternative.name} if minimizing windshield time matters more.`;
+  } else if (driveDeltaMinutes <= -10) {
+    tradeoff = `${place.name} saves about ${Math.abs(driveDeltaMinutes)} drive minutes versus ${alternative.name}; ${alternative.name} is the alternative if its specific setting matters more.`;
+  } else {
+    tradeoff = `Drive time is essentially a wash with ${alternative.name}; choose between them on the experience and confidence data.`;
+  }
+
+  return {
+    headline:
+      matchAdvantage || depthAdvantage
+        ? `Pick ${place.name} if you want the stronger current case.`
+        : `Pick ${place.name} if its specific character matters more than the alternative.`,
+    evidence: [
+      firstUsefulSentence(place.why),
+      matchAdvantage ? "It matches the request more strongly in the current result set." : "",
+      depthAdvantage ? "It also has deeper planning coverage than the alternative." : "",
+    ].filter(Boolean).join(" "),
+    tradeoff,
+    alternative,
+  };
+}
+
+function arrivalTimeLabel(place: DiscoveryPlace) {
+  const minutes = place.driveMinutes ?? Math.max(1, Math.round(place.driveHours * 60));
+  return new Date(Date.now() + minutes * 60_000).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function checkedAgeLabel(generatedAt: string | undefined) {
+  if (!generatedAt) return "not refreshed yet";
+  const ageMinutes = Math.max(0, Math.round((Date.now() - Date.parse(generatedAt)) / 60_000));
+  if (!Number.isFinite(ageMinutes) || ageMinutes <= 1) return "checked just now";
+  if (ageMinutes < 60) return `checked ${ageMinutes} min ago`;
+  return `checked ${Math.round(ageMinutes / 60)} hr ago`;
+}
+
+function confidenceUnknowns(place: DiscoveryPlace, intelligence: PlaceIntelligence | null) {
+  const unknowns: string[] = [];
+  if (place.travelSource !== "routed") unknowns.push("road-routed drive time");
+  if (!intelligence?.weather) unknowns.push("fresh point weather");
+  if (
+    !intelligence?.trailMetadata?.taggedDistanceMiles &&
+    !(intelligence?.trailSystems[0]?.nearbyMappedMiles > 0)
+  ) {
+    unknowns.push("exact hike mileage");
+  }
+  if (!intelligence?.trailMetadata?.difficulty) unknowns.push("verified trail difficulty");
+  if (!intelligence?.trailMetadata?.taggedAscentFeet) unknowns.push("route ascent");
+  return unknowns;
+}
+
 function weatherLine(plan: Plan) {
   if (!plan.weather) return "Live weather is limited for this place.";
   const parts: string[] = [];
@@ -144,6 +241,8 @@ export function OutdoorIntentHub() {
   const [activeDiscoveryId, setActiveDiscoveryId] = useState("");
   const [comparisonPlaces, setComparisonPlaces] = useState<DiscoveryPlace[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [dismissedDiscoveryIds, setDismissedDiscoveryIds] = useState<string[]>([]);
+  const [departureOpen, setDepartureOpen] = useState(false);
   const [placeIntelligence, setPlaceIntelligence] = useState<PlaceIntelligence | null>(null);
   const [placeIntelligenceLoading, setPlaceIntelligenceLoading] = useState(false);
   const [planning, setPlanning] = useState(false);
@@ -334,6 +433,7 @@ export function OutdoorIntentHub() {
     setActiveDiscoveryId("");
     setComparisonPlaces([]);
     setCompareOpen(false);
+    setDepartureOpen(false);
     setAroundOpen(false);
   }
 
@@ -410,6 +510,7 @@ export function OutdoorIntentHub() {
     queryOverride?: string,
     driveOverride = driveHours,
     minDriveOverride = 0,
+    surpriseMode = false,
   ) {
     let chosenOrigin = origin.trim();
     let coordinates = originCoordinates;
@@ -439,6 +540,7 @@ export function OutdoorIntentHub() {
     discoveryRequestRef.current = controller;
     setDiscovering(true);
     setCompareOpen(false);
+    setDepartureOpen(false);
     setMessage("");
 
     try {
@@ -452,6 +554,7 @@ export function OutdoorIntentHub() {
           query,
           maxDriveHours: driveOverride,
           ...(minDriveOverride > 0 ? { minDriveHours: minDriveOverride } : {}),
+          ...(surpriseMode ? { surpriseMode: true, excludePlaceIds: dismissedDiscoveryIds } : {}),
         }),
       });
       const payload = await response.json();
@@ -496,6 +599,36 @@ export function OutdoorIntentHub() {
   function submitDiscovery(event: FormEvent) {
     event.preventDefault();
     void runDiscovery();
+  }
+
+  function surpriseMe() {
+    void runDiscovery(
+      "wild quiet overlooked outdoor place worth discovering",
+      driveHours,
+      0,
+      true,
+    );
+  }
+
+  function dismissDiscoveryPlace(place: DiscoveryPlace) {
+    setDismissedDiscoveryIds((current) =>
+      current.includes(place.id) ? current : [...current, place.id].slice(-50),
+    );
+    setComparisonPlaces((current) => current.filter((candidate) => candidate.id !== place.id));
+    if (activeDiscoveryId === place.id) {
+      placeIntelligenceRequestRef.current?.abort();
+      setPlaceIntelligence(null);
+      setPlaceIntelligenceLoading(false);
+      setActiveDiscoveryId("");
+    }
+    setDiscovery((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        places: current.places.filter((candidate) => candidate.id !== place.id),
+      };
+    });
+    setMessage("Got it. I’ll keep that one out of this session’s surprise picks.");
   }
 
   const loadPlaceIntelligence = useCallback((place: DiscoveryPlace) => {
@@ -586,8 +719,16 @@ export function OutdoorIntentHub() {
 
   function openComparison() {
     if (!comparisonPlaces.length) return;
+    setDepartureOpen(false);
     setActiveDiscoveryId("");
     setCompareOpen(true);
+  }
+
+  function openDeparture() {
+    if (!activeDiscoveryId) return;
+    setCompareOpen(false);
+    setAroundOpen(false);
+    setDepartureOpen(true);
   }
 
   function requestTrailLayer(nextLayer: UniverseLayerId) {
@@ -687,6 +828,12 @@ export function OutdoorIntentHub() {
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
   const activeDiscovery = activeId ? null : discovery?.places.find((place) => place.id === activeDiscoveryId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
+  const decisionArgument = activeDiscovery
+    ? buildDecisionArgument(activeDiscovery, discovery?.places ?? [])
+    : null;
+  const activeUnknowns = activeDiscovery
+    ? confidenceUnknowns(activeDiscovery, placeIntelligence)
+    : [];
   const leadPlan = plans?.plans[0] ?? null;
   const visibleSignals = signalSnapshot?.placeId === activeId ? signalSnapshot.signals : [];
 
@@ -789,7 +936,7 @@ export function OutdoorIntentHub() {
 
   return (
     <main
-      className={`michigan-canvas ${discovery?.places.length ? "has-discovery-results" : ""} ${activeDiscovery ? "has-active-discovery" : ""}`}
+      className={`michigan-canvas ${discovery?.places.length ? "has-discovery-results" : ""} ${activeDiscovery ? "has-active-discovery" : ""} ${departureOpen && activeDiscovery ? "has-departure" : ""}`}
       aria-label="Explore Michigan outdoors"
     >
       <div className="michigan-canvas-map">
