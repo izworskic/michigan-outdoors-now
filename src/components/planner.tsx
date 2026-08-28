@@ -520,8 +520,8 @@ export function Planner({
                       <p className="result-summary">{plan.destination.summary}</p>
 
                       <div className="result-facts">
-                        <span>{formatDriveTime(plan.driveHours)}</span>
-                        <span>{plan.distanceMiles} rough miles</span>
+                        <span>{plan.travelSource === "routed" ? "" : "~"}{formatDriveTime(plan.driveHours)} drive</span>
+                        <span>{plan.distanceMiles} {plan.travelSource === "routed" ? "road" : "rough"} miles</span>
                         {plan.weather?.high !== null && plan.weather?.high !== undefined && <span>{Math.round(plan.weather.high)}° high / {plan.weather.low === null ? "n/a" : `${Math.round(plan.weather.low)}° low`}</span>}
                         {plan.weather?.precipitationProbability !== null && plan.weather?.precipitationProbability !== undefined && <span>{Math.round(plan.weather.precipitationProbability)}% rain</span>}
                         {plan.weather?.windGust !== null && plan.weather?.windGust !== undefined && <span>{Math.round(plan.weather.windGust)} mph gusts</span>}
@@ -559,7 +559,7 @@ export function Planner({
             </div>
           )}
 
-          <p className="result-note">{response.note} Drive times are rough estimates, not live traffic. A trip-fit score is not a safety score.</p>
+          <p className="result-note">{response.note} Routed times are not live traffic; fallback values remain planning estimates. A trip-fit score is not a safety score.</p>
         </div>
       )}
     </section>
