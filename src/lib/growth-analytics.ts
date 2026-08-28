@@ -2,19 +2,9 @@
 
 import { track } from "@vercel/analytics";
 
-export type GrowthSurface =
-  | "homepage_planner"
-  | "location_intent"
-  | "flagship_semantic"
-  | "place_detail"
-  | "guide";
-
-export type GrowthContext = {
-  surface: GrowthSurface;
-  originSlug?: string;
-  intentSlug?: string;
-  pageKey?: string;
-};
+export { growthEventNames } from "./growth-contract";
+export type { GrowthContext, GrowthEventName } from "./growth-contract";
+import type { GrowthContext, GrowthEventName } from "./growth-contract";
 
 export type GrowthEventProperties = Record<string, string | number | boolean>;
 
