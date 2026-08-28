@@ -756,6 +756,7 @@ export function OutdoorIntentHub() {
             )}
           </form>
         </section>
+        {message && <p className="canvas-message canvas-message-inline">{message}</p>}
         </div>
 
         <div className="canvas-links">
@@ -908,7 +909,6 @@ export function OutdoorIntentHub() {
         </>
       )}
 
-      {message && <p className="canvas-message">{message}</p>}
 
       {(activeDiscovery || activeDestination || activePlan) && (
         <aside className="canvas-sheet" aria-live="polite">
