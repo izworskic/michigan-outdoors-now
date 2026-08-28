@@ -61,7 +61,7 @@ async function main() {
     responsiveNonOverlap:
       css.includes(".canvas-sheet-discovery{\n  bottom:154px;") &&
       css.includes(".canvas-result-dock{") &&
-      /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{\s*bottom:148px;\s*max-height:44svh;/.test(css),
+      /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{[\s\S]*?position:fixed;[\s\S]*?bottom:148px;[\s\S]*?max-height:44svh;/.test(css),
     regressionCoverage:
       tests.includes("persistent map dock") &&
       tests.includes("newly unlocked distance band") &&

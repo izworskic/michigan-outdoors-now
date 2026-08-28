@@ -49,5 +49,21 @@ test("discovery detail sits above the persistent dock on phone and desktop", asy
   const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
 
   assert.match(css, /\.canvas-sheet-discovery\{\s*bottom:154px;/);
-  assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{\s*bottom:148px;\s*max-height:44svh;/);
+  assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{[\s\S]*?position:fixed;[\s\S]*?bottom:148px;[\s\S]*?max-height:44svh;/);
+});
+
+
+test("mobile search explicitly reveals returned result cards", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
+
+  assert.match(hub, /const resultDockRef = useRef<HTMLElement \| null>\(null\)/);
+  assert.match(hub, /wishInputRef\.current\?\.blur\(\)/);
+  assert.match(hub, /resultDockRef\.current\?\.focus\(\{ preventScroll: true \}\)/);
+  assert.match(hub, /ref=\{resultDockRef\}/);
+  assert.match(hub, />\s*See results\s*<\/button>/);
+  assert.match(
+    css,
+    /@media\(max-width:700px\)[\s\S]*?\.canvas-result-dock\{[\s\S]*?position:fixed;[\s\S]*?z-index:32;[\s\S]*?bottom:max\(8px,env\(safe-area-inset-bottom\)\);/,
+  );
 });
