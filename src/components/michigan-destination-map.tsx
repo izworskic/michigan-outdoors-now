@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, Marker as MapLibreMarker } from "maplibre-gl";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchGeoJson } from "../lib/boat-launches";
+import type { DiscoveryPlace } from "../lib/discovery";
 import type { UniverseGeoJson, UniverseTrailProperties, UniverseTrailSystem } from "../lib/outdoor-universe";
 import type { Destination } from "../lib/types";
 
@@ -36,6 +37,9 @@ type MichiganDestinationMapProps = {
   userLocation?: LocationPoint;
   onViewportChange?: (viewport: MapViewport) => void;
   focusPoint?: MapFocusPoint | null;
+  discoveryPlaces?: DiscoveryPlace[];
+  activeDiscoveryId?: string;
+  onDiscoveryActivate?: (placeId: string) => void;
 };
 
 const mapStyle = "https://tiles.openfreemap.org/styles/positron";
@@ -51,6 +55,10 @@ const boatLaunchSourceId = "michigan-boat-launches";
 const boatLaunchClusterLayerId = "michigan-boat-launch-clusters";
 const boatLaunchClusterCountLayerId = "michigan-boat-launch-cluster-count";
 const boatLaunchPointLayerId = "michigan-boat-launch-points";
+const discoverySourceId = "semantic-outdoor-discovery";
+const discoveryClusterLayerId = "semantic-outdoor-discovery-clusters";
+const discoveryClusterCountLayerId = "semantic-outdoor-discovery-cluster-count";
+const discoveryPointLayerId = "semantic-outdoor-discovery-points";
 
 function emptyCollection(): UniverseGeoJson {
   return { type: "FeatureCollection", features: [] };
@@ -93,6 +101,9 @@ export function MichiganDestinationMap({
   userLocation,
   onViewportChange,
   focusPoint,
+  discoveryPlaces = [],
+  activeDiscoveryId = "",
+  onDiscoveryActivate,
 }: MichiganDestinationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -497,6 +508,146 @@ export function MichiganDestinationMap({
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!mapReady || !map) return;
+
+    const data = {
+      type: "FeatureCollection" as const,
+      features: discoveryPlaces.map((place) => ({
+        type: "Feature" as const,
+        geometry: {
+          type: "Point" as const,
+          coordinates: [place.longitude, place.latitude],
+        },
+        properties: {
+          id: place.id,
+          name: place.name,
+          area: place.area,
+          categoryLabel: place.categoryLabel,
+          score: place.score,
+          driveHours: place.driveHours,
+        },
+      })),
+    };
+
+    const existing = map.getSource(discoverySourceId) as GeoJSONSource | undefined;
+    if (existing) existing.setData(data as never);
+    else {
+      map.addSource(discoverySourceId, {
+        type: "geojson",
+        data: data as never,
+        cluster: true,
+        clusterMaxZoom: 10,
+        clusterRadius: 42,
+      });
+    }
+
+    if (!map.getLayer(discoveryClusterLayerId)) {
+      map.addLayer({
+        id: discoveryClusterLayerId,
+        type: "circle",
+        source: discoverySourceId,
+        filter: ["has", "point_count"],
+        paint: {
+          "circle-color": "#264f40",
+          "circle-opacity": 0.9,
+          "circle-radius": ["step", ["get", "point_count"], 14, 10, 18, 25, 22],
+          "circle-stroke-color": "rgba(255,255,255,.96)",
+          "circle-stroke-width": 1.5,
+        },
+      });
+    }
+
+    if (!map.getLayer(discoveryClusterCountLayerId)) {
+      map.addLayer({
+        id: discoveryClusterCountLayerId,
+        type: "symbol",
+        source: discoverySourceId,
+        filter: ["has", "point_count"],
+        layout: {
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-size": 10,
+        },
+        paint: { "text-color": "#ffffff" },
+      });
+    }
+
+    if (!map.getLayer(discoveryPointLayerId)) {
+      map.addLayer({
+        id: discoveryPointLayerId,
+        type: "circle",
+        source: discoverySourceId,
+        filter: ["!", ["has", "point_count"]],
+        paint: {
+          "circle-color": "#264f40",
+          "circle-opacity": 0.94,
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, 6, 9, 8, 13, 10],
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 2,
+        },
+      });
+    }
+
+    map.setPaintProperty(
+      discoveryPointLayerId,
+      "circle-radius",
+      [
+        "case",
+        ["==", ["get", "id"], activeDiscoveryId],
+        12,
+        ["interpolate", ["linear"], ["zoom"], 5, 6, 9, 8, 13, 10],
+      ],
+    );
+    map.setPaintProperty(
+      discoveryPointLayerId,
+      "circle-stroke-width",
+      ["case", ["==", ["get", "id"], activeDiscoveryId], 4, 2],
+    );
+
+    const clusterClick = (event: MapLayerMouseEvent) => {
+      map.flyTo({
+        center: event.lngLat,
+        zoom: Math.min(map.getZoom() + 2, 11),
+        duration: 340,
+      });
+    };
+    const pointClick = (event: MapLayerMouseEvent) => {
+      const id = String(event.features?.[0]?.properties?.id ?? "");
+      if (id) onDiscoveryActivate?.(id);
+    };
+    const pointerOn = () => { map.getCanvas().style.cursor = "pointer"; };
+    const pointerOff = () => { map.getCanvas().style.cursor = ""; };
+
+    map.on("click", discoveryClusterLayerId, clusterClick);
+    map.on("click", discoveryPointLayerId, pointClick);
+    map.on("mouseenter", discoveryClusterLayerId, pointerOn);
+    map.on("mouseenter", discoveryPointLayerId, pointerOn);
+    map.on("mouseleave", discoveryClusterLayerId, pointerOff);
+    map.on("mouseleave", discoveryPointLayerId, pointerOff);
+
+    return () => {
+      map.off("click", discoveryClusterLayerId, clusterClick);
+      map.off("click", discoveryPointLayerId, pointClick);
+      map.off("mouseenter", discoveryClusterLayerId, pointerOn);
+      map.off("mouseenter", discoveryPointLayerId, pointerOn);
+      map.off("mouseleave", discoveryClusterLayerId, pointerOff);
+      map.off("mouseleave", discoveryPointLayerId, pointerOff);
+    };
+  }, [activeDiscoveryId, discoveryPlaces, mapReady, onDiscoveryActivate]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !activeDiscoveryId) return;
+    const selected = discoveryPlaces.find((place) => place.id === activeDiscoveryId);
+    if (!selected) return;
+    map.flyTo({
+      center: [selected.longitude, selected.latitude],
+      zoom: Math.max(map.getZoom(), 8),
+      duration: 420,
+    });
+  }, [activeDiscoveryId, discoveryPlaces, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     const mapApi = mapApiRef.current;
     if (!mapReady || !map || !mapApi) return;
 
@@ -599,9 +750,10 @@ export function MichiganDestinationMap({
 
   return (
     <div className="destination-map-frame">
-      <div ref={containerRef} className="destination-map" aria-label="Michigan outdoor map with full-planning places, statewide DNR trails, public boat launches, temporary closures, and reroutes" />
+      <div ref={containerRef} className="destination-map" aria-label="Michigan outdoor map with full-planning places, semantic discovery results, statewide DNR trails, public boat launches, temporary closures, and reroutes" />
       <div className="map-legend" aria-label="Map legend">
         <span><i className="map-legend-decision" />Full trip planning</span>
+        {discoveryPlaces.length > 0 && <span><i className="map-legend-discovery" />Found for you</span>}
         <span><i className="map-legend-system" />Trail system</span>
         <span><i className="map-legend-trail" />{trailLayerLabel ?? "DNR trail route"}</span>
         {boatLaunchCount > 0 && <span><i className="map-legend-launch" />Boat launch</span>}
