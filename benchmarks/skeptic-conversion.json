@@ -1,0 +1,17 @@
+{
+  "name": "skeptic-conversion",
+  "version": 1,
+  "baselineScore": 46,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "criteria": [
+    {"key":"surpriseDiscovery","weight":20},
+    {"key":"dismissWithoutAccount","weight":10},
+    {"key":"whyThisOne","weight":20},
+    {"key":"tradeoffVisible","weight":10},
+    {"key":"departureMode","weight":20},
+    {"key":"provenanceLedger","weight":10},
+    {"key":"noPostDecisionClutter","weight":5},
+    {"key":"regressionCoverage","weight":5}
+  ]
+}
