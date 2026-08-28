@@ -2188,3 +2188,151 @@ body{background:#f8f5ef;color:#243139}
     min-height:40px;
   }
 }
+
+
+/* Free-form Michigan discovery */
+.canvas-wish{
+  position:absolute;
+  z-index:18;
+  top:78px;
+  left:50%;
+  width:min(720px,calc(100% - 36px));
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+.canvas-wish-form{
+  display:grid;
+  gap:8px;
+  padding:11px 12px 10px;
+  border:1px solid rgba(255,255,255,.82);
+  border-radius:13px;
+  background:rgba(249,248,243,.95);
+  box-shadow:0 16px 42px rgba(20,46,54,.15);
+  backdrop-filter:blur(18px);
+  pointer-events:auto;
+}
+.canvas-wish-copy{
+  display:flex;
+  align-items:baseline;
+  gap:9px;
+}
+.canvas-wish-copy span{
+  color:#8f5136;
+  font-size:7px;
+  font-weight:850;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+}
+.canvas-wish-copy strong{
+  color:#223b42;
+  font:500 15px/1.05 Georgia,serif;
+}
+.canvas-wish-input{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:7px;
+}
+.canvas-wish-input input{
+  min-width:0;
+  min-height:43px;
+  padding:9px 12px;
+  border:1px solid rgba(31,61,69,.14);
+  border-radius:9px;
+  outline:none;
+  background:#fff;
+  color:#17262b;
+  font-size:13px;
+}
+.canvas-wish-input input:focus{
+  border-color:#315f55;
+  box-shadow:0 0 0 3px rgba(49,95,85,.10);
+}
+.canvas-wish-input button{
+  min-height:43px;
+  padding:8px 15px;
+  border:1px solid #264f40;
+  border-radius:9px;
+  background:#264f40;
+  color:#fff;
+  font-size:9px;
+  font-weight:850;
+  cursor:pointer;
+}
+.canvas-wish-input button:disabled{opacity:.6;cursor:wait}
+.canvas-wish-examples{
+  display:flex;
+  gap:4px 10px;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.canvas-wish-examples::-webkit-scrollbar{display:none}
+.canvas-wish-examples button{
+  flex:0 0 auto;
+  padding:2px 0;
+  border:0;
+  border-bottom:1px solid rgba(31,61,69,.18);
+  background:transparent;
+  color:#5b7075;
+  font-size:8px;
+  cursor:pointer;
+}
+.canvas-wish-examples button:hover{color:#193d48;border-color:#193d48}
+.canvas-wish-status{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  padding-top:5px;
+  border-top:1px solid rgba(31,61,69,.10);
+  color:#60757a;
+  font-size:8px;
+  line-height:1.35;
+}
+.canvas-wish-status button{
+  padding:2px 0;
+  border:0;
+  border-bottom:1px solid rgba(31,61,69,.2);
+  background:transparent;
+  color:#365158;
+  font-size:8px;
+  font-weight:800;
+  cursor:pointer;
+}
+.canvas-discovery-source{
+  margin:18px 0 0;
+  padding-top:14px;
+  border-top:1px solid rgba(31,61,69,.11);
+  color:#728186;
+  font-size:8px;
+  line-height:1.5;
+}
+.map-legend-discovery{
+  width:9px;
+  height:9px;
+  border:2px solid #fff;
+  border-radius:50%;
+  background:#264f40;
+  box-shadow:0 0 0 1px rgba(36,79,64,.45);
+}
+
+@media(max-width:900px){
+  .canvas-wish{top:132px;width:min(680px,calc(100% - 36px))}
+  .canvas-sheet{top:194px}
+}
+@media(max-width:700px){
+  .canvas-wish{
+    top:132px;
+    width:calc(100% - 24px);
+  }
+  .canvas-wish-form{padding:9px;gap:6px}
+  .canvas-wish-copy strong{font-size:14px}
+  .canvas-wish-input{grid-template-columns:1fr auto}
+  .canvas-wish-input input{font-size:12px}
+  .canvas-wish-input button{padding-inline:11px}
+  .canvas-wish-examples{display:none}
+  .canvas-sheet{
+    top:198px;
+    bottom:78px;
+  }
+  .canvas-message{top:198px}
+}
