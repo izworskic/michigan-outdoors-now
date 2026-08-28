@@ -137,7 +137,7 @@ test("selected semantic places load current trip confidence intelligence", async
   assert.match(hub, /className="canvas-field-intelligence"/);
   assert.match(hub, /What we know before you leave\./);
   assert.match(hub, /Open-Meteo weather \+ air quality/);
-  assert.match(hub, /DNR mapped mi in the nearby window/);
+  assert.match(hub, /DNR shows .* mapped mi in the nearby trail window/);
   assert.match(hub, /nearby elevation span/);
   assert.match(hub, /DNR closure item/);
   assert.match(css, /\.canvas-field-intelligence\{/);
