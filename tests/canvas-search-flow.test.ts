@@ -48,12 +48,12 @@ test("search completion shows choices without auto-opening a detail sheet", asyn
   const source = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
 
   assert.doesNotMatch(source, /setActiveDiscoveryId\(result\.places\[0\]/);
-  assert.match(source, /className="canvas-wish-results"/);
-  assert.match(source, /discovery\.places\.slice\(0, 3\)/);
-  assert.match(source, /onClick=\{\(\) => setActiveDiscoveryId\(place\.id\)\}/);
+  assert.match(source, /className="canvas-result-dock"/);
+  assert.match(source, /discovery\.places\.slice\(0, 8\)/);
+  assert.match(source, /onClick=\{\(\) => activateDiscovery\(place\.id\)\}/);
 });
 
-test("location intent feedback and results share one non-overlapping layout stack", async () => {
+test("location and intent controls stay in one non-overlapping layout stack", async () => {
   const source = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
 
