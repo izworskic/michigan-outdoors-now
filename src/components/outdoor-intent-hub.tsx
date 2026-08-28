@@ -778,6 +778,52 @@ export function OutdoorIntentHub() {
     setCompareOpen(true);
   }
 
+  async function buildMyDay() {
+    if (!discovery || comparisonPlaces.length < 2) {
+      setMessage("Keep two or three places before building a day.");
+      return;
+    }
+
+    setDayPlanning(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/day-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: discovery.origin,
+          places: comparisonPlaces.map((place) => ({
+            id: place.id,
+            name: place.name,
+            area: place.area,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            category: place.categoryLabel,
+          })),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !("stops" in payload)) {
+        throw new Error(payload.error ?? "Could not build the day.");
+      }
+
+      const result = payload as DayPlanResponse;
+      setDayPlan(result);
+      setCompareOpen(false);
+      setDayPlanOpen(true);
+      trackGrowthEvent("day_plan_built", semanticGrowthContext, {
+        stopCount: result.stops.length,
+        routeSource: result.source,
+        totalDriveMinutes: result.totalDriveMinutes,
+      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not build the day.");
+    } finally {
+      setDayPlanning(false);
+    }
+  }
+
   function openDeparture() {
     if (!activeDiscoveryId) return;
     const place = discovery?.places.find((candidate) => candidate.id === activeDiscoveryId);
