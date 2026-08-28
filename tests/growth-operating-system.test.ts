@@ -180,3 +180,23 @@ test("weekly Search Console collection uses final page by query data and fails c
   assert.match(workflow, /configured=false/);
   assert.match(workflow, /Upload growth intelligence artifact/);
 });
+
+
+test("weekly Vercel collection groups fixed events by attributed SEO page", async () => {
+  const fetchScript = await readFile(
+    new URL("../scripts/fetch-vercel-product-events.mjs", import.meta.url),
+    "utf8",
+  );
+  const workflow = await readFile(
+    new URL("../.github/workflows/growth-intelligence.yml", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(fetchScript, /\/v1\/query\/web-analytics\/events\/aggregate/);
+  assert.match(fetchScript, /by: "eventData\/page"/);
+  assert.match(fetchScript, /eventData\/surface eq 'location_intent'/);
+  assert.match(fetchScript, /planner_completed/);
+  assert.match(fetchScript, /directions_opened/);
+  assert.match(workflow, /VERCEL_ANALYTICS_TOKEN/);
+  assert.match(workflow, /product-events-latest\.json/);
+});
