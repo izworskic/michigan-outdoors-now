@@ -1304,6 +1304,9 @@ export function OutdoorIntentHub() {
                       </strong>
                       <small>
                         {[
+                          placeIntelligence.trailMetadata?.taggedAscentFeet
+                            ? `${placeIntelligence.trailMetadata.taggedAscentFeet} ft tagged ascent`
+                            : null,
                           displayTrailValue(placeIntelligence.trailMetadata?.difficulty),
                           displayTrailValue(placeIntelligence.trailMetadata?.surface),
                           displayTrailValue(placeIntelligence.trailMetadata?.trailVisibility),
