@@ -90,6 +90,32 @@ try {
   assert.match(discoveryPayload.origin.name, /Bay City.*area/);
   assert.match(discoveryPayload.intent.summary, /beach|water/i);
 
+  const fartherDiscovery = await fetch(`${origin}/api/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: typedOriginPayload.origin.name,
+      originCoordinates: {
+        latitude: typedOriginPayload.origin.latitude,
+        longitude: typedOriginPayload.origin.longitude,
+      },
+      query: "scenic hiking water",
+      minDriveHours: 2,
+      maxDriveHours: 8,
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(fartherDiscovery.status, 200);
+  const fartherPayload = await fartherDiscovery.json();
+  assert.ok(Array.isArray(fartherPayload.places));
+  assert.ok(fartherPayload.places.length > 0);
+  assert.ok(
+    fartherPayload.places.every(
+      (place) => place.driveHours >= 1.95 && place.driveHours <= 8.05,
+    ),
+    "farther-band discovery returned a place inside the previous travel range",
+  );
+
   const statewide = await fetch(`${origin}/api/statewide?date=today&mode=best`, {
     signal: AbortSignal.timeout(25_000),
   });
@@ -257,7 +283,7 @@ try {
   assert.ok(coordinatePayload.rangeOptions.every((option) => option.driveHours <= 2.1));
 
   console.log(
-    `Runtime check passed: persistent Michigan map canvas with branching exploration, cumulative drive-hour location bands, paginated DNR outdoor universe with access overlays, clustered statewide boat launches, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering; AI reference; and ${payload.conditionsStatus} recommendations.`,
+    `Runtime check passed: persistent Michigan map canvas with branching exploration, cumulative drive-hour location bands, paginated DNR outdoor universe with access overlays, clustered statewide boat launches, explorer, guide, destination, live-condition and local pages; protected 404s; typed and one-tap coordinate planning with inclusive drive-radius filtering plus verified farther-only discovery bands; AI reference; and ${payload.conditionsStatus} recommendations.`,
   );
 } finally {
   server.kill("SIGTERM");

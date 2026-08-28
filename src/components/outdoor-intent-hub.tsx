@@ -114,6 +114,7 @@ export function OutdoorIntentHub() {
   const [plans, setPlans] = useState<PlannerResponse | null>(null);
   const [wish, setWish] = useState("");
   const [discovery, setDiscovery] = useState<DiscoveryResponse | null>(null);
+  const [discoveryRange, setDiscoveryRange] = useState<{ minDriveHours: number; maxDriveHours: number } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [activeDiscoveryId, setActiveDiscoveryId] = useState("");
   const [planning, setPlanning] = useState(false);
@@ -242,6 +243,7 @@ export function OutdoorIntentHub() {
       const result = payload as PlannerResponse;
       if (requestRef.current !== controller) return;
       setDiscovery(null);
+      setDiscoveryRange(null);
       setActiveDiscoveryId("");
       setPlans(result);
       setUserLocation({
@@ -270,6 +272,7 @@ export function OutdoorIntentHub() {
     discoveryRequestRef.current?.abort();
     setPlans(null);
     setDiscovery(null);
+    setDiscoveryRange(null);
     setActiveId("");
     setActiveDiscoveryId("");
     setAroundOpen(false);
@@ -344,7 +347,11 @@ export function OutdoorIntentHub() {
     });
   }
 
-  async function runDiscovery(queryOverride?: string, driveOverride = driveHours) {
+  async function runDiscovery(
+    queryOverride?: string,
+    driveOverride = driveHours,
+    minDriveOverride = 0,
+  ) {
     let chosenOrigin = origin.trim();
     let coordinates = originCoordinates;
     const query = (queryOverride ?? wish).trim();
@@ -384,6 +391,7 @@ export function OutdoorIntentHub() {
           originCoordinates: coordinates,
           query,
           maxDriveHours: driveOverride,
+          ...(minDriveOverride > 0 ? { minDriveHours: minDriveOverride } : {}),
         }),
       });
       const payload = await response.json();
@@ -394,6 +402,11 @@ export function OutdoorIntentHub() {
       const result = payload as DiscoveryResponse;
       if (discoveryRequestRef.current !== controller) return;
       setDiscovery(result);
+      setDiscoveryRange(
+        minDriveOverride > 0
+          ? { minDriveHours: minDriveOverride, maxDriveHours: driveOverride }
+          : null,
+      );
       setPlans(null);
       setActiveId("");
       setActiveDiscoveryId("");
@@ -402,7 +415,11 @@ export function OutdoorIntentHub() {
         longitude: result.origin.longitude,
       });
       if (!result.places.length) {
-        setMessage("Nothing strong matched that search inside this travel range. Try loosening the description or going farther.");
+        setMessage(
+          minDriveOverride > 0
+            ? `Nothing strong matched between ${minDriveOverride} and ${driveOverride} hours. Try the next band or return to the full range.`
+            : "Nothing strong matched that search inside this travel range. Try loosening the description or going farther.",
+        );
       }
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -422,9 +439,18 @@ export function OutdoorIntentHub() {
   }
 
   const activateDiscovery = useCallback((placeId: string) => {
+    const place = discovery?.places.find((candidate) => candidate.id === placeId);
     setActiveId("");
     setActiveDiscoveryId(placeId);
-  }, []);
+    if (place) {
+      setFocusPoint({
+        key: `discovery-${place.id}-${Date.now()}`,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        zoom: 8.2,
+      });
+    }
+  }, [discovery?.places]);
 
 
   function requestTrailLayer(nextLayer: UniverseLayerId) {
@@ -494,14 +520,23 @@ export function OutdoorIntentHub() {
   }
 
   function changeRange(delta: number) {
+    const previousMax = driveHours;
     const next = Math.max(1, Math.min(8, driveHours + delta));
     if (next === driveHours) return;
     setDriveHours(next);
     if (discovery?.query) {
-      void runDiscovery(discovery.query, next);
+      setActiveDiscoveryId("");
+      void runDiscovery(discovery.query, next, delta > 0 ? previousMax : 0);
     } else if (origin.trim() || originCoordinates) {
       void run(pull, next);
     }
+  }
+
+  function restoreInclusiveDiscovery() {
+    if (!discovery?.query) return;
+    setActiveDiscoveryId("");
+    setDiscoveryRange(null);
+    void runDiscovery(discovery.query, driveHours, 0);
   }
 
   function nextIdea() {
@@ -736,22 +771,13 @@ export function OutdoorIntentHub() {
                     type="button"
                     onClick={() => {
                       setDiscovery(null);
+                      setDiscoveryRange(null);
                       setActiveDiscoveryId("");
                     }}
                   >
                     Clear
                   </button>
                 </div>
-                {discovery.places.length > 0 && (
-                  <div className="canvas-wish-results" aria-label="Top outdoor possibilities">
-                    {discovery.places.slice(0, 3).map((place) => (
-                      <button type="button" key={place.id} onClick={() => setActiveDiscoveryId(place.id)}>
-                        <strong>{place.name}</strong>
-                        <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </>
             )}
           </form>
@@ -788,25 +814,72 @@ export function OutdoorIntentHub() {
         </div>
       </header>
 
-      <section className="canvas-pulls" aria-label="Ways to explore">
-        <div className="canvas-pulls-label">
-          <span>What are you after?</span>
-          {mapStatus && <small>{mapStatus}</small>}
-        </div>
-        <div className="canvas-pulls-rail">
-          {pulls.map((option) => (
-            <button
-              type="button"
-              key={option.id}
-              aria-pressed={pull.id === option.id}
-              title={option.short}
-              onClick={() => choosePull(option)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </section>
+      {discovery && discovery.places.length > 0 ? (
+        <section className="canvas-result-dock" aria-label="Outdoor search results">
+          <div className="canvas-result-dock-head">
+            <div>
+              <span>{discoveryRange ? "Farther-out results" : "Your possibilities"}</span>
+              <strong>
+                {discoveryRange
+                  ? `${discoveryRange.minDriveHours}–${discoveryRange.maxDriveHours} hr from your start`
+                  : `Up to ${driveHours} hr from your start`}
+              </strong>
+            </div>
+            <div className="canvas-result-dock-actions">
+              {discoveryRange && (
+                <button type="button" onClick={restoreInclusiveDiscovery} disabled={discovering}>
+                  Show all within {driveHours} hr
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setDiscovery(null);
+                  setDiscoveryRange(null);
+                  setActiveDiscoveryId("");
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+          <div className="canvas-result-rail">
+            {discovery.places.slice(0, 8).map((place) => (
+              <button
+                type="button"
+                key={place.id}
+                className={place.id === activeDiscoveryId ? "is-active" : ""}
+                aria-pressed={place.id === activeDiscoveryId}
+                onClick={() => activateDiscovery(place.id)}
+              >
+                <strong>{place.name}</strong>
+                <span>{place.area}</span>
+                <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <section className="canvas-pulls" aria-label="Ways to explore">
+          <div className="canvas-pulls-label">
+            <span>What are you after?</span>
+            {mapStatus && <small>{mapStatus}</small>}
+          </div>
+          <div className="canvas-pulls-rail">
+            {pulls.map((option) => (
+              <button
+                type="button"
+                key={option.id}
+                aria-pressed={pull.id === option.id}
+                title={option.short}
+                onClick={() => choosePull(option)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {!activeId && !activeDiscoveryId && (
         <>
@@ -911,7 +984,7 @@ export function OutdoorIntentHub() {
 
 
       {(activeDiscovery || activeDestination || activePlan) && (
-        <aside className="canvas-sheet" aria-live="polite">
+        <aside className={`canvas-sheet ${activeDiscovery ? "canvas-sheet-discovery" : ""}`} aria-live="polite">
           <button type="button" className="canvas-sheet-close" onClick={() => { setActiveId(""); setActiveDiscoveryId(""); }} aria-label="Close place detail">×</button>
 
           {activeDiscovery ? (
@@ -941,35 +1014,7 @@ export function OutdoorIntentHub() {
               <div className="canvas-branch">
                 {driveHours < 8 && <button type="button" onClick={() => changeRange(1)}>Go farther</button>}
                 {driveHours > 1 && <button type="button" onClick={() => changeRange(-1)}>Stay closer</button>}
-                {(discovery?.places.length ?? 0) > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const candidates = discovery?.places ?? [];
-                      const currentIndex = Math.max(0, candidates.findIndex((place) => place.id === activeDiscovery.id));
-                      const next = candidates[(currentIndex + 1) % candidates.length];
-                      if (next) setActiveDiscoveryId(next.id);
-                    }}
-                  >
-                    Show another
-                  </button>
-                )}
               </div>
-
-              {(discovery?.places.length ?? 0) > 1 && (
-                <div className="canvas-other-picks">
-                  <span>Keep wandering</span>
-                  {discovery?.places
-                    .filter((place) => place.id !== activeDiscovery.id)
-                    .slice(0, 4)
-                    .map((place) => (
-                      <button type="button" key={place.id} onClick={() => setActiveDiscoveryId(place.id)}>
-                        <strong>{place.name}</strong>
-                        <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
-                      </button>
-                    ))}
-                </div>
-              )}
 
               <p className="canvas-discovery-source">{discovery?.sourceNote}</p>
             </>
