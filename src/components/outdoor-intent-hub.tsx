@@ -113,6 +113,7 @@ export function OutdoorIntentHub() {
   const [message, setMessage] = useState("");
   const [activeId, setActiveId] = useState("");
   const [viewport, setViewport] = useState<MapViewport>({ latitude: 44.7, longitude: -85.45, zoom: 5.25 });
+  const viewportRef = useRef<MapViewport>({ latitude: 44.7, longitude: -85.45, zoom: 5.25 });
   const [aroundOpen, setAroundOpen] = useState(false);
   const [focusPoint, setFocusPoint] = useState<MapFocusPoint | null>(null);
   const [trailLayer, setTrailLayer] = useState<UniverseLayerId>("hiking");
@@ -167,20 +168,24 @@ export function OutdoorIntentHub() {
 
     setSignalSnapshot(null);
     const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch(`/api/conditions/${encodeURIComponent(activeId)}?signals=1`, { signal: controller.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error("Place intelligence unavailable");
+          return response.json() as Promise<{ specialistSignals?: SpecialistSignal[] }>;
+        })
+        .then((payload) => {
+          const signals = Array.isArray(payload.specialistSignals) ? payload.specialistSignals : [];
+          signalCacheRef.current.set(activeId, signals);
+          setSignalSnapshot({ placeId: activeId, signals });
+        })
+        .catch(() => undefined);
+    }, 120);
 
-    fetch(`/api/conditions/${encodeURIComponent(activeId)}?signals=1`, { signal: controller.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("Place intelligence unavailable");
-        return response.json() as Promise<{ specialistSignals?: SpecialistSignal[] }>;
-      })
-      .then((payload) => {
-        const signals = Array.isArray(payload.specialistSignals) ? payload.specialistSignals : [];
-        signalCacheRef.current.set(activeId, signals);
-        setSignalSnapshot({ placeId: activeId, signals });
-      })
-      .catch(() => undefined);
-
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [activeId]);
 
   const run = useCallback(async (
@@ -256,9 +261,15 @@ export function OutdoorIntentHub() {
   }
 
   const handleViewportChange = useCallback((nextViewport: MapViewport) => {
-    setViewport(nextViewport);
+    viewportRef.current = nextViewport;
     if (nextViewport.zoom >= 6.35) setTrailRequested(true);
-  }, []);
+    if (aroundOpen) setViewport(nextViewport);
+  }, [aroundOpen]);
+
+  function toggleAround() {
+    if (!aroundOpen) setViewport(viewportRef.current);
+    setAroundOpen((open) => !open);
+  }
 
   function choosePull(nextPull: Pull) {
     setPull(nextPull);
@@ -339,8 +350,9 @@ export function OutdoorIntentHub() {
 
 
   const nearbyPlaces = useMemo(
-    () =>
-      destinations
+    () => {
+      if (!aroundOpen) return [];
+      return destinations
         .map((destination) => ({
           destination,
           distanceMiles: haversineMiles(
@@ -351,13 +363,15 @@ export function OutdoorIntentHub() {
           ),
         }))
         .sort((a, b) => a.distanceMiles - b.distanceMiles)
-        .slice(0, 5),
-    [viewport.latitude, viewport.longitude],
+        .slice(0, 5);
+    },
+    [aroundOpen, viewport.latitude, viewport.longitude],
   );
 
   const nearbyTrailSystems = useMemo(
-    () =>
-      universe.systems
+    () => {
+      if (!aroundOpen) return [];
+      return universe.systems
         .filter(
           (system) =>
             typeof system.latitude === "number" &&
@@ -375,13 +389,15 @@ export function OutdoorIntentHub() {
           ),
         }))
         .sort((a, b) => a.distanceMiles - b.distanceMiles)
-        .slice(0, 4),
-    [universe.systems, viewport.latitude, viewport.longitude],
+        .slice(0, 4);
+    },
+    [aroundOpen, universe.systems, viewport.latitude, viewport.longitude],
   );
 
   const nearbyLaunches = useMemo(
-    () =>
-      boatLaunches.geojson.features
+    () => {
+      if (!aroundOpen) return [];
+      return boatLaunches.geojson.features
         .map((feature) => ({
           feature,
           distanceMiles: haversineMiles(
@@ -392,8 +408,9 @@ export function OutdoorIntentHub() {
           ),
         }))
         .sort((a, b) => a.distanceMiles - b.distanceMiles)
-        .slice(0, 4),
-    [boatLaunches.geojson.features, viewport.latitude, viewport.longitude],
+        .slice(0, 4);
+    },
+    [aroundOpen, boatLaunches.geojson.features, viewport.latitude, viewport.longitude],
   );
 
   function focusNearbyPoint(key: string, latitude: number, longitude: number, zoom = 9) {
@@ -512,7 +529,7 @@ export function OutdoorIntentHub() {
             type="button"
             className="canvas-around-toggle"
             aria-expanded={aroundOpen}
-            onClick={() => setAroundOpen((open) => !open)}
+            onClick={toggleAround}
           >
             <strong>Around here</strong>
             <span>Drag the map. Tap anything. Or see what is nearest.</span>
