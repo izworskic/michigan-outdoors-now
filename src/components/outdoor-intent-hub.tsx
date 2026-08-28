@@ -116,13 +116,16 @@ export function OutdoorIntentHub() {
   const [aroundOpen, setAroundOpen] = useState(false);
   const [focusPoint, setFocusPoint] = useState<MapFocusPoint | null>(null);
   const [trailLayer, setTrailLayer] = useState<UniverseLayerId>("hiking");
+  const [trailRequested, setTrailRequested] = useState(false);
   const [universe, setUniverse] = useState<OutdoorUniverseResponse>(() => emptyUniverse("hiking"));
   const [boatLaunches, setBoatLaunches] = useState<BoatLaunchResponse>(() => emptyBoatLaunches());
   const [signalSnapshot, setSignalSnapshot] = useState<{ placeId: string; signals: SpecialistSignal[] } | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const signalCacheRef = useRef(new Map<string, SpecialistSignal[]>());
   const originInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
+    if (!trailRequested) return;
     const trailsController = new AbortController();
 
     fetch(`/api/outdoor-universe?layer=${trailLayer}`, { signal: trailsController.signal })
@@ -134,36 +137,46 @@ export function OutdoorIntentHub() {
       .catch(() => undefined);
 
     return () => trailsController.abort();
-  }, [trailLayer]);
+  }, [trailLayer, trailRequested]);
 
   useEffect(() => {
     const launchesController = new AbortController();
+    const timer = window.setTimeout(() => {
+      fetch("/api/boat-launches", { signal: launchesController.signal })
+        .then((response) => {
+          if (!response.ok) throw new Error("Boat launches unavailable");
+          return response.json() as Promise<BoatLaunchResponse>;
+        })
+        .then(setBoatLaunches)
+        .catch(() => undefined);
+    }, 700);
 
-    fetch("/api/boat-launches", { signal: launchesController.signal })
-      .then((response) => {
-        if (!response.ok) throw new Error("Boat launches unavailable");
-        return response.json() as Promise<BoatLaunchResponse>;
-      })
-      .then(setBoatLaunches)
-      .catch(() => undefined);
-
-    return () => launchesController.abort();
+    return () => {
+      window.clearTimeout(timer);
+      launchesController.abort();
+    };
   }, []);
 
   useEffect(() => {
     if (!activeId) return;
+    const cached = signalCacheRef.current.get(activeId);
+    if (cached) {
+      setSignalSnapshot({ placeId: activeId, signals: cached });
+      return;
+    }
+
+    setSignalSnapshot(null);
     const controller = new AbortController();
 
-    fetch(`/api/conditions/${encodeURIComponent(activeId)}`, { signal: controller.signal })
+    fetch(`/api/conditions/${encodeURIComponent(activeId)}?signals=1`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Place intelligence unavailable");
         return response.json() as Promise<{ specialistSignals?: SpecialistSignal[] }>;
       })
       .then((payload) => {
-        setSignalSnapshot({
-          placeId: activeId,
-          signals: Array.isArray(payload.specialistSignals) ? payload.specialistSignals : [],
-        });
+        const signals = Array.isArray(payload.specialistSignals) ? payload.specialistSignals : [];
+        signalCacheRef.current.set(activeId, signals);
+        setSignalSnapshot({ placeId: activeId, signals });
       })
       .catch(() => undefined);
 
@@ -236,11 +249,22 @@ export function OutdoorIntentHub() {
     void run();
   }
 
+  function requestTrailLayer(nextLayer: UniverseLayerId) {
+    setTrailLayer(nextLayer);
+    setTrailRequested(true);
+    if (universe.layer !== nextLayer) setUniverse(emptyUniverse(nextLayer));
+  }
+
+  const handleViewportChange = useCallback((nextViewport: MapViewport) => {
+    setViewport(nextViewport);
+    if (nextViewport.zoom >= 6.35) setTrailRequested(true);
+  }, []);
+
   function choosePull(nextPull: Pull) {
     setPull(nextPull);
     setDriveHours(nextPull.driveHours);
-    if (nextPull.id === "water" || nextPull.id === "river") setTrailLayer("water");
-    if (nextPull.id === "trail") setTrailLayer("hiking");
+    if (nextPull.id === "water" || nextPull.id === "river") requestTrailLayer("water");
+    if (nextPull.id === "trail") requestTrailLayer("hiking");
     if (origin.trim() || originCoordinates) void run(nextPull, nextPull.driveHours);
     else {
       setMessage("");
@@ -381,9 +405,10 @@ export function OutdoorIntentHub() {
   const mapStatus = useMemo(() => {
     const pieces = [];
     if (universe.status === "live") pieces.push(`${universe.systemCount.toLocaleString()} ${universe.label.toLowerCase()}`);
+    else if (!trailRequested) pieces.push("trails load as you zoom");
     if (boatLaunches.status === "live") pieces.push(`${boatLaunches.count.toLocaleString()} launches`);
     return pieces.join(" · ");
-  }, [boatLaunches.count, boatLaunches.status, universe.label, universe.status, universe.systemCount]);
+  }, [boatLaunches.count, boatLaunches.status, trailRequested, universe.label, universe.status, universe.systemCount]);
 
   return (
     <main className="michigan-canvas" aria-label="Explore Michigan outdoors">
@@ -402,7 +427,7 @@ export function OutdoorIntentHub() {
           boatLaunchGeoJson={boatLaunches.geojson}
           boatLaunchCount={boatLaunches.count}
           userLocation={userLocation}
-          onViewportChange={setViewport}
+          onViewportChange={handleViewportChange}
           focusPoint={focusPoint}
         />
       </div>
@@ -443,7 +468,7 @@ export function OutdoorIntentHub() {
                   type="button"
                   key={layer}
                   aria-pressed={trailLayer === layer}
-                  onClick={() => setTrailLayer(layer)}
+                  onClick={() => requestTrailLayer(layer)}
                 >
                   {universeLayerLabels[layer]}
                 </button>
