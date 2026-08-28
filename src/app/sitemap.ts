@@ -3,6 +3,7 @@ import { origins } from "../data/origins";
 import { guides } from "../data/guides";
 import { destinations } from "../data/destinations";
 import { searchLandings } from "../lib/search-landings";
+import { trailSearchPages } from "../lib/trail-search-pages";
 import { siteUrl } from "../lib/site";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -15,6 +16,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...origins.map((origin) => ({ url: `${siteUrl}/from/${origin.slug}` })),
     ...searchLandings.map((landing) => ({
       url: `${siteUrl}/from/${landing.origin.slug}/${landing.intent.slug}`,
+    })),
+    ...trailSearchPages.map((page) => ({
+      url: `${siteUrl}/hiking/${page.slug}`,
     })),
     ...destinations.map((destination) => ({ url: `${siteUrl}/places/${destination.id}` })),
   ];
