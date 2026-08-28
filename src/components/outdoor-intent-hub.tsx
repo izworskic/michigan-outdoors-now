@@ -1762,6 +1762,19 @@ export function OutdoorIntentHub() {
                 </div>
 
                 {placeIntelligence && (
+                  <div className={`canvas-go-signal is-${placeIntelligence.goSignal.status}`}>
+                    <span>Should I go?</span>
+                    <strong>{placeIntelligence.goSignal.headline}</strong>
+                    {placeIntelligence.goSignal.reasons.length > 0 && (
+                      <p>{placeIntelligence.goSignal.reasons.join(" ")}</p>
+                    )}
+                    {placeIntelligence.goSignal.cautions.length > 0 && (
+                      <small>{placeIntelligence.goSignal.cautions.join(" ")}</small>
+                    )}
+                  </div>
+                )}
+
+                {placeIntelligence && (
                   <div className="canvas-field-intelligence-grid">
                     <article>
                       <span>Drive</span>
@@ -1776,54 +1789,57 @@ export function OutdoorIntentHub() {
                     </article>
 
                     <article>
-                      <span>Trail nearby</span>
-                      {placeIntelligence.trailSystems[0] ? (
+                      <span>Trail Truth</span>
+                      {placeIntelligence.trailTruth ? (
+                        <>
+                          <strong>
+                            {placeIntelligence.trailTruth.routeName ?? "Mapped hiking relation"}
+                          </strong>
+                          <small>
+                            {[
+                              placeIntelligence.trailTruth.distanceMiles
+                                ? `${placeIntelligence.trailTruth.distanceMiles} mi ${placeIntelligence.trailTruth.distanceSource === "osm-tag" ? "tagged route" : "mapped relation"}`
+                                : null,
+                              placeIntelligence.trailTruth.routeKind !== "unknown"
+                                ? placeIntelligence.trailTruth.routeKind
+                                : null,
+                              `${placeIntelligence.trailTruth.confidence} confidence`,
+                            ].filter(Boolean).join(" · ")}
+                          </small>
+                        </>
+                      ) : placeIntelligence.trailSystems[0] ? (
                         <>
                           <strong>{placeIntelligence.trailSystems[0].name}</strong>
                           <small>
-                            {placeIntelligence.trailSystems[0].nearbyMappedMiles > 0
-                              ? `${placeIntelligence.trailSystems[0].nearbyMappedMiles} DNR mapped mi in the nearby window`
-                              : `${placeIntelligence.trailSystems[0].nearestMiles} mi from the selected place`}
-                          </small>
-                        </>
-                      ) : placeIntelligence.trailMetadata?.routeName ? (
-                        <>
-                          <strong>{placeIntelligence.trailMetadata.routeName}</strong>
-                          <small>
-                            {placeIntelligence.trailMetadata.taggedDistanceMiles
-                              ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi OSM-tagged route`
-                              : "Named OSM hiking route nearby; mapped distance is not tagged."}
+                            No selected OSM route resolved. DNR shows {placeIntelligence.trailSystems[0].nearbyMappedMiles} mapped mi in the nearby trail window.
                           </small>
                         </>
                       ) : (
                         <>
-                          <strong>No nearby official or named route returned</strong>
-                          <small>This does not mean there is no trail; the nearby source queries may be incomplete.</small>
+                          <strong>No route-specific trail truth returned</strong>
+                          <small>Nearby source coverage may be incomplete; verify the official map before choosing a route.</small>
                         </>
                       )}
                     </article>
 
                     <article>
-                      <span>Terrain</span>
+                      <span>Route profile</span>
                       <strong>
-                        {placeIntelligence.trailMetadata?.taggedDistanceMiles
-                          ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi tagged route`
+                        {placeIntelligence.trailTruth?.ascentFeet
+                          ? `${placeIntelligence.trailTruth.ascentFeet} ft ${placeIntelligence.trailTruth.ascentSource === "osm-tag" ? "tagged" : "sampled"} ascent`
                           : placeIntelligence.elevation
                             ? `~${placeIntelligence.elevation.rangeFeet} ft nearby elevation span`
-                            : "Route profile not verified"}
+                            : "Route ascent not verified"}
                       </strong>
                       <small>
                         {[
-                          placeIntelligence.trailMetadata?.taggedAscentFeet
-                            ? `${placeIntelligence.trailMetadata.taggedAscentFeet} ft tagged ascent`
+                          placeIntelligence.trailTruth?.difficultyLabel,
+                          displayTrailValue(placeIntelligence.trailTruth?.surface),
+                          displayTrailValue(placeIntelligence.trailTruth?.trailVisibility),
+                          placeIntelligence.trailTruth?.footAccess
+                            ? `foot access: ${displayTrailValue(placeIntelligence.trailTruth.footAccess)}`
                             : null,
-                          displayTrailValue(placeIntelligence.trailMetadata?.difficulty),
-                          displayTrailValue(placeIntelligence.trailMetadata?.surface),
-                          displayTrailValue(placeIntelligence.trailMetadata?.trailVisibility),
-                          placeIntelligence.trailMetadata?.footAccess
-                            ? `foot access: ${displayTrailValue(placeIntelligence.trailMetadata.footAccess)}`
-                            : null,
-                        ].filter(Boolean).join(" · ") || "Difficulty/surface tags not available here"}
+                        ].filter(Boolean).join(" · ") || "Difficulty/surface tags not available on the selected relation"}
                       </small>
                     </article>
 
@@ -1876,9 +1892,11 @@ export function OutdoorIntentHub() {
 
                     <span>Map metadata</span>
                     <strong>
-                      {activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
-                        ? "OpenStreetMap contributors"
-                        : "Used only when mapped metadata exists"}
+                      {placeIntelligence?.trailTruth
+                        ? `OpenStreetMap hiking relation ${placeIntelligence.trailTruth.relationId ?? ""} · ${placeIntelligence.trailTruth.confidence} confidence`
+                        : activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
+                          ? "OpenStreetMap contributors"
+                          : "Used only when mapped metadata exists"}
                     </strong>
 
                     <span>Freshness</span>
