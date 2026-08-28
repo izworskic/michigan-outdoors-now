@@ -2314,6 +2314,11 @@ body{background:#f8f5ef;color:#243139}
   font-size:8px;
   line-height:1.35;
 }
+.canvas-wish-status-actions{
+  flex:0 0 auto;
+  display:flex;
+  gap:10px;
+}
 .canvas-wish-status button{
   padding:2px 0;
   border:0;
@@ -2542,9 +2547,11 @@ body{background:#f8f5ef;color:#243139}
 }
 @media(max-width:700px){
   .canvas-result-dock{
+    position:fixed;
+    z-index:32;
     left:8px;
     right:8px;
-    bottom:8px;
+    bottom:max(8px,env(safe-area-inset-bottom));
     width:auto;
     transform:none;
     gap:6px;
@@ -2578,6 +2585,7 @@ body{background:#f8f5ef;color:#243139}
     font-size:15px;
   }
   .canvas-sheet-discovery{
+    position:fixed;
     bottom:148px;
     max-height:44svh;
   }
