@@ -26,7 +26,8 @@
     "score:organic-growth": "node --import tsx scripts/score-organic-search-growth.ts",
     "score:growth-system": "node --import tsx scripts/score-growth-operating-system.ts",
     "report:growth": "node --import tsx scripts/report-growth-opportunities.ts",
-    "fetch:gsc": "node scripts/fetch-search-console.mjs"
+    "fetch:gsc": "node scripts/fetch-search-console.mjs",
+    "fetch:vercel-events": "node scripts/fetch-vercel-product-events.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
