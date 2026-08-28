@@ -109,6 +109,11 @@ try {
   assert.ok(Array.isArray(longHikePayload.places));
   assert.ok(longHikePayload.places.length > 0, "Bay City long hike search returned no possibilities");
   assert.match(longHikePayload.intent.summary, /trailhead|natural area|viewpoint|waterfall|hiking/i);
+  assert.ok(longHikePayload.intent.traits.includes("long"), "long hike effort intent was lost");
+  const mappedLongHike = longHikePayload.places.find((place) => place.source === "OpenStreetMap");
+  if (mappedLongHike) {
+    assert.match(mappedLongHike.why, /exact route length and mileage are not verified/i);
+  }
 
   const fartherDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
