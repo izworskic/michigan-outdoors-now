@@ -25,7 +25,8 @@
     "score:skeptic-conversion": "node --import tsx scripts/score-skeptic-conversion.ts",
     "score:organic-growth": "node --import tsx scripts/score-organic-search-growth.ts",
     "score:growth-system": "node --import tsx scripts/score-growth-operating-system.ts",
-    "report:growth": "node --import tsx scripts/report-growth-opportunities.ts"
+    "report:growth": "node --import tsx scripts/report-growth-opportunities.ts",
+    "fetch:gsc": "node scripts/fetch-search-console.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
