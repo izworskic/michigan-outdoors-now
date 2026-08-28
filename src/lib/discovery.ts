@@ -181,7 +181,7 @@ const TRAIT_RULES: Array<[DiscoveryTrait, string[]]> = [
   ["wild", ["wild", "remote", "backcountry", "rugged", "undeveloped"]],
   ["water", ["water", "river", "lake", "shore", "waterfall", "beach", "paddle", "trout"]],
   ["short", ["short", "quick", "easy hike", "short hike", "half day", "half-day"]],
-  ["long", ["long", "long hike", "full day", "full-day", "all day", "all-day", "big hike", "big day", "high mileage", "lots of miles", "backcountry"]],
+  ["long", ["long hike", "long walk", "long trail", "full day", "full-day", "all day", "all-day", "big hike", "big day", "high mileage", "lots of miles", "backcountry"]],
   ["family", ["family", "kids", "kid friendly", "children"]],
   ["dog", ["dog", "dogs", "pet"]],
   ["accessible", ["accessible", "wheelchair", "mobility", "step free", "step-free"]],
@@ -349,7 +349,6 @@ function destinationEffortFit(destination: Destination, intent: DiscoveryIntent)
 
   if (intent.traits.includes("long")) {
     const longSignals = [
-      "long",
       "full day",
       "backcountry",
       "rugged",
