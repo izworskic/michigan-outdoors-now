@@ -330,11 +330,6 @@ export function OutdoorIntentHub() {
     void runDiscovery();
   }
 
-  const activateDestination = useCallback((destinationId: string) => {
-    setActiveDiscoveryId("");
-    setActiveId(destinationId);
-  }, []);
-
   const activateDiscovery = useCallback((placeId: string) => {
     setActiveId("");
     setActiveDiscoveryId(placeId);
@@ -417,7 +412,7 @@ export function OutdoorIntentHub() {
   }
 
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
-  const activeDiscovery = discovery?.places.find((place) => place.id === activeDiscoveryId) ?? null;
+  const activeDiscovery = activeId ? null : discovery?.places.find((place) => place.id === activeDiscoveryId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
   const leadPlan = plans?.plans[0] ?? null;
   const visibleSignals = signalSnapshot?.placeId === activeId ? signalSnapshot.signals : [];
@@ -525,7 +520,7 @@ export function OutdoorIntentHub() {
         <MichiganDestinationMap
           activeId={activeId}
           destinations={destinations}
-          onActivate={activateDestination}
+          onActivate={setActiveId}
           discoveryPlaces={discovery?.places ?? []}
           activeDiscoveryId={activeDiscoveryId}
           onDiscoveryActivate={activateDiscovery}
