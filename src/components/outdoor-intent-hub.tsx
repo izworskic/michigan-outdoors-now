@@ -113,6 +113,101 @@ function placeWeatherLine(intelligence: PlaceIntelligence | null) {
   return parts.join(" · ");
 }
 
+type DecisionArgument = {
+  headline: string;
+  evidence: string;
+  tradeoff: string;
+  alternative: DiscoveryPlace | null;
+};
+
+function firstUsefulSentence(text: string) {
+  const trimmed = text.trim();
+  const boundary = trimmed.search(/[.!?](?:\s|$)/);
+  return boundary >= 0 ? trimmed.slice(0, boundary + 1) : trimmed;
+}
+
+function buildDecisionArgument(
+  place: DiscoveryPlace,
+  places: DiscoveryPlace[],
+): DecisionArgument {
+  const alternative =
+    places
+      .filter((candidate) => candidate.id !== place.id)
+      .sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.driveHours - b.driveHours ||
+          a.name.localeCompare(b.name),
+      )[0] ?? null;
+
+  if (!alternative) {
+    return {
+      headline: `Pick ${place.name} if this is the kind of day you described.`,
+      evidence: firstUsefulSentence(place.why),
+      tradeoff: place.curatedPlaceId
+        ? "It has deeper planning coverage in Michigan Outdoors Now."
+        : "It is still a mapped lead, so verify route specifics before committing.",
+      alternative: null,
+    };
+  }
+
+  const driveDeltaMinutes = Math.round((place.driveHours - alternative.driveHours) * 60);
+  const matchAdvantage = place.score >= alternative.score + 4;
+  const depthAdvantage = Boolean(place.curatedPlaceId && !alternative.curatedPlaceId);
+
+  let tradeoff: string;
+  if (driveDeltaMinutes >= 10) {
+    tradeoff = `${place.name} costs about ${driveDeltaMinutes} more drive minutes than ${alternative.name}. Choose ${alternative.name} if minimizing windshield time matters more.`;
+  } else if (driveDeltaMinutes <= -10) {
+    tradeoff = `${place.name} saves about ${Math.abs(driveDeltaMinutes)} drive minutes versus ${alternative.name}; ${alternative.name} is the alternative if its specific setting matters more.`;
+  } else {
+    tradeoff = `Drive time is essentially a wash with ${alternative.name}; choose between them on the experience and confidence data.`;
+  }
+
+  return {
+    headline:
+      matchAdvantage || depthAdvantage
+        ? `Pick ${place.name} if you want the stronger current case.`
+        : `Pick ${place.name} if its specific character matters more than the alternative.`,
+    evidence: [
+      firstUsefulSentence(place.why),
+      matchAdvantage ? "It matches the request more strongly in the current result set." : "",
+      depthAdvantage ? "It also has deeper planning coverage than the alternative." : "",
+    ].filter(Boolean).join(" "),
+    tradeoff,
+    alternative,
+  };
+}
+
+function arrivalTimeLabel(place: DiscoveryPlace) {
+  const minutes = place.driveMinutes ?? Math.max(1, Math.round(place.driveHours * 60));
+  return new Date(Date.now() + minutes * 60_000).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function checkedAgeLabel(generatedAt: string | undefined) {
+  if (!generatedAt) return "not refreshed yet";
+  const ageMinutes = Math.max(0, Math.round((Date.now() - Date.parse(generatedAt)) / 60_000));
+  if (!Number.isFinite(ageMinutes) || ageMinutes <= 1) return "checked just now";
+  if (ageMinutes < 60) return `checked ${ageMinutes} min ago`;
+  return `checked ${Math.round(ageMinutes / 60)} hr ago`;
+}
+
+function confidenceUnknowns(place: DiscoveryPlace, intelligence: PlaceIntelligence | null) {
+  const unknowns: string[] = [];
+  const nearbyMappedMiles = intelligence?.trailSystems[0]?.nearbyMappedMiles ?? 0;
+  if (place.travelSource !== "routed") unknowns.push("road-routed drive time");
+  if (!intelligence?.weather) unknowns.push("fresh point weather");
+  if (!intelligence?.trailMetadata?.taggedDistanceMiles && nearbyMappedMiles <= 0) {
+    unknowns.push("exact hike mileage");
+  }
+  if (!intelligence?.trailMetadata?.difficulty) unknowns.push("verified trail difficulty");
+  if (!intelligence?.trailMetadata?.taggedAscentFeet) unknowns.push("route ascent");
+  return unknowns;
+}
+
 function weatherLine(plan: Plan) {
   if (!plan.weather) return "Live weather is limited for this place.";
   const parts: string[] = [];
@@ -144,6 +239,8 @@ export function OutdoorIntentHub() {
   const [activeDiscoveryId, setActiveDiscoveryId] = useState("");
   const [comparisonPlaces, setComparisonPlaces] = useState<DiscoveryPlace[]>([]);
   const [compareOpen, setCompareOpen] = useState(false);
+  const [dismissedDiscoveryIds, setDismissedDiscoveryIds] = useState<string[]>([]);
+  const [departureOpen, setDepartureOpen] = useState(false);
   const [placeIntelligence, setPlaceIntelligence] = useState<PlaceIntelligence | null>(null);
   const [placeIntelligenceLoading, setPlaceIntelligenceLoading] = useState(false);
   const [planning, setPlanning] = useState(false);
@@ -334,6 +431,7 @@ export function OutdoorIntentHub() {
     setActiveDiscoveryId("");
     setComparisonPlaces([]);
     setCompareOpen(false);
+    setDepartureOpen(false);
     setAroundOpen(false);
   }
 
@@ -410,6 +508,7 @@ export function OutdoorIntentHub() {
     queryOverride?: string,
     driveOverride = driveHours,
     minDriveOverride = 0,
+    surpriseMode = false,
   ) {
     let chosenOrigin = origin.trim();
     let coordinates = originCoordinates;
@@ -439,6 +538,7 @@ export function OutdoorIntentHub() {
     discoveryRequestRef.current = controller;
     setDiscovering(true);
     setCompareOpen(false);
+    setDepartureOpen(false);
     setMessage("");
 
     try {
@@ -452,6 +552,7 @@ export function OutdoorIntentHub() {
           query,
           maxDriveHours: driveOverride,
           ...(minDriveOverride > 0 ? { minDriveHours: minDriveOverride } : {}),
+          ...(surpriseMode ? { surpriseMode: true, excludePlaceIds: dismissedDiscoveryIds } : {}),
         }),
       });
       const payload = await response.json();
@@ -496,6 +597,36 @@ export function OutdoorIntentHub() {
   function submitDiscovery(event: FormEvent) {
     event.preventDefault();
     void runDiscovery();
+  }
+
+  function surpriseMe() {
+    void runDiscovery(
+      "wild quiet overlooked outdoor place worth discovering",
+      driveHours,
+      0,
+      true,
+    );
+  }
+
+  function dismissDiscoveryPlace(place: DiscoveryPlace) {
+    setDismissedDiscoveryIds((current) =>
+      current.includes(place.id) ? current : [...current, place.id].slice(-50),
+    );
+    setComparisonPlaces((current) => current.filter((candidate) => candidate.id !== place.id));
+    if (activeDiscoveryId === place.id) {
+      placeIntelligenceRequestRef.current?.abort();
+      setPlaceIntelligence(null);
+      setPlaceIntelligenceLoading(false);
+      setActiveDiscoveryId("");
+    }
+    setDiscovery((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        places: current.places.filter((candidate) => candidate.id !== place.id),
+      };
+    });
+    setMessage("Got it. I’ll keep that one out of this session’s surprise picks.");
   }
 
   const loadPlaceIntelligence = useCallback((place: DiscoveryPlace) => {
@@ -586,8 +717,16 @@ export function OutdoorIntentHub() {
 
   function openComparison() {
     if (!comparisonPlaces.length) return;
+    setDepartureOpen(false);
     setActiveDiscoveryId("");
     setCompareOpen(true);
+  }
+
+  function openDeparture() {
+    if (!activeDiscoveryId) return;
+    setCompareOpen(false);
+    setAroundOpen(false);
+    setDepartureOpen(true);
   }
 
   function requestTrailLayer(nextLayer: UniverseLayerId) {
@@ -687,6 +826,12 @@ export function OutdoorIntentHub() {
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
   const activeDiscovery = activeId ? null : discovery?.places.find((place) => place.id === activeDiscoveryId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
+  const decisionArgument = activeDiscovery
+    ? buildDecisionArgument(activeDiscovery, discovery?.places ?? [])
+    : null;
+  const activeUnknowns = activeDiscovery
+    ? confidenceUnknowns(activeDiscovery, placeIntelligence)
+    : [];
   const leadPlan = plans?.plans[0] ?? null;
   const visibleSignals = signalSnapshot?.placeId === activeId ? signalSnapshot.signals : [];
 
@@ -789,7 +934,7 @@ export function OutdoorIntentHub() {
 
   return (
     <main
-      className={`michigan-canvas ${discovery?.places.length ? "has-discovery-results" : ""} ${activeDiscovery ? "has-active-discovery" : ""}`}
+      className={`michigan-canvas ${discovery?.places.length ? "has-discovery-results" : ""} ${activeDiscovery ? "has-active-discovery" : ""} ${departureOpen && activeDiscovery ? "has-departure" : ""}`}
       aria-label="Explore Michigan outdoors"
     >
       <div className="michigan-canvas-map">
@@ -902,6 +1047,14 @@ export function OutdoorIntentHub() {
                   {example}
                 </button>
               ))}
+              <button
+                type="button"
+                className="canvas-surprise-trigger"
+                onClick={surpriseMe}
+                disabled={discovering || originStatus === "resolving"}
+              >
+                Surprise me · something I probably don’t know
+              </button>
             </div>
             {discovery && (
               <>
@@ -978,11 +1131,19 @@ export function OutdoorIntentHub() {
         >
           <div className="canvas-result-dock-head">
             <div>
-              <span>{discoveryRange ? "Farther-out results" : `${discovery.places.length} matches`}</span>
+              <span>
+                {discovery.mode === "surprise"
+                  ? "Less-obvious Michigan"
+                  : discoveryRange
+                    ? "Farther-out results"
+                    : `${discovery.places.length} matches`}
+              </span>
               <strong>
-                {discoveryRange
-                  ? `${discoveryRange.minDriveHours}–${discoveryRange.maxDriveHours} hr · ${discovery.query}`
-                  : `Up to ${driveHours} hr · ${discovery.query}`}
+                {discovery.mode === "surprise"
+                  ? `Within ${driveHours} hr · picked for fit + novelty, not fame`
+                  : discoveryRange
+                    ? `${discoveryRange.minDriveHours}–${discoveryRange.maxDriveHours} hr · ${discovery.query}`
+                    : `Up to ${driveHours} hr · ${discovery.query}`}
               </strong>
             </div>
             <div className="canvas-result-dock-actions">
@@ -1042,14 +1203,25 @@ export function OutdoorIntentHub() {
                     <span className={place.curatedPlaceId ? "is-deep" : "is-lead"}>
                       {place.curatedPlaceId ? "Full guide" : "Mapped lead"}
                     </span>
-                    <button
-                      type="button"
-                      className="canvas-result-keep"
-                      aria-pressed={kept}
-                      onClick={() => toggleComparison(place)}
-                    >
-                      {kept ? "Kept" : "Keep to compare"}
-                    </button>
+                    <div className="canvas-result-card-footer-actions">
+                      {discovery.mode === "surprise" && (
+                        <button
+                          type="button"
+                          className="canvas-result-dismiss"
+                          onClick={() => dismissDiscoveryPlace(place)}
+                        >
+                          Not for me
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="canvas-result-keep"
+                        aria-pressed={kept}
+                        onClick={() => toggleComparison(place)}
+                      >
+                        {kept ? "Kept" : "Keep to compare"}
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
@@ -1180,6 +1352,102 @@ export function OutdoorIntentHub() {
       )}
 
 
+      {departureOpen && activeDiscovery && (
+        <aside className="canvas-departure" aria-label="Ready to leave" aria-live="polite">
+          <div className="canvas-departure-head">
+            <div>
+              <span>Decision made</span>
+              <strong>Get out the door.</strong>
+            </div>
+            <button type="button" onClick={() => setDepartureOpen(false)} aria-label="Back to place detail">×</button>
+          </div>
+
+          <div className="canvas-departure-place">
+            <p>{activeDiscovery.area}</p>
+            <h1>{activeDiscovery.name}</h1>
+            <strong>
+              {discoveryDriveLabel(activeDiscovery)}
+              {" · "}
+              arrive around {arrivalTimeLabel(activeDiscovery)} if you leave now
+            </strong>
+          </div>
+
+          {placeIntelligence?.access.closureCount ? (
+            <div className="canvas-departure-warning">
+              <span>Check before leaving</span>
+              <strong>
+                {placeIntelligence.access.closureCount} nearby DNR closure item
+                {placeIntelligence.access.closureCount === 1 ? "" : "s"}
+              </strong>
+              <small>{placeIntelligence.access.notes[0]}</small>
+            </div>
+          ) : null}
+
+          <div className="canvas-departure-grid">
+            <article>
+              <span>Weather</span>
+              <strong>{placeWeatherLine(placeIntelligence) ?? "Fresh weather still checking"}</strong>
+            </article>
+            <article>
+              <span>Trail</span>
+              <strong>
+                {placeIntelligence?.trailSystems[0]?.name ??
+                  placeIntelligence?.trailMetadata?.routeName ??
+                  "Exact route still needs choosing"}
+              </strong>
+              <small>
+                {placeIntelligence?.trailMetadata?.taggedDistanceMiles
+                  ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi tagged route`
+                  : placeIntelligence?.trailSystems[0]?.nearbyMappedMiles
+                    ? `${placeIntelligence.trailSystems[0].nearbyMappedMiles} DNR mapped mi nearby`
+                    : "Mileage not verified"}
+              </small>
+            </article>
+            <article>
+              <span>Terrain</span>
+              <strong>
+                {placeIntelligence?.trailMetadata?.taggedAscentFeet
+                  ? `${placeIntelligence.trailMetadata.taggedAscentFeet} ft tagged ascent`
+                  : placeIntelligence?.elevation
+                    ? `~${placeIntelligence.elevation.rangeFeet} ft nearby elevation span`
+                    : "Profile not verified"}
+              </strong>
+            </article>
+            <article>
+              <span>Access</span>
+              <strong>
+                {placeIntelligence?.access.rerouteCount
+                  ? `${placeIntelligence.access.rerouteCount} nearby DNR reroute${placeIntelligence.access.rerouteCount === 1 ? "" : "s"}`
+                  : "No nearby DNR reroute returned"}
+              </strong>
+            </article>
+          </div>
+
+          <div className="canvas-departure-actions">
+            <a href={activeDiscovery.directionsUrl} target="_blank" rel="noopener">
+              Start directions
+            </a>
+            {activeDiscovery.curatedPlaceId ? (
+              <Link href={`/places/${activeDiscovery.curatedPlaceId}`}>Open full guide</Link>
+            ) : activeDiscovery.website ? (
+              <a href={activeDiscovery.website} target="_blank" rel="noopener">Place website</a>
+            ) : (
+              <a href={activeDiscovery.sourceUrl} target="_blank" rel="noopener">Map source</a>
+            )}
+            <button type="button" onClick={() => setDepartureOpen(false)}>Back to decision</button>
+          </div>
+
+          <details className="canvas-departure-proof">
+            <summary>Source truth</summary>
+            <p>
+              {activeDiscovery.travelSource === "routed" ? "Road travel is routed through OSRM. " : "Drive time is still a planning estimate. "}
+              Weather uses Open-Meteo. Trail/access checks use Michigan DNR and mapped trail metadata uses OpenStreetMap when present.
+              {activeUnknowns.length ? ` Still unknown: ${activeUnknowns.join(", ")}.` : ""}
+            </p>
+          </details>
+        </aside>
+      )}
+
       {compareOpen && comparisonPlaces.length > 0 && (
         <aside className="canvas-compare" aria-label="Compare outdoor possibilities" aria-live="polite">
           <div className="canvas-compare-head">
@@ -1234,6 +1502,7 @@ export function OutdoorIntentHub() {
               placeIntelligenceRequestRef.current?.abort();
               setPlaceIntelligence(null);
               setPlaceIntelligenceLoading(false);
+              setDepartureOpen(false);
               setActiveId("");
               setActiveDiscoveryId("");
             }}
@@ -1262,6 +1531,25 @@ export function OutdoorIntentHub() {
                 {activeDiscovery.area} · {activeDiscovery.travelSource === "routed" ? "" : "about "}{activeDiscovery.distanceMiles} {activeDiscovery.travelSource === "routed" ? "road" : "rough"} miles
               </p>
               <p className="canvas-sheet-summary">{activeDiscovery.why}</p>
+
+              {decisionArgument && (
+                <details className="canvas-decision-argument">
+                  <summary>Why this one over the others?</summary>
+                  <div>
+                    <strong>{decisionArgument.headline}</strong>
+                    <p>{decisionArgument.evidence}</p>
+                    <small>{decisionArgument.tradeoff}</small>
+                    {decisionArgument.alternative && (
+                      <button
+                        type="button"
+                        onClick={() => activateDiscovery(decisionArgument.alternative!.id)}
+                      >
+                        Show {decisionArgument.alternative.name} instead
+                      </button>
+                    )}
+                  </div>
+                </details>
+              )}
 
               <div className="canvas-now">
                 <span>{activeDiscovery.categoryLabel}</span>
@@ -1359,9 +1647,47 @@ export function OutdoorIntentHub() {
                 {placeIntelligence && (
                   <p className="canvas-field-confidence-note">{placeIntelligence.confidenceNote}</p>
                 )}
+
+                <details className="canvas-proof-ledger">
+                  <summary>Why should I trust this?</summary>
+                  <div className="canvas-proof-ledger-grid">
+                    <span>Drive</span>
+                    <strong>
+                      {activeDiscovery.travelSource === "routed"
+                        ? "OSRM road route"
+                        : "Michigan Outdoors Now planning estimate"}
+                    </strong>
+
+                    <span>Weather</span>
+                    <strong>{placeIntelligence?.weather ? "Open-Meteo point forecast + AQI" : "Not returned yet"}</strong>
+
+                    <span>Trails / access</span>
+                    <strong>
+                      {placeIntelligence
+                        ? "Michigan DNR nearby trail, closure and reroute layers"
+                        : "Checking official Michigan DNR layers"}
+                    </strong>
+
+                    <span>Map metadata</span>
+                    <strong>
+                      {activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
+                        ? "OpenStreetMap contributors"
+                        : "Used only when mapped metadata exists"}
+                    </strong>
+
+                    <span>Freshness</span>
+                    <strong>{checkedAgeLabel(placeIntelligence?.generatedAt ?? discovery?.generatedAt)}</strong>
+
+                    <span>Still unknown</span>
+                    <strong>{activeUnknowns.length ? activeUnknowns.join(" · ") : "No major field left unknown in the current data set"}</strong>
+                  </div>
+                </details>
               </section>
 
               <div className="canvas-sheet-actions">
+                <button type="button" className="canvas-commit-action" onClick={openDeparture}>
+                  Get me out of here
+                </button>
                 <button
                   type="button"
                   aria-pressed={comparisonPlaces.some((place) => place.id === activeDiscovery.id)}

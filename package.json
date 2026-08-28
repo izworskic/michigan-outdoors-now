@@ -13,7 +13,7 @@
     "score:usefulness": "node scripts/score-usefulness.mjs",
     "score:search": "node --import tsx scripts/score-search-readiness.ts",
     "score:impact": "node --import tsx scripts/score-impact-readiness.ts",
-    "check": "npm run lint && npm run test && npm run check:specialists && npm run score:core-flow && npm run score:result-flow && npm run score:persona-taste && npm run score:decision-depth && npm run score:field-confidence && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact && npm run score:platform && npm run score:interface",
+    "check": "npm run lint && npm run test && npm run check:specialists && npm run score:core-flow && npm run score:result-flow && npm run score:persona-taste && npm run score:decision-depth && npm run score:field-confidence && npm run score:skeptic-conversion && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact && npm run score:platform && npm run score:interface",
     "score:platform": "node --import tsx scripts/score-platform-quality.ts",
     "score:interface": "node --import tsx scripts/score-interface-loss.ts",
     "check:specialists": "node --import tsx scripts/check-specialist-links.ts",
@@ -21,7 +21,8 @@
     "score:result-flow": "node --import tsx scripts/score-result-flow-refinement.ts",
     "score:persona-taste": "node --import tsx scripts/score-persona-taste.ts",
     "score:decision-depth": "node --import tsx scripts/score-decision-depth.ts",
-    "score:field-confidence": "node --import tsx scripts/score-field-confidence.ts"
+    "score:field-confidence": "node --import tsx scripts/score-field-confidence.ts",
+    "score:skeptic-conversion": "node --import tsx scripts/score-skeptic-conversion.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

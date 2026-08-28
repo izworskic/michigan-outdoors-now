@@ -32,6 +32,8 @@ type DiscoverRequest = {
   query: string;
   maxDriveHours: number;
   minDriveHours?: number;
+  surpriseMode?: boolean;
+  excludePlaceIds?: string[];
 };
 
 type OverpassElement = {
@@ -79,6 +81,13 @@ function isDiscoverRequest(value: unknown): value is DiscoverRequest {
         Number.isFinite(request.minDriveHours) &&
         request.minDriveHours >= 0 &&
         request.minDriveHours < (request.maxDriveHours as number))) &&
+    (request.surpriseMode === undefined || typeof request.surpriseMode === "boolean") &&
+    (request.excludePlaceIds === undefined ||
+      (Array.isArray(request.excludePlaceIds) &&
+        request.excludePlaceIds.length <= 50 &&
+        request.excludePlaceIds.every(
+          (id) => typeof id === "string" && id.length > 0 && id.length <= 140,
+        ))) &&
     validCoordinates
   );
 }
@@ -247,6 +256,44 @@ function osmPlaces(
   return places;
 }
 
+const HOUSEHOLD_MICHIGAN_DESTINATION_PATTERNS = [
+  "sleeping bear",
+  "pictured rocks",
+  "tahquamenon",
+  "mackinac",
+  "porcupine mountains",
+  "kitch-iti-kipi",
+  "torch lake",
+];
+
+function surpriseRank(place: DiscoveryPlace) {
+  const normalized = place.name.toLowerCase();
+  const householdPenalty = HOUSEHOLD_MICHIGAN_DESTINATION_PATTERNS.some((pattern) =>
+    normalized.includes(pattern),
+  )
+    ? 26
+    : 0;
+  const curatedCredibility = place.curatedPlaceId ? 10 : 3;
+  const discoveryBonus = ["wildlife", "cave", "viewpoint", "waterfall", "paddling"].includes(
+    place.category,
+  )
+    ? 5
+    : 0;
+  const enoughDriveToFeelDifferent = place.driveHours >= 0.6 ? 3 : 0;
+
+  return place.score + curatedCredibility + discoveryBonus + enoughDriveToFeelDifferent - householdPenalty;
+}
+
+function surprisePlaces(places: DiscoveryPlace[]) {
+  return [...places].sort(
+    (a, b) =>
+      surpriseRank(b) - surpriseRank(a) ||
+      b.score - a.score ||
+      a.driveHours - b.driveHours ||
+      a.name.localeCompare(b.name),
+  );
+}
+
 function mergePlaces(live: DiscoveryPlace[], curated: DiscoveryPlace[]) {
   const all = [...live, ...curated].sort(
     (a, b) =>
@@ -332,25 +379,28 @@ export async function POST(request: Request) {
       })
     : [];
 
-  const mergedPlaces = mergePlaces(live, curated);
+  const excludedIds = new Set(body.excludePlaceIds ?? []);
+  const mergedPlaces = mergePlaces(live, curated).filter((place) => !excludedIds.has(place.id));
   const routedTravel = await fetchRoutedTravel({
     originLatitude: origin.latitude,
     originLongitude: origin.longitude,
     places: mergedPlaces,
     maxPlaces: 20,
   });
-  const places = applyRoutedTravel(mergedPlaces, routedTravel)
+  const routedPlaces = applyRoutedTravel(mergedPlaces, routedTravel)
     .filter(
       (place) =>
         place.driveHours <= body.maxDriveHours + 0.08 &&
         place.driveHours + 0.05 >= minDriveHours,
-    )
-    .sort(
-      (a, b) =>
-        b.score - a.score ||
-        a.driveHours - b.driveHours ||
-        a.name.localeCompare(b.name),
     );
+  const places = body.surpriseMode
+    ? surprisePlaces(routedPlaces)
+    : routedPlaces.sort(
+        (a, b) =>
+          b.score - a.score ||
+          a.driveHours - b.driveHours ||
+          a.name.localeCompare(b.name),
+      );
 
   const response: DiscoveryResponse = {
     origin,
@@ -359,6 +409,7 @@ export async function POST(request: Request) {
     places,
     generatedAt: new Date().toISOString(),
     status: elements ? "live" : "fallback",
+    mode: body.surpriseMode ? "surprise" : "search",
     sourceNote: elements
       ? `Fast mapped-place enrichment from OpenStreetMap contributors is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
       : `Results are from the curated Michigan Outdoors Now destination set. Live mapped-place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
@@ -375,6 +426,8 @@ export async function POST(request: Request) {
       curatedPlaceCount: curated.length,
       returnedPlaceCount: places.length,
       routedPlaceCount: routedTravel.size,
+      surpriseMode: Boolean(body.surpriseMode),
+      excludedPlaceCount: excludedIds.size,
       status: response.status,
     }),
   );
