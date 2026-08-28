@@ -1,0 +1,620 @@
+import {
+  DNR_TRAIL_CLOSURES_SERVICE,
+  DNR_TRAIL_REROUTES_SERVICE,
+  DNR_TRAIL_SERVICE,
+  type UniverseGeoJson,
+  type UniverseGeoJsonFeature,
+} from "./outdoor-universe";
+import { haversineMiles } from "./planner";
+
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+];
+
+export type PointWeatherIntelligence = {
+  temperature: number | null;
+  high: number | null;
+  low: number | null;
+  precipitationProbability: number | null;
+  windGust: number | null;
+  aqi: number | null;
+  weatherCode: number | null;
+};
+
+export type TrailSystemIntelligence = {
+  name: string;
+  nearbyMappedMiles: number;
+  nearestMiles: number;
+  status: string | null;
+  restriction: string | null;
+  designation: string | null;
+};
+
+export type TrailMetadataIntelligence = {
+  routeName: string | null;
+  taggedDistanceMiles: number | null;
+  taggedAscentFeet: number | null;
+  difficulty: string | null;
+  trailVisibility: string | null;
+  surface: string | null;
+  footAccess: string | null;
+  source: "OpenStreetMap" | null;
+};
+
+export type ElevationIntelligence = {
+  lowFeet: number;
+  highFeet: number;
+  rangeFeet: number;
+  sampleCount: number;
+};
+
+export type AccessIntelligence = {
+  closureCount: number;
+  rerouteCount: number;
+  notes: string[];
+  source: "Michigan DNR Trails Open Data";
+};
+
+export type PlaceIntelligence = {
+  generatedAt: string;
+  weather: PointWeatherIntelligence | null;
+  trailSystems: TrailSystemIntelligence[];
+  trailMetadata: TrailMetadataIntelligence | null;
+  elevation: ElevationIntelligence | null;
+  access: AccessIntelligence;
+  confidenceNote: string;
+};
+
+type OSMElement = {
+  type: "node" | "way" | "relation";
+  id: number;
+  center?: { lat?: number; lon?: number };
+  lat?: number;
+  lon?: number;
+  tags?: Record<string, string>;
+};
+
+type GeoJsonPayload = Partial<UniverseGeoJson> & {
+  error?: unknown;
+};
+
+type ForecastPayload = {
+  current?: {
+    temperature_2m?: number | null;
+    wind_gusts_10m?: number | null;
+    weather_code?: number | null;
+  };
+  daily?: {
+    temperature_2m_max?: Array<number | null>;
+    temperature_2m_min?: Array<number | null>;
+    precipitation_probability_max?: Array<number | null>;
+  };
+};
+
+type AirPayload = {
+  hourly?: {
+    time?: string[];
+    us_aqi?: Array<number | null>;
+  };
+};
+
+function numberOrNull(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function todayInDetroit() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Detroit",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+async function fetchPointWeather(
+  latitude: number,
+  longitude: number,
+): Promise<PointWeatherIntelligence | null> {
+  const forecastParams = new URLSearchParams({
+    latitude: latitude.toFixed(5),
+    longitude: longitude.toFixed(5),
+    timezone: "America/Detroit",
+    temperature_unit: "fahrenheit",
+    wind_speed_unit: "mph",
+    current: "temperature_2m,wind_gusts_10m,weather_code",
+    daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+    forecast_days: "2",
+  });
+  const airParams = new URLSearchParams({
+    latitude: latitude.toFixed(5),
+    longitude: longitude.toFixed(5),
+    timezone: "America/Detroit",
+    hourly: "us_aqi",
+    forecast_days: "2",
+  });
+
+  const [forecastResult, airResult] = await Promise.allSettled([
+    fetch(`https://api.open-meteo.com/v1/forecast?${forecastParams}`, {
+      signal: AbortSignal.timeout(2_400),
+      next: { revalidate: 900 },
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("Weather unavailable");
+      return (await response.json()) as ForecastPayload;
+    }),
+    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${airParams}`, {
+      signal: AbortSignal.timeout(2_400),
+      next: { revalidate: 1800 },
+    }).then(async (response) => {
+      if (!response.ok) throw new Error("Air quality unavailable");
+      return (await response.json()) as AirPayload;
+    }),
+  ]);
+
+  if (forecastResult.status !== "fulfilled") return null;
+  const forecast = forecastResult.value;
+  const targetDate = todayInDetroit();
+  let aqi: number | null = null;
+
+  if (airResult.status === "fulfilled") {
+    const times = airResult.value.hourly?.time ?? [];
+    const values = airResult.value.hourly?.us_aqi ?? [];
+    const matching = values.filter(
+      (value, index): value is number =>
+        times[index]?.startsWith(targetDate) === true &&
+        typeof value === "number" &&
+        Number.isFinite(value),
+    );
+    if (matching.length) aqi = Math.max(...matching);
+  }
+
+  return {
+    temperature: numberOrNull(forecast.current?.temperature_2m),
+    high: numberOrNull(forecast.daily?.temperature_2m_max?.[0]),
+    low: numberOrNull(forecast.daily?.temperature_2m_min?.[0]),
+    precipitationProbability: numberOrNull(forecast.daily?.precipitation_probability_max?.[0]),
+    windGust: numberOrNull(forecast.current?.wind_gusts_10m),
+    aqi,
+    weatherCode: numberOrNull(forecast.current?.weather_code),
+  };
+}
+
+function spatialEnvelope(latitude: number, longitude: number, miles = 5) {
+  const latSpan = miles / 69;
+  const lonSpan = miles / Math.max(20, 69 * Math.cos((latitude * Math.PI) / 180));
+  return [
+    longitude - lonSpan,
+    latitude - latSpan,
+    longitude + lonSpan,
+    latitude + latSpan,
+  ];
+}
+
+function buildDnrSpatialQuery(
+  service: string,
+  latitude: number,
+  longitude: number,
+  where: string,
+  outFields: string,
+) {
+  const bounds = spatialEnvelope(latitude, longitude, 5);
+  const params = new URLSearchParams({
+    where,
+    geometry: bounds.map((value) => value.toFixed(5)).join(","),
+    geometryType: "esriGeometryEnvelope",
+    inSR: "4326",
+    spatialRel: "esriSpatialRelIntersects",
+    outFields,
+    returnGeometry: "true",
+    outSR: "4326",
+    geometryPrecision: "5",
+    resultRecordCount: "250",
+    f: "geojson",
+  });
+  return `${service}?${params}`;
+}
+
+async function fetchGeoJson(url: string): Promise<UniverseGeoJson> {
+  const response = await fetch(url, {
+    headers: { Accept: "application/geo+json, application/json" },
+    signal: AbortSignal.timeout(2_000),
+    next: { revalidate: 900 },
+  });
+  if (!response.ok) throw new Error("DNR spatial query unavailable");
+  const payload = (await response.json()) as GeoJsonPayload;
+  if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+    throw new Error("DNR spatial query returned invalid data");
+  }
+  return payload as UniverseGeoJson;
+}
+
+function flattenCoordinates(coordinates: unknown, result: Array<[number, number]> = []) {
+  if (!Array.isArray(coordinates)) return result;
+  if (
+    coordinates.length >= 2 &&
+    typeof coordinates[0] === "number" &&
+    typeof coordinates[1] === "number" &&
+    Number.isFinite(coordinates[0]) &&
+    Number.isFinite(coordinates[1])
+  ) {
+    result.push([coordinates[0], coordinates[1]]);
+    return result;
+  }
+  for (const value of coordinates) flattenCoordinates(value, result);
+  return result;
+}
+
+function nearestFeatureMiles(
+  feature: UniverseGeoJsonFeature,
+  latitude: number,
+  longitude: number,
+) {
+  const points = flattenCoordinates(feature.geometry?.coordinates);
+  if (!points.length) return Number.POSITIVE_INFINITY;
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const [lon, lat] of points) {
+    nearest = Math.min(nearest, haversineMiles(latitude, longitude, lat, lon));
+  }
+  return nearest;
+}
+
+function trailFeatureName(feature: UniverseGeoJsonFeature) {
+  const raw = feature.properties?.Name || feature.properties?.TrailNamePrimary;
+  return typeof raw === "string" && raw.trim() ? raw.trim() : "Unnamed DNR hiking trail";
+}
+
+function summarizeTrailSystems(
+  features: UniverseGeoJsonFeature[],
+  latitude: number,
+  longitude: number,
+): TrailSystemIntelligence[] {
+  const groups = new Map<string, TrailSystemIntelligence>();
+
+  for (const feature of features) {
+    const nearestMiles = nearestFeatureMiles(feature, latitude, longitude);
+    if (!Number.isFinite(nearestMiles) || nearestMiles > 5.5) continue;
+
+    const name = trailFeatureName(feature);
+    const miles = numberOrNull(feature.properties?.SegmentLengthMiles) ?? 0;
+    const existing = groups.get(name);
+    const status =
+      typeof feature.properties?.OpenClosedStatusNonmotor === "string"
+        ? feature.properties.OpenClosedStatusNonmotor
+        : null;
+    const restriction =
+      typeof feature.properties?.SpecialRestrictionType === "string"
+        ? feature.properties.SpecialRestrictionType
+        : null;
+    const designation =
+      typeof feature.properties?.SpecialDesignation === "string"
+        ? feature.properties.SpecialDesignation
+        : null;
+
+    if (existing) {
+      existing.nearbyMappedMiles += miles;
+      existing.nearestMiles = Math.min(existing.nearestMiles, nearestMiles);
+      existing.status ||= status;
+      existing.restriction ||= restriction;
+      existing.designation ||= designation;
+    } else {
+      groups.set(name, {
+        name,
+        nearbyMappedMiles: miles,
+        nearestMiles,
+        status,
+        restriction,
+        designation,
+      });
+    }
+  }
+
+  return [...groups.values()]
+    .map((system) => ({
+      ...system,
+      nearbyMappedMiles: Number(system.nearbyMappedMiles.toFixed(1)),
+      nearestMiles: Number(system.nearestMiles.toFixed(1)),
+    }))
+    .sort((a, b) => a.nearestMiles - b.nearestMiles || b.nearbyMappedMiles - a.nearbyMappedMiles)
+    .slice(0, 4);
+}
+
+function accessNote(feature: UniverseGeoJsonFeature, kind: "closure" | "reroute") {
+  const name = trailFeatureName(feature);
+  const detail =
+    typeof feature.properties?.PublicComments === "string"
+      ? feature.properties.PublicComments.trim()
+      : "";
+  return detail ? `${kind === "closure" ? "Closure" : "Reroute"} · ${name}: ${detail}` : `${kind === "closure" ? "Closure" : "Reroute"} · ${name}`;
+}
+
+function summarizeAccess(
+  closures: UniverseGeoJson,
+  reroutes: UniverseGeoJson,
+  latitude: number,
+  longitude: number,
+): AccessIntelligence {
+  const nearbyClosures = closures.features.filter(
+    (feature) => nearestFeatureMiles(feature, latitude, longitude) <= 5.5,
+  );
+  const nearbyReroutes = reroutes.features.filter(
+    (feature) => nearestFeatureMiles(feature, latitude, longitude) <= 5.5,
+  );
+
+  return {
+    closureCount: nearbyClosures.length,
+    rerouteCount: nearbyReroutes.length,
+    notes: [
+      ...nearbyClosures.slice(0, 3).map((feature) => accessNote(feature, "closure")),
+      ...nearbyReroutes.slice(0, 3).map((feature) => accessNote(feature, "reroute")),
+    ],
+    source: "Michigan DNR Trails Open Data",
+  };
+}
+
+function buildOverpassTrailQuery(latitude: number, longitude: number) {
+  const lat = latitude.toFixed(5);
+  const lon = longitude.toFixed(5);
+  return (
+    "[out:json][timeout:12];(" +
+    `relation(around:3000,${lat},${lon})["route"~"^(hiking|foot)$"];` +
+    `way(around:1800,${lat},${lon})["highway"~"^(path|footway|track)$"];` +
+    ");out tags center 80;"
+  );
+}
+
+async function fetchOsmTrailElements(latitude: number, longitude: number): Promise<OSMElement[]> {
+  const query = buildOverpassTrailQuery(latitude, longitude);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1_500);
+
+  const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Accept: "application/json",
+        "User-Agent": "MichiganOutdoorsNow/1.0 (https://michiganoutdoorsnow.chrisizworski.com/)",
+      },
+      body: new URLSearchParams({ data: query }).toString(),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error("Overpass trail metadata unavailable");
+    const payload = (await response.json()) as { elements?: OSMElement[] };
+    if (!Array.isArray(payload.elements)) throw new Error("No OSM trail elements");
+    return payload.elements;
+  });
+
+  try {
+    const result = await Promise.any(attempts);
+    controller.abort();
+    return result;
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
+  }
+}
+
+function numericValue(raw: string | undefined) {
+  if (!raw) return null;
+  const text = raw.trim().toLowerCase().replace(",", ".");
+  const match = text.match(/([0-9]+(?:\.[0-9]+)?)/);
+  if (!match) return null;
+  const value = Number(match[1]);
+  return Number.isFinite(value) ? { value, text } : null;
+}
+
+export function parseDistanceMiles(
+  raw: string | undefined,
+  defaultUnit: "km" | "m" | "mi",
+) {
+  const parsed = numericValue(raw);
+  if (!parsed) return null;
+  const { value, text } = parsed;
+
+  if (/\bmi\b|mile/.test(text)) return Number(value.toFixed(1));
+  if (/\bkm\b|kilomet/.test(text)) return Number((value * 0.621371).toFixed(1));
+  if (/\bm\b|meter/.test(text)) return Number((value / 1609.344).toFixed(1));
+
+  if (defaultUnit === "km") return Number((value * 0.621371).toFixed(1));
+  if (defaultUnit === "m") return Number((value / 1609.344).toFixed(1));
+  return Number(value.toFixed(1));
+}
+
+export function parseElevationFeet(raw: string | undefined) {
+  const parsed = numericValue(raw);
+  if (!parsed) return null;
+  const { value, text } = parsed;
+  if (/\bft\b|feet|foot/.test(text)) return Math.round(value);
+  return Math.round(value * 3.28084);
+}
+
+function difficultyRank(value: string | undefined) {
+  const order = [
+    "strolling",
+    "hiking",
+    "mountain_hiking",
+    "demanding_mountain_hiking",
+    "alpine_hiking",
+    "demanding_alpine_hiking",
+    "difficult_alpine_hiking",
+  ];
+  return value ? order.indexOf(value) : -1;
+}
+
+function summarizeOsmTrailMetadata(
+  elements: OSMElement[],
+  latitude: number,
+  longitude: number,
+): TrailMetadataIntelligence | null {
+  if (!elements.length) return null;
+
+  const scored = elements
+    .map((element) => {
+      const lat = element.lat ?? element.center?.lat;
+      const lon = element.lon ?? element.center?.lon;
+      const distance =
+        typeof lat === "number" && typeof lon === "number"
+          ? haversineMiles(latitude, longitude, lat, lon)
+          : Number.POSITIVE_INFINITY;
+      return { element, distance };
+    })
+    .sort((a, b) => a.distance - b.distance);
+
+  const route = scored.find(({ element }) => element.type === "relation");
+  const ways = scored.filter(({ element }) => element.type === "way").slice(0, 20);
+  const hardest = ways
+    .map(({ element }) => element.tags?.sac_scale)
+    .filter((value): value is string => Boolean(value))
+    .sort((a, b) => difficultyRank(b) - difficultyRank(a))[0] ?? null;
+  const visibility =
+    ways.map(({ element }) => element.tags?.trail_visibility).find(Boolean) ?? null;
+  const surface = ways.map(({ element }) => element.tags?.surface).find(Boolean) ?? null;
+  const footAccess =
+    ways.map(({ element }) => element.tags?.foot || element.tags?.access).find(Boolean) ?? null;
+
+  const routeTags = route?.element.tags ?? {};
+  const taggedDistance =
+    parseDistanceMiles(routeTags.distance, "km") ??
+    parseDistanceMiles(routeTags.length, "m") ??
+    parseDistanceMiles(routeTags["distance:mi"], "mi");
+  const taggedAscentFeet = parseElevationFeet(routeTags.ascent);
+
+  if (!route && !hardest && !visibility && !surface && !footAccess) return null;
+
+  return {
+    routeName: routeTags.name || routeTags.ref || null,
+    taggedDistanceMiles: taggedDistance,
+    taggedAscentFeet,
+    difficulty: hardest,
+    trailVisibility: visibility,
+    surface,
+    footAccess,
+    source: "OpenStreetMap",
+  };
+}
+
+function sampleFeaturePoints(
+  features: UniverseGeoJsonFeature[],
+  latitude: number,
+  longitude: number,
+) {
+  const selected = features
+    .map((feature) => ({
+      feature,
+      distance: nearestFeatureMiles(feature, latitude, longitude),
+    }))
+    .filter((item) => Number.isFinite(item.distance))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 3)
+    .flatMap(({ feature }) => flattenCoordinates(feature.geometry?.coordinates));
+
+  if (selected.length <= 80) return selected;
+  const step = (selected.length - 1) / 79;
+  return Array.from({ length: 80 }, (_, index) => selected[Math.round(index * step)]);
+}
+
+async function fetchElevationRange(
+  features: UniverseGeoJsonFeature[],
+  latitude: number,
+  longitude: number,
+): Promise<ElevationIntelligence | null> {
+  const points = sampleFeaturePoints(features, latitude, longitude);
+  if (points.length < 2) return null;
+
+  const params = new URLSearchParams({
+    latitude: points.map((point) => point[1].toFixed(5)).join(","),
+    longitude: points.map((point) => point[0].toFixed(5)).join(","),
+  });
+
+  try {
+    const response = await fetch(`https://api.open-meteo.com/v1/elevation?${params}`, {
+      signal: AbortSignal.timeout(1_800),
+      next: { revalidate: 86_400 },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { elevation?: Array<number | null> };
+    const meters = (payload.elevation ?? []).filter(
+      (value): value is number => typeof value === "number" && Number.isFinite(value),
+    );
+    if (meters.length < 2) return null;
+
+    const lowFeet = Math.round(Math.min(...meters) * 3.28084);
+    const highFeet = Math.round(Math.max(...meters) * 3.28084);
+    return {
+      lowFeet,
+      highFeet,
+      rangeFeet: Math.max(0, highFeet - lowFeet),
+      sampleCount: meters.length,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchPlaceIntelligence(args: {
+  latitude: number;
+  longitude: number;
+}): Promise<PlaceIntelligence> {
+  const trailUrl = buildDnrSpatialQuery(
+    DNR_TRAIL_SERVICE,
+    args.latitude,
+    args.longitude,
+    "TrailType='Hiking'",
+    "OBJECTID,TrailType,Name,TrailNamePrimary,PRDTrailUnit,SegmentLengthMiles,SpecialRestrictionType,SpecialDesignation,OpenClosedStatusNonmotor",
+  );
+  const closureUrl = buildDnrSpatialQuery(
+    DNR_TRAIL_CLOSURES_SERVICE,
+    args.latitude,
+    args.longitude,
+    "1=1",
+    "OBJECTID,TrailNamePrimary,PublicComments,PRDTrailUnit,SegmentLengthMiles",
+  );
+  const rerouteUrl = buildDnrSpatialQuery(
+    DNR_TRAIL_REROUTES_SERVICE,
+    args.latitude,
+    args.longitude,
+    "1=1",
+    "OBJECTID,TrailNamePrimary,PublicComments,PRDTrailUnit,SegmentLengthMiles",
+  );
+
+  const [weatherResult, trailResult, closureResult, rerouteResult, osmResult] =
+    await Promise.allSettled([
+      fetchPointWeather(args.latitude, args.longitude),
+      fetchGeoJson(trailUrl),
+      fetchGeoJson(closureUrl),
+      fetchGeoJson(rerouteUrl),
+      fetchOsmTrailElements(args.latitude, args.longitude),
+    ]);
+
+  const trails =
+    trailResult.status === "fulfilled"
+      ? trailResult.value
+      : ({ type: "FeatureCollection", features: [] } as UniverseGeoJson);
+  const closures =
+    closureResult.status === "fulfilled"
+      ? closureResult.value
+      : ({ type: "FeatureCollection", features: [] } as UniverseGeoJson);
+  const reroutes =
+    rerouteResult.status === "fulfilled"
+      ? rerouteResult.value
+      : ({ type: "FeatureCollection", features: [] } as UniverseGeoJson);
+  const osmElements = osmResult.status === "fulfilled" ? osmResult.value : [];
+
+  const elevation = await fetchElevationRange(trails.features, args.latitude, args.longitude);
+
+  return {
+    generatedAt: new Date().toISOString(),
+    weather: weatherResult.status === "fulfilled" ? weatherResult.value : null,
+    trailSystems: summarizeTrailSystems(trails.features, args.latitude, args.longitude),
+    trailMetadata: summarizeOsmTrailMetadata(osmElements, args.latitude, args.longitude),
+    elevation,
+    access: summarizeAccess(closures, reroutes, args.latitude, args.longitude),
+    confidenceNote:
+      "Weather and air quality come from Open-Meteo. Nearby official trail and access-change data come from Michigan DNR. OSM difficulty, surface, route-distance and visibility fields appear only when nearby mapped trail data includes those tags. Elevation is a sampled nearby-trail terrain range, not total route gain.",
+  };
+}

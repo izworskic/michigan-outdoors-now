@@ -22,7 +22,8 @@ test("opening and closing detail preserves the result dock", async () => {
   assert.match(hub, /activateDiscovery\(place\.id\)/);
   assert.match(hub, /setFocusPoint\(\{[\s\S]*?latitude: place\.latitude,[\s\S]*?longitude: place\.longitude/);
   assert.match(hub, /canvas-sheet-discovery/);
-  assert.match(hub, /aria-label="Close place detail">×<\/button>/);
+  assert.match(hub, /aria-label="Close place detail"/);
+  assert.match(hub, /placeIntelligenceRequestRef\.current\?\.abort\(\)/);
 });
 
 test("Go farther requests only the newly unlocked distance band", async () => {
@@ -76,7 +77,7 @@ test("result-first taste exposes every returned destination and keeps comparison
   assert.match(hub, /discovery\.places\.map\(\(place, index\) =>/);
   assert.doesNotMatch(hub, /discovery\.places\.slice\(/);
   assert.match(hub, /canvas-result-rank/);
-  assert.match(hub, /~\{driveTimeLabel\(place\.driveHours\)\} drive/);
+  assert.match(hub, /discoveryDriveLabel\(place\)/);
   assert.match(hub, /\{place\.categoryLabel\}/);
   assert.match(hub, /<p>\{place\.why\}<\/p>/);
 });
@@ -105,12 +106,13 @@ test("users can keep up to three semantic places and compare without losing map 
   assert.match(hub, /setCompareOpen\(false\);\s*activateDiscovery\(place\.id\)/);
 });
 
-test("semantic cards label rough drive estimates and planning depth", async () => {
+test("semantic cards distinguish routed travel from estimates and planning depth", async () => {
   const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
 
-  assert.match(hub, /~\{driveTimeLabel\(place\.driveHours\)\} drive/);
+  assert.match(hub, /place\.travelSource === "routed"/);
+  assert.match(hub, /discoveryDriveLabel\(place\)/);
   assert.match(hub, /place\.curatedPlaceId \? "Full guide" : "Mapped lead"/);
-  assert.match(hub, /Drive times are rough planning estimates/);
+  assert.match(hub, /Drive times are routed where the routing service answered inside the fast budget/);
 });
 
 
@@ -124,4 +126,19 @@ test("Go farther preserves the kept comparison set", async () => {
   assert.match(rangeBody, /runDiscovery\(discovery\.query, next, delta > 0 \? previousMax : 0\)/);
   assert.doesNotMatch(rangeBody, /setComparisonPlaces/);
   assert.doesNotMatch(rangeBody, /setCompareOpen\(false\)/);
+});
+
+
+test("selected semantic places load current trip confidence intelligence", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
+
+  assert.match(hub, /fetch\("\/api\/place-intelligence"/);
+  assert.match(hub, /className="canvas-field-intelligence"/);
+  assert.match(hub, /What we know before you leave\./);
+  assert.match(hub, /Open-Meteo weather \+ air quality/);
+  assert.match(hub, /DNR mapped mi in the nearby window/);
+  assert.match(hub, /nearby elevation span/);
+  assert.match(hub, /DNR closure item/);
+  assert.match(css, /\.canvas-field-intelligence\{/);
 });

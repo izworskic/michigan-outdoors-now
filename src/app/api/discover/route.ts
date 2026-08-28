@@ -13,6 +13,7 @@ import {
   type DiscoveryResponse,
 } from "../../../lib/discovery";
 import { resolveMichiganOrigin } from "../../../lib/live-data";
+import { applyRoutedTravel, fetchRoutedTravel } from "../../../lib/route-intelligence";
 import { isPlausibleMichiganCoordinate } from "../../../lib/planner";
 
 export const runtime = "nodejs";
@@ -331,7 +332,26 @@ export async function POST(request: Request) {
       })
     : [];
 
-  const places = mergePlaces(live, curated);
+  const mergedPlaces = mergePlaces(live, curated);
+  const routedTravel = await fetchRoutedTravel({
+    originLatitude: origin.latitude,
+    originLongitude: origin.longitude,
+    places: mergedPlaces,
+    maxPlaces: 20,
+  });
+  const places = applyRoutedTravel(mergedPlaces, routedTravel)
+    .filter(
+      (place) =>
+        place.driveHours <= body.maxDriveHours + 0.08 &&
+        place.driveHours + 0.05 >= minDriveHours,
+    )
+    .sort(
+      (a, b) =>
+        b.score - a.score ||
+        a.driveHours - b.driveHours ||
+        a.name.localeCompare(b.name),
+    );
+
   const response: DiscoveryResponse = {
     origin,
     query: body.query.trim(),
@@ -340,8 +360,8 @@ export async function POST(request: Request) {
     generatedAt: new Date().toISOString(),
     status: elements ? "live" : "fallback",
     sourceNote: elements
-      ? "Fast mapped-place enrichment from OpenStreetMap contributors is blended with Michigan Outdoors Now curated destinations. Drive times are rough planning estimates, not route-engine ETAs."
-      : "Results are from the curated Michigan Outdoors Now destination set. Live mapped-place enrichment did not answer inside the fast-search budget, so it was skipped rather than delaying your results.",
+      ? `Fast mapped-place enrichment from OpenStreetMap contributors is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
+      : `Results are from the curated Michigan Outdoors Now destination set. Live mapped-place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
   };
 
   console.info(
@@ -354,6 +374,7 @@ export async function POST(request: Request) {
       livePlaceCount: live.length,
       curatedPlaceCount: curated.length,
       returnedPlaceCount: places.length,
+      routedPlaceCount: routedTravel.size,
       status: response.status,
     }),
   );

@@ -65,9 +65,10 @@ async function main() {
       hub.includes('place.curatedPlaceId ? "Full guide" : "Mapped lead"') &&
       hub.includes("route length, access, and current conditions still need verification"),
     roughDriveHonesty:
-      hub.includes("~{driveTimeLabel(place.driveHours)} drive") &&
-      hub.includes("Drive times are rough planning estimates") &&
-      route.includes("Drive times are rough planning estimates, not route-engine ETAs"),
+      hub.includes("discoveryDriveLabel(place)") &&
+      hub.includes('place.travelSource === "routed"') &&
+      hub.includes("Drive times are routed where the routing service answered inside the fast budget") &&
+      route.includes("Top results include best-effort routed driving times from OSRM"),
     mapComparisonContinuity:
       hub.includes("setCompareOpen(false);") &&
       hub.includes("activateDiscovery(place.id)") &&
@@ -75,7 +76,7 @@ async function main() {
     regressionCoverage:
       discoveryTests.includes("long hike language is preserved as effort intent") &&
       resultTests.includes("keep up to three semantic places") &&
-      resultTests.includes("rough drive estimates and planning depth"),
+      resultTests.includes("routed travel from estimates and planning depth"),
   };
 
   const scored = benchmark.criteria.map((criterion) => ({

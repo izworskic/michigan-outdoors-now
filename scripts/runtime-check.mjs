@@ -89,6 +89,16 @@ try {
   assert.ok(discoveryPayload.places.length > 0);
   assert.match(discoveryPayload.origin.name, /Bay City.*area/);
   assert.match(discoveryPayload.intent.summary, /beach|water/i);
+  assert.ok(
+    discoveryPayload.places.every((place) => ["routed", "estimated"].includes(place.travelSource)),
+    "discovery travel provenance is missing",
+  );
+  const routedPlace = discoveryPayload.places.find((place) => place.travelSource === "routed");
+  if (routedPlace) {
+    assert.ok(Number.isFinite(routedPlace.driveMinutes));
+    assert.ok(routedPlace.driveMinutes > 0);
+    assert.match(discoveryPayload.sourceNote, /routed driving times|routed/i);
+  }
 
   const longHikeDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
@@ -114,6 +124,29 @@ try {
   if (mappedLongHike) {
     assert.match(mappedLongHike.why, /exact route length and mileage are not verified/i);
   }
+
+  const confidenceTarget = longHikePayload.places[0];
+  const confidenceStarted = performance.now();
+  const placeIntelligence = await fetch(`${origin}/api/place-intelligence`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      latitude: confidenceTarget.latitude,
+      longitude: confidenceTarget.longitude,
+    }),
+    signal: AbortSignal.timeout(7_000),
+  });
+  const confidenceElapsed = performance.now() - confidenceStarted;
+  assert.equal(placeIntelligence.status, 200);
+  assert.ok(confidenceElapsed <= 6_000, `place intelligence exceeded 6 second budget: ${Math.round(confidenceElapsed)}ms`);
+  assert.match(placeIntelligence.headers.get("cache-control") ?? "", /no-store/);
+  const placeIntelligencePayload = await placeIntelligence.json();
+  assert.ok(Array.isArray(placeIntelligencePayload.trailSystems));
+  assert.ok(placeIntelligencePayload.access);
+  assert.equal(placeIntelligencePayload.access.source, "Michigan DNR Trails Open Data");
+  assert.ok(Number.isInteger(placeIntelligencePayload.access.closureCount));
+  assert.ok(Number.isInteger(placeIntelligencePayload.access.rerouteCount));
+  assert.match(placeIntelligencePayload.confidenceNote, /Open-Meteo|Michigan DNR/);
 
   const fartherDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",

@@ -52,6 +52,9 @@ jobs:
       - name: Score decision depth
         run: npm run score:decision-depth
 
+      - name: Score field confidence
+        run: npm run score:field-confidence
+
       - name: Build production output
         run: npm run build
 
