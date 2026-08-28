@@ -477,10 +477,11 @@ function buildOverpassTrailQuery(latitude: number, longitude: number) {
   const lat = latitude.toFixed(5);
   const lon = longitude.toFixed(5);
   return (
-    "[out:json][timeout:12];(" +
-    `relation(around:3000,${lat},${lon})["route"~"^(hiking|foot)$"];` +
-    `way(around:1800,${lat},${lon})["highway"~"^(path|footway|track)$"];` +
-    ");out tags center 80;"
+    "[out:json][timeout:12];" +
+    `relation(around:3500,${lat},${lon})["route"~"^(hiking|foot)$"]->.routes;` +
+    ".routes out body center 20;" +
+    "way(r.routes);out tags geom 160;" +
+    `way(around:1800,${lat},${lon})["highway"~"^(path|footway|track)$"];out tags center 60;`
   );
 }
 
@@ -566,6 +567,126 @@ function difficultyRank(value: string | undefined) {
   return value ? order.indexOf(value) : -1;
 }
 
+function osmElementDistance(
+  element: OSMElement,
+  latitude: number,
+  longitude: number,
+) {
+  const lat = element.lat ?? element.center?.lat ?? element.geometry?.[0]?.lat;
+  const lon = element.lon ?? element.center?.lon ?? element.geometry?.[0]?.lon;
+  return typeof lat === "number" && typeof lon === "number"
+    ? haversineMiles(latitude, longitude, lat, lon)
+    : Number.POSITIVE_INFINITY;
+}
+
+function selectOsmRoute(
+  elements: OSMElement[],
+  latitude: number,
+  longitude: number,
+) {
+  return (
+    elements
+      .filter((element) => element.type === "relation")
+      .map((element) => ({
+        element,
+        distance: osmElementDistance(element, latitude, longitude),
+        named: Boolean(element.tags?.name || element.tags?.ref),
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.named) - Number(a.named) ||
+          a.distance - b.distance ||
+          a.element.id - b.element.id,
+      )[0]?.element ?? null
+  );
+}
+
+function routeMemberWays(route: OSMElement | null, elements: OSMElement[]) {
+  if (!route?.members?.length) return [];
+  const wayById = new Map(
+    elements
+      .filter((element) => element.type === "way")
+      .map((element) => [element.id, element] as const),
+  );
+  return route.members
+    .filter((member) => member.type === "way")
+    .map((member) => ({ member, way: wayById.get(member.ref) }))
+    .filter(
+      (item): item is {
+        member: { type: "node" | "way" | "relation"; ref: number; role?: string };
+        way: OSMElement;
+      } => Boolean(item.way?.geometry?.length),
+    );
+}
+
+function geometryDistanceMiles(geometry: Array<{ lat: number; lon: number }>) {
+  let miles = 0;
+  for (let index = 1; index < geometry.length; index += 1) {
+    miles += haversineMiles(
+      geometry[index - 1].lat,
+      geometry[index - 1].lon,
+      geometry[index].lat,
+      geometry[index].lon,
+    );
+  }
+  return miles;
+}
+
+function orderedRoutePoints(route: OSMElement | null, elements: OSMElement[]) {
+  const parts = routeMemberWays(route, elements);
+  const points: Array<{ lat: number; lon: number }> = [];
+  let previous: { lat: number; lon: number } | null = null;
+
+  for (const { member, way } of parts) {
+    let geometry = [...(way.geometry ?? [])];
+    if (!geometry.length) continue;
+
+    if (member.role === "backward" || member.role === "-1") {
+      geometry.reverse();
+    } else if (previous && geometry.length > 1) {
+      const first = geometry[0];
+      const last = geometry[geometry.length - 1];
+      const firstGap = haversineMiles(previous.lat, previous.lon, first.lat, first.lon);
+      const lastGap = haversineMiles(previous.lat, previous.lon, last.lat, last.lon);
+      if (lastGap < firstGap) geometry.reverse();
+    }
+
+    if (points.length && geometry.length) {
+      const first = geometry[0];
+      const lastPoint = points[points.length - 1];
+      if (haversineMiles(lastPoint.lat, lastPoint.lon, first.lat, first.lon) < 0.01) {
+        geometry = geometry.slice(1);
+      }
+    }
+
+    points.push(...geometry);
+    previous = points[points.length - 1] ?? previous;
+  }
+
+  return points;
+}
+
+function routeKind(tags: Record<string, string>) {
+  const roundtrip = tags.roundtrip?.toLowerCase();
+  if (roundtrip === "yes" || roundtrip === "true" || roundtrip === "1") return "loop" as const;
+  if (roundtrip === "no" || tags.from || tags.to) return "point-to-point" as const;
+  return "unknown" as const;
+}
+
+function difficultyLabel(value: string | null) {
+  if (!value) return null;
+  const labels: Record<string, string> = {
+    strolling: "strolling",
+    hiking: "hiking",
+    mountain_hiking: "mountain hiking",
+    demanding_mountain_hiking: "demanding mountain hiking",
+    alpine_hiking: "alpine hiking",
+    demanding_alpine_hiking: "demanding alpine hiking",
+    difficult_alpine_hiking: "difficult alpine hiking",
+  };
+  return labels[value] ?? value.replaceAll("_", " ");
+}
+
 function summarizeOsmTrailMetadata(
   elements: OSMElement[],
   latitude: number,
@@ -573,31 +694,30 @@ function summarizeOsmTrailMetadata(
 ): TrailMetadataIntelligence | null {
   if (!elements.length) return null;
 
-  const scored = elements
-    .map((element) => {
-      const lat = element.lat ?? element.center?.lat;
-      const lon = element.lon ?? element.center?.lon;
-      const distance =
-        typeof lat === "number" && typeof lon === "number"
-          ? haversineMiles(latitude, longitude, lat, lon)
-          : Number.POSITIVE_INFINITY;
-      return { element, distance };
-    })
-    .sort((a, b) => a.distance - b.distance);
+  const route = selectOsmRoute(elements, latitude, longitude);
+  const routeWays = routeMemberWays(route, elements).map(({ way }) => way);
+  const nearbyWays = elements
+    .filter((element) => element.type === "way")
+    .sort(
+      (a, b) =>
+        osmElementDistance(a, latitude, longitude) -
+        osmElementDistance(b, latitude, longitude),
+    )
+    .slice(0, 24);
+  const ways = routeWays.length ? routeWays : nearbyWays;
 
-  const route = scored.find(({ element }) => element.type === "relation");
-  const ways = scored.filter(({ element }) => element.type === "way").slice(0, 20);
-  const hardest = ways
-    .map(({ element }) => element.tags?.sac_scale)
-    .filter((value): value is string => Boolean(value))
-    .sort((a, b) => difficultyRank(b) - difficultyRank(a))[0] ?? null;
+  const hardest =
+    ways
+      .map((element) => element.tags?.sac_scale)
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => difficultyRank(b) - difficultyRank(a))[0] ?? null;
   const visibility =
-    ways.map(({ element }) => element.tags?.trail_visibility).find(Boolean) ?? null;
-  const surface = ways.map(({ element }) => element.tags?.surface).find(Boolean) ?? null;
+    ways.map((element) => element.tags?.trail_visibility).find(Boolean) ?? null;
+  const surface = ways.map((element) => element.tags?.surface).find(Boolean) ?? null;
   const footAccess =
-    ways.map(({ element }) => element.tags?.foot || element.tags?.access).find(Boolean) ?? null;
+    ways.map((element) => element.tags?.foot || element.tags?.access).find(Boolean) ?? null;
 
-  const routeTags = route?.element.tags ?? {};
+  const routeTags = route?.tags ?? {};
   const taggedDistance =
     parseDistanceMiles(routeTags.distance, "km") ??
     parseDistanceMiles(routeTags.length, "m") ??
@@ -615,6 +735,93 @@ function summarizeOsmTrailMetadata(
     surface,
     footAccess,
     source: "OpenStreetMap",
+  };
+}
+
+async function buildTrailTruth(
+  elements: OSMElement[],
+  latitude: number,
+  longitude: number,
+): Promise<TrailRouteTruth | null> {
+  const route = selectOsmRoute(elements, latitude, longitude);
+  if (!route) return null;
+
+  const routeTags = route.tags ?? {};
+  const memberWays = routeMemberWays(route, elements);
+  const routePoints = orderedRoutePoints(route, elements);
+  const taggedDistance =
+    parseDistanceMiles(routeTags.distance, "km") ??
+    parseDistanceMiles(routeTags.length, "m") ??
+    parseDistanceMiles(routeTags["distance:mi"], "mi");
+  const geometryDistance = memberWays.length
+    ? memberWays.reduce(
+        (sum, { way }) => sum + geometryDistanceMiles(way.geometry ?? []),
+        0,
+      )
+    : 0;
+  const taggedAscent = parseElevationFeet(routeTags.ascent);
+  const sampledAscent =
+    taggedAscent === null && routePoints.length >= 8
+      ? await fetchRouteAscentFeet(routePoints)
+      : null;
+  const routeWays = memberWays.map(({ way }) => way);
+  const hardest =
+    routeWays
+      .map((way) => way.tags?.sac_scale)
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => difficultyRank(b) - difficultyRank(a))[0] ?? null;
+  const surface = routeWays.map((way) => way.tags?.surface).find(Boolean) ?? null;
+  const trailVisibility =
+    routeWays.map((way) => way.tags?.trail_visibility).find(Boolean) ?? null;
+  const footAccess =
+    routeWays.map((way) => way.tags?.foot || way.tags?.access).find(Boolean) ?? null;
+  const distanceMiles =
+    taggedDistance ??
+    (geometryDistance > 0.2 ? Number(geometryDistance.toFixed(1)) : null);
+  const distanceSource =
+    taggedDistance !== null
+      ? ("osm-tag" as const)
+      : distanceMiles !== null
+        ? ("osm-geometry" as const)
+        : null;
+  const routeName = routeTags.name || routeTags.ref || null;
+  const confidence: TrailRouteTruth["confidence"] =
+    routeName && taggedDistance !== null
+      ? "high"
+      : routeName && distanceMiles !== null && memberWays.length >= 2
+        ? "medium"
+        : "limited";
+  const caveats = [
+    distanceSource === "osm-geometry"
+      ? "Mileage is computed from mapped OSM relation members, not an official land-manager route statement."
+      : "",
+    sampledAscent !== null
+      ? "Ascent is sampled from mapped route geometry and terrain elevation; it is an estimate, not a surveyed route total."
+      : "",
+    "Use the official land manager for closures, reroutes, seasonal rules and the final route choice.",
+  ].filter(Boolean);
+
+  return {
+    routeName,
+    routeKind: routeKind(routeTags),
+    distanceMiles,
+    distanceSource,
+    ascentFeet: taggedAscent ?? sampledAscent,
+    ascentSource:
+      taggedAscent !== null
+        ? "osm-tag"
+        : sampledAscent !== null
+          ? "sampled-route"
+          : null,
+    difficulty: hardest,
+    difficultyLabel: difficultyLabel(hardest),
+    surface,
+    trailVisibility,
+    footAccess,
+    relationId: route.id,
+    mappedWayCount: memberWays.length,
+    confidence,
+    caveats,
   };
 }
 
