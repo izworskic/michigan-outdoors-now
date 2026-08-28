@@ -17,9 +17,9 @@ import { parsePlannerFragment, serializePlannerFragment } from "../src/lib/plann
 import type { WeatherSnapshot } from "../src/lib/types.ts";
 
 test("the curated catalog and static origin set stay intentional", () => {
-  assert.equal(destinationCount, 32);
-  assert.equal(destinations.length, 32);
-  assert.equal(new Set(destinations.map((destination) => destination.id)).size, 32);
+  assert.equal(destinationCount, 39);
+  assert.equal(destinations.length, 39);
+  assert.equal(new Set(destinations.map((destination) => destination.id)).size, 39);
   assert.equal(origins.length, 11);
   assert.equal(originsBySlug.get("bay-city")?.zip, "48708");
 });

@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
 import type { BoatLaunchResponse } from "../lib/boat-launches";
-import type { OutdoorUniverseResponse } from "../lib/outdoor-universe";
+import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse } from "../lib/types";
 import { MichiganDestinationMap } from "./michigan-destination-map";
 
@@ -30,10 +30,10 @@ const pulls: Pull[] = [
   { id: "weekend", label: "Weekend", short: "Let both days compete", driveHours: 8, date: "weekend", activities: ["hiking", "scenic", "birding"] },
 ];
 
-function emptyUniverse(): OutdoorUniverseResponse {
+function emptyUniverse(layer: UniverseLayerId = "hiking"): OutdoorUniverseResponse {
   return {
-    layer: "hiking",
-    label: "Hiking trails",
+    layer,
+    label: universeLayerLabels[layer],
     status: "unavailable",
     fetchedAt: "",
     source: {
@@ -111,22 +111,28 @@ export function OutdoorIntentHub() {
   const [planning, setPlanning] = useState(false);
   const [message, setMessage] = useState("");
   const [activeId, setActiveId] = useState("");
-  const [universe, setUniverse] = useState<OutdoorUniverseResponse>(() => emptyUniverse());
+  const [trailLayer, setTrailLayer] = useState<UniverseLayerId>("hiking");
+  const [universe, setUniverse] = useState<OutdoorUniverseResponse>(() => emptyUniverse("hiking"));
   const [boatLaunches, setBoatLaunches] = useState<BoatLaunchResponse>(() => emptyBoatLaunches());
   const requestRef = useRef<AbortController | null>(null);
   const originInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const trailsController = new AbortController();
-    const launchesController = new AbortController();
 
-    fetch("/api/outdoor-universe?layer=hiking", { signal: trailsController.signal })
+    fetch(`/api/outdoor-universe?layer=${trailLayer}`, { signal: trailsController.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Trail layer unavailable");
         return response.json() as Promise<OutdoorUniverseResponse>;
       })
       .then(setUniverse)
       .catch(() => undefined);
+
+    return () => trailsController.abort();
+  }, [trailLayer]);
+
+  useEffect(() => {
+    const launchesController = new AbortController();
 
     fetch("/api/boat-launches", { signal: launchesController.signal })
       .then((response) => {
@@ -136,10 +142,7 @@ export function OutdoorIntentHub() {
       .then(setBoatLaunches)
       .catch(() => undefined);
 
-    return () => {
-      trailsController.abort();
-      launchesController.abort();
-    };
+    return () => launchesController.abort();
   }, []);
 
   const run = useCallback(async (
@@ -211,6 +214,8 @@ export function OutdoorIntentHub() {
   function choosePull(nextPull: Pull) {
     setPull(nextPull);
     setDriveHours(nextPull.driveHours);
+    if (nextPull.id === "water" || nextPull.id === "river") setTrailLayer("water");
+    if (nextPull.id === "trail") setTrailLayer("hiking");
     if (origin.trim() || originCoordinates) void run(nextPull, nextPull.driveHours);
     else {
       setMessage("");
@@ -265,10 +270,10 @@ export function OutdoorIntentHub() {
   const leadPlan = plans?.plans[0] ?? null;
   const mapStatus = useMemo(() => {
     const pieces = [];
-    if (universe.status === "live") pieces.push(`${universe.systemCount.toLocaleString()} trail systems`);
+    if (universe.status === "live") pieces.push(`${universe.systemCount.toLocaleString()} ${universe.label.toLowerCase()}`);
     if (boatLaunches.status === "live") pieces.push(`${boatLaunches.count.toLocaleString()} launches`);
     return pieces.join(" · ");
-  }, [boatLaunches.count, boatLaunches.status, universe.status, universe.systemCount]);
+  }, [boatLaunches.count, boatLaunches.status, universe.label, universe.status, universe.systemCount]);
 
   return (
     <main className="michigan-canvas" aria-label="Explore Michigan outdoors">
@@ -283,7 +288,7 @@ export function OutdoorIntentHub() {
           reroutesGeoJson={universe.access.reroutes}
           closureCount={universe.access.closureCount}
           rerouteCount={universe.access.rerouteCount}
-          trailLayerLabel="DNR hiking route"
+          trailLayerLabel={universe.label}
           boatLaunchGeoJson={boatLaunches.geojson}
           boatLaunchCount={boatLaunches.count}
           userLocation={userLocation}
@@ -317,6 +322,22 @@ export function OutdoorIntentHub() {
 
         <div className="canvas-links">
           <Link href="/explore">Full atlas</Link>
+          <details className="canvas-layer-menu">
+            <summary>Layers</summary>
+            <div>
+              <span className="canvas-menu-label">Official DNR trail networks</span>
+              {universeLayerIds.map((layer) => (
+                <button
+                  type="button"
+                  key={layer}
+                  aria-pressed={trailLayer === layer}
+                  onClick={() => setTrailLayer(layer)}
+                >
+                  {universeLayerLabels[layer]}
+                </button>
+              ))}
+            </div>
+          </details>
           <details>
             <summary>Live</summary>
             <div>

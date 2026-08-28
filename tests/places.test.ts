@@ -13,7 +13,7 @@ import { isPlausibleMichiganCoordinate } from "../src/lib/planner.ts";
 
 test("all curated places have unique, useful destination answers", () => {
   const answers = destinations.map(destinationDirectAnswer);
-  assert.equal(answers.length, 32);
+  assert.equal(answers.length, 39);
   assert.equal(new Set(answers).size, answers.length);
   assert.ok(answers.every((answer) => answer.length >= 300));
 });
