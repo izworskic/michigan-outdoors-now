@@ -19,10 +19,15 @@ export const allowIndexing =
 
 export const personSchema = {
   "@type": "Person",
-  "@id": "https://chrisizworski.com/#chris-izworski",
+  "@id": "https://chrisizworski.com/#person",
   name: "Chris Izworski",
   url: "https://chrisizworski.com/",
-  sameAs: ["https://github.com/izworskic"],
+  sameAs: [
+    "https://github.com/izworskic",
+    "https://www.linkedin.com/in/chris-izworski-15294510",
+    "https://www.wikidata.org/wiki/Q138283432",
+    "https://orcid.org/0009-0002-7268-6083",
+  ],
   knowsAbout: [
     "Michigan outdoors",
     "Great Lakes conditions",
