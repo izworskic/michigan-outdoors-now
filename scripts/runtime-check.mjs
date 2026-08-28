@@ -193,6 +193,47 @@ try {
   assert.ok(Number.isInteger(placeIntelligencePayload.access.closureCount));
   assert.ok(Number.isInteger(placeIntelligencePayload.access.rerouteCount));
   assert.match(placeIntelligencePayload.confidenceNote, /Open-Meteo|Michigan DNR/);
+  assert.ok(["good", "mixed", "poor", "unknown"].includes(placeIntelligencePayload.goSignal?.status));
+  if (placeIntelligencePayload.trailTruth) {
+    assert.ok(["loop", "point-to-point", "unknown"].includes(placeIntelligencePayload.trailTruth.routeKind));
+    assert.ok(["high", "medium", "limited"].includes(placeIntelligencePayload.trailTruth.confidence));
+    if (placeIntelligencePayload.trailTruth.distanceMiles !== null) {
+      assert.ok(placeIntelligencePayload.trailTruth.distanceMiles > 0);
+      assert.ok(["osm-tag", "osm-geometry"].includes(placeIntelligencePayload.trailTruth.distanceSource));
+    }
+  }
+
+  const dayPlanResponse = await fetch(`${origin}/api/day-plan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: longHikePayload.origin,
+      places: longHikePayload.places.slice(0, 2).map((place) => ({
+        id: place.id,
+        name: place.name,
+        area: place.area,
+        latitude: place.latitude,
+        longitude: place.longitude,
+        category: place.categoryLabel,
+      })),
+    }),
+    signal: AbortSignal.timeout(7_000),
+  });
+  assert.equal(dayPlanResponse.status, 200);
+  assert.match(dayPlanResponse.headers.get("x-robots-tag") ?? "", /noindex/);
+  const dayPlanPayload = await dayPlanResponse.json();
+  assert.ok(["routed", "estimated"].includes(dayPlanPayload.source));
+  assert.equal(dayPlanPayload.stops.length, 2);
+  assert.equal(new Set(dayPlanPayload.stops.map((stop) => stop.id)).size, 2);
+  assert.equal(dayPlanPayload.legs.length, 2);
+  assert.ok(dayPlanPayload.totalDriveMinutes > 0);
+
+  const trailSearchPage = await fetch(`${origin}/hiking/10-mile-hikes-michigan`);
+  assert.equal(trailSearchPage.status, 200);
+  const trailSearchHtml = await trailSearchPage.text();
+  assert.match(trailSearchHtml, /Michigan hikes around 10 miles/);
+  assert.match(trailSearchHtml, /Trail Truth standard/);
+  assert.match(trailSearchHtml, /National Park Service|Michigan DNR|U\.S\. Forest Service/);
 
   const growthManifest = await fetch(`${origin}/growth-manifest.json`, {
     signal: AbortSignal.timeout(4_000),
@@ -203,7 +244,9 @@ try {
   assert.equal(growthManifestPayload.version, "1.0.0");
   assert.equal(growthManifestPayload.owner, "https://chrisizworski.com/#person");
   assert.equal(growthManifestPayload.launch.locationIntentPages, 54);
+  assert.equal(growthManifestPayload.launch.trailIntentPages, 6);
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("planner_completed"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("day_plan_built"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("departure_mode_opened"));
   assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("exact coordinates"));
 
@@ -371,6 +414,7 @@ try {
   assert.match(payload.origin.name, /Bay City/);
   assert.ok(payload.plans.length > 0 && payload.plans.length <= 3);
   assert.ok(payload.plans.every((plan) => plan.driveHours <= 8.1));
+  assert.ok(payload.plans.every((plan) => ["routed", "estimated"].includes(plan.travelSource)));
   assert.ok(payload.plans.every((plan) => plan.destination.activities.includes("hiking") || plan.destination.activities.includes("birding")));
   assert.ok(Array.isArray(payload.rangeOptions));
   assert.ok(payload.rangeOptions.length >= payload.plans.length);
