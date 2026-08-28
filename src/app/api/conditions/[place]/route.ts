@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { destinations } from "../../../../data/destinations";
 import { fetchWeatherSnapshots } from "../../../../lib/live-data";
 import { getDetroitDate } from "../../../../lib/planner";
+import { fetchSpecialistSignals } from "../../../../lib/specialist-intelligence";
 
 export const runtime = "nodejs";
 
@@ -35,13 +36,15 @@ export async function GET(
   try {
     const snapshots = await fetchWeatherSnapshots([destination], targetDate);
     const weather = snapshots.get(destination.id) ?? null;
+    const specialistSignals = await fetchSpecialistSignals(destination, weather);
     return NextResponse.json(
       {
         place: { id: destination.id, name: destination.name, area: destination.area },
         targetDate,
         generatedAt: new Date().toISOString(),
-        conditionsStatus: weather ? "live" : "estimated",
+        conditionsStatus: weather || specialistSignals.some((signal) => signal.kind === "live") ? "live" : "estimated",
         weather,
+        specialistSignals,
       },
       { headers },
     );
@@ -53,6 +56,7 @@ export async function GET(
         generatedAt: new Date().toISOString(),
         conditionsStatus: "estimated",
         weather: null,
+        specialistSignals: [],
       },
       { headers },
     );
