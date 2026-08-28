@@ -69,6 +69,7 @@ export type DiscoveryResponse = {
   places: DiscoveryPlace[];
   generatedAt: string;
   status: "live" | "fallback";
+  mode?: "search" | "surprise";
   sourceNote: string;
 };
 
