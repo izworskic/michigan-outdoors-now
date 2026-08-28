@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { origins } from "../data/origins";
 import {
   activityLabels,
@@ -55,6 +55,8 @@ type PlannerProps = {
   analyticsContext?: GrowthContext;
 };
 
+const DEFAULT_GROWTH_CONTEXT: GrowthContext = { surface: "homepage_planner" };
+
 
 export function Planner({
   defaultOrigin = "Bay City",
@@ -65,7 +67,7 @@ export function Planner({
   initialKids = false,
   initialDog = false,
   initialAccessible = false,
-  analyticsContext = { surface: "homepage_planner" },
+  analyticsContext = DEFAULT_GROWTH_CONTEXT,
 }: PlannerProps) {
   const [origin, setOrigin] = useState(defaultOrigin);
   const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
@@ -86,9 +88,12 @@ export function Planner({
   const [shareStatus, setShareStatus] = useState("");
   const startTracked = useRef(false);
 
-  function trackEvent(name: Parameters<typeof trackGrowthEvent>[0], properties: GrowthEventProperties = {}) {
-    trackGrowthEvent(name, analyticsContext, properties);
-  }
+  const trackEvent = useCallback(
+    (name: Parameters<typeof trackGrowthEvent>[0], properties: GrowthEventProperties = {}) => {
+      trackGrowthEvent(name, analyticsContext, properties);
+    },
+    [analyticsContext],
+  );
 
   const plannerRequest = useMemo<PlannerRequest>(() => ({
     origin,
@@ -122,7 +127,7 @@ export function Planner({
     }, 0);
 
     return () => window.clearTimeout(timer);
-  }, []);
+  }, [trackEvent]);
 
   function trackStart() {
     if (startTracked.current) return;
