@@ -1,0 +1,16 @@
+{
+  "name": "result-flow-refinement",
+  "version": 1,
+  "baselineScore": 52,
+  "releaseTarget": 90,
+  "flagshipTarget": 95,
+  "criteria": [
+    {"key":"persistentResultDock","weight":25},
+    {"key":"detailReturnsToDock","weight":15},
+    {"key":"fartherUsesNewBand","weight":25},
+    {"key":"newlyUnlockedResultsFirst","weight":15},
+    {"key":"rangeStateVisible","weight":10},
+    {"key":"responsiveNonOverlap","weight":5},
+    {"key":"regressionCoverage","weight":5}
+  ]
+}
