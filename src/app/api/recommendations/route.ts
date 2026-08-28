@@ -6,6 +6,7 @@ import {
   rankDestinations,
   targetDatesFor,
 } from "../../../lib/planner";
+import { fetchRoutedPoints } from "../../../lib/route-intelligence";
 import {
   activityIds,
   type ActivityId,
@@ -138,8 +139,44 @@ export async function POST(request: Request) {
         all.findIndex((candidate) => candidate.destination.id === plan.destination.id) === index,
     );
 
-  const plans = candidatePlans.slice(0, 3);
-  const rangeOptions = [...candidatePlans]
+  const destinationById = new Map(destinations.map((destination) => [destination.id, destination]));
+  const routedTravel = await fetchRoutedPoints({
+    originLatitude: origin.latitude,
+    originLongitude: origin.longitude,
+    points: candidatePlans
+      .map((plan) => destinationById.get(plan.destination.id))
+      .filter((destination): destination is (typeof destinations)[number] => Boolean(destination))
+      .map((destination) => ({
+        id: destination.id,
+        latitude: destination.latitude,
+        longitude: destination.longitude,
+      })),
+    maxPoints: 24,
+    timeoutMs: 1_400,
+  });
+
+  const routedCandidatePlans = candidatePlans
+    .map((plan) => {
+      const routed = routedTravel.get(plan.destination.id);
+      if (!routed) {
+        return {
+          ...plan,
+          driveMinutes: Math.max(1, Math.round(plan.driveHours * 60)),
+          travelSource: "estimated" as const,
+        };
+      }
+      return {
+        ...plan,
+        distanceMiles: routed.distanceMiles,
+        driveHours: routed.driveHours,
+        driveMinutes: routed.driveMinutes,
+        travelSource: "routed" as const,
+      };
+    })
+    .filter((plan) => plan.driveHours <= body.maxDriveHours + 0.08);
+
+  const plans = routedCandidatePlans.slice(0, 3);
+  const rangeOptions = [...routedCandidatePlans]
     .sort(
       (a, b) =>
         a.driveHours - b.driveHours ||
@@ -156,6 +193,8 @@ export async function POST(request: Request) {
       score: plan.score,
       distanceMiles: plan.distanceMiles,
       driveHours: plan.driveHours,
+      driveMinutes: plan.driveMinutes,
+      travelSource: plan.travelSource,
       conditionsStatus: plan.conditionsStatus,
       forecastDate: plan.weather?.date ?? null,
     }));
@@ -171,9 +210,9 @@ export async function POST(request: Request) {
     rangeOptions,
     note: hasLiveConditions
       ? body.date === "weekend" && targetDates.length > 1
-        ? "Both days of the current weekend were compared. Forecasts help rank options, but check official closures and local conditions before leaving."
-        : "Forecasts help rank options, but this is planning guidance, not a safety rating. Check official closures and local conditions before leaving."
-      : "Live forecast data was unavailable, so these are distance-and-fit suggestions. Check conditions and official closures before leaving.",
+        ? "Both days of the current weekend were compared. Road-routed travel replaces rough estimates when the routing service answers inside the fast budget. Forecasts help rank options; check official closures and local conditions before leaving."
+        : "Road-routed travel replaces rough estimates when the routing service answers inside the fast budget. Forecasts help rank options, but this is planning guidance, not a safety rating."
+      : "Live forecast data was unavailable. Road-routed travel is still used when available; remaining values are clearly planning estimates. Check conditions and official closures before leaving.",
   };
 
   console.info(
@@ -185,6 +224,7 @@ export async function POST(request: Request) {
       needsCount: Number(body.kids) + Number(body.dog) + Number(body.accessible),
       planCount: plans.length,
       rangeOptionCount: rangeOptions.length,
+      routedPlanCount: routedCandidatePlans.filter((plan) => plan.travelSource === "routed").length,
       conditionsStatus: response.conditionsStatus,
     }),
   );
