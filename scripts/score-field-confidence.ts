@@ -25,6 +25,7 @@ async function main() {
       "src/components/outdoor-intent-hub.tsx",
       "src/app/atlas.css",
       "tests/route-intelligence.test.ts",
+      "tests/place-intelligence.test.ts",
       "tests/result-flow-refinement.test.ts",
       "scripts/runtime-check.mjs",
       "docs/field-confidence.md",
@@ -38,6 +39,7 @@ async function main() {
   const hub = files["src/components/outdoor-intent-hub.tsx"];
   const css = files["src/app/atlas.css"];
   const routingTests = files["tests/route-intelligence.test.ts"];
+  const intelligenceTests = files["tests/place-intelligence.test.ts"];
   const resultTests = files["tests/result-flow-refinement.test.ts"];
   const runtime = files["scripts/runtime-check.mjs"];
   const doc = files["docs/field-confidence.md"];
@@ -74,6 +76,9 @@ async function main() {
       intelligence.includes("sac_scale") &&
       intelligence.includes("trail_visibility") &&
       intelligence.includes("surface") &&
+      intelligenceTests.includes("route distance defaults to kilometers") &&
+      intelligenceTests.includes("length defaults to meters") &&
+      intelligenceTests.includes("ascent defaults to meters") &&
       hub.includes("Difficulty/surface tags not available here"),
     officialAccessChanges:
       intelligence.includes("DNR_TRAIL_CLOSURES_SERVICE") &&
