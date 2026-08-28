@@ -2092,3 +2092,99 @@ body{background:#f8f5ef;color:#243139}
     font-size:19px;
   }
 }
+
+
+/* Cross-tool live intelligence belongs inside the place decision, not in a separate dashboard. */
+.canvas-live-intelligence{
+  display:grid;
+  gap:10px;
+  margin-top:22px;
+  padding-top:18px;
+  border-top:1px solid rgba(31,61,69,.13);
+}
+.canvas-live-intelligence-head{
+  display:grid;
+  gap:4px;
+}
+.canvas-live-intelligence-head>span{
+  color:#8b5b42;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.canvas-live-intelligence-head>strong{
+  font:500 20px/1.08 Georgia,serif;
+  letter-spacing:-.03em;
+}
+.canvas-live-intelligence-list{
+  display:grid;
+  gap:7px;
+}
+.canvas-live-intelligence-list>article{
+  display:grid;
+  gap:7px;
+  padding:12px;
+  border:1px solid rgba(31,61,69,.12);
+  border-radius:9px;
+  background:rgba(238,243,241,.72);
+}
+.canvas-signal-meta{
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.canvas-signal-meta>span{
+  color:#365158;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.07em;
+  text-transform:uppercase;
+}
+.canvas-signal-meta>small{
+  padding:2px 5px;
+  border-radius:999px;
+  background:#173b4b;
+  color:#fff;
+  font-size:7px;
+  font-weight:850;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.canvas-live-intelligence-list>article>strong{
+  font:500 17px/1.12 Georgia,serif;
+  color:#18343d;
+}
+.canvas-live-intelligence-list>article>p{
+  margin:0;
+  color:#5f7378;
+  font-size:9px;
+  line-height:1.5;
+}
+.canvas-signal-links{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  padding-top:2px;
+}
+.canvas-signal-links>a{
+  min-height:34px;
+  display:inline-flex;
+  align-items:center;
+  color:#193d48;
+  font-size:8px;
+  font-weight:800;
+  text-decoration:none;
+  border-bottom:1px solid rgba(31,61,69,.16);
+}
+@media(max-width:700px){
+  .canvas-live-intelligence-head>strong{
+    font-size:18px;
+  }
+  .canvas-live-intelligence-list>article{
+    padding:11px;
+  }
+  .canvas-signal-links>a{
+    min-height:40px;
+  }
+}
