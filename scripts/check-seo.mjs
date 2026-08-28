@@ -102,6 +102,13 @@ const placeSlugs = [
   "mackinac-island",
   "torch-lake-antrim",
   "silver-lake-state-park",
+  "port-crescent-state-park",
+  "negwegon-state-park",
+  "ocqueoc-falls",
+  "petoskey-state-park",
+  "fayette-state-park",
+  "mclain-state-park",
+  "fort-wilkins",
   "isle-royale",
 ];
 
