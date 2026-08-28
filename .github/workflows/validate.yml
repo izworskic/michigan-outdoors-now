@@ -61,6 +61,9 @@ jobs:
       - name: Score organic search growth
         run: npm run score:organic-growth
 
+      - name: Score growth operating system
+        run: npm run score:growth-system
+
       - name: Build production output
         run: npm run build
 
