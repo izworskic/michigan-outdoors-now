@@ -135,6 +135,7 @@ export function OutdoorIntentHub() {
   const signalCacheRef = useRef(new Map<string, SpecialistSignal[]>());
   const originInputRef = useRef<HTMLInputElement | null>(null);
   const wishInputRef = useRef<HTMLInputElement | null>(null);
+  const resultDockRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!trailRequested) return;
@@ -168,6 +169,20 @@ export function OutdoorIntentHub() {
       launchesController.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!discovery?.places.length) return;
+
+    // A mobile keyboard can leave the bottom result dock outside the visual
+    // viewport even though the result count at the top has updated.
+    // End text entry and move focus to the actual returned result surface.
+    wishInputRef.current?.blur();
+    const timer = window.setTimeout(() => {
+      resultDockRef.current?.focus({ preventScroll: true });
+    }, 80);
+
+    return () => window.clearTimeout(timer);
+  }, [discovery?.generatedAt, discovery?.places.length]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -767,16 +782,29 @@ export function OutdoorIntentHub() {
                   <span>
                     {discovery.places.length.toLocaleString()} possibilities · {discovery.intent.summary}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDiscovery(null);
-                      setDiscoveryRange(null);
-                      setActiveDiscoveryId("");
-                    }}
-                  >
-                    Clear
-                  </button>
+                  <div className="canvas-wish-status-actions">
+                    {discovery.places.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          wishInputRef.current?.blur();
+                          resultDockRef.current?.focus({ preventScroll: true });
+                        }}
+                      >
+                        See results
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscovery(null);
+                        setDiscoveryRange(null);
+                        setActiveDiscoveryId("");
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
                 </div>
               </>
             )}
@@ -815,7 +843,12 @@ export function OutdoorIntentHub() {
       </header>
 
       {discovery && discovery.places.length > 0 ? (
-        <section className="canvas-result-dock" aria-label="Outdoor search results">
+        <section
+          ref={resultDockRef}
+          className="canvas-result-dock"
+          aria-label="Outdoor search results"
+          tabIndex={-1}
+        >
           <div className="canvas-result-dock-head">
             <div>
               <span>{discoveryRange ? "Farther-out results" : "Your possibilities"}</span>
