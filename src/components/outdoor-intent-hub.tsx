@@ -233,11 +233,13 @@ export function OutdoorIntentHub() {
     if (!place) return;
 
     const cached = placeIntelligenceCacheRef.current.get(place.id);
-    if (cached) {
+    const cacheAgeMs = cached ? Date.now() - Date.parse(cached.generatedAt) : Number.POSITIVE_INFINITY;
+    if (cached && Number.isFinite(cacheAgeMs) && cacheAgeMs < 15 * 60 * 1000) {
       setPlaceIntelligence(cached);
       setPlaceIntelligenceLoading(false);
       return;
     }
+    if (cached) placeIntelligenceCacheRef.current.delete(place.id);
 
     const controller = new AbortController();
     setPlaceIntelligence(null);
