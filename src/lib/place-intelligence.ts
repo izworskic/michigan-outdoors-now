@@ -20,6 +20,17 @@ export type PointWeatherIntelligence = {
   windGust: number | null;
   aqi: number | null;
   weatherCode: number | null;
+  recentRainInches: number | null;
+  recentSnowInches: number | null;
+  daylightHoursRemaining: number | null;
+  outingWindow: {
+    start: string;
+    end: string;
+    maxPrecipitationProbability: number | null;
+    maxWindGust: number | null;
+    minTemperature: number | null;
+    maxTemperature: number | null;
+  } | null;
 };
 
 export type TrailSystemIntelligence = {
@@ -42,6 +53,31 @@ export type TrailMetadataIntelligence = {
   source: "OpenStreetMap" | null;
 };
 
+export type TrailRouteTruth = {
+  routeName: string | null;
+  routeKind: "loop" | "point-to-point" | "unknown";
+  distanceMiles: number | null;
+  distanceSource: "osm-tag" | "osm-geometry" | null;
+  ascentFeet: number | null;
+  ascentSource: "osm-tag" | "sampled-route" | null;
+  difficulty: string | null;
+  difficultyLabel: string | null;
+  surface: string | null;
+  trailVisibility: string | null;
+  footAccess: string | null;
+  relationId: number | null;
+  mappedWayCount: number;
+  confidence: "high" | "medium" | "limited";
+  caveats: string[];
+};
+
+export type GoSignal = {
+  status: "good" | "mixed" | "poor" | "unknown";
+  headline: string;
+  reasons: string[];
+  cautions: string[];
+};
+
 export type ElevationIntelligence = {
   lowFeet: number;
   highFeet: number;
@@ -61,6 +97,8 @@ export type PlaceIntelligence = {
   weather: PointWeatherIntelligence | null;
   trailSystems: TrailSystemIntelligence[];
   trailMetadata: TrailMetadataIntelligence | null;
+  trailTruth: TrailRouteTruth | null;
+  goSignal: GoSignal;
   elevation: ElevationIntelligence | null;
   access: AccessIntelligence;
   confidenceNote: string;
@@ -73,6 +111,12 @@ type OSMElement = {
   lat?: number;
   lon?: number;
   tags?: Record<string, string>;
+  members?: Array<{
+    type: "node" | "way" | "relation";
+    ref: number;
+    role?: string;
+  }>;
+  geometry?: Array<{ lat: number; lon: number }>;
 };
 
 type GeoJsonPayload = Partial<UniverseGeoJson> & {
@@ -85,10 +129,20 @@ type ForecastPayload = {
     wind_gusts_10m?: number | null;
     weather_code?: number | null;
   };
+  hourly?: {
+    time?: number[];
+    temperature_2m?: Array<number | null>;
+    precipitation_probability?: Array<number | null>;
+    rain?: Array<number | null>;
+    snowfall?: Array<number | null>;
+    wind_gusts_10m?: Array<number | null>;
+  };
   daily?: {
     temperature_2m_max?: Array<number | null>;
     temperature_2m_min?: Array<number | null>;
     precipitation_probability_max?: Array<number | null>;
+    sunrise?: number[];
+    sunset?: number[];
   };
 };
 
@@ -122,10 +176,16 @@ async function fetchPointWeather(
     latitude: latitude.toFixed(5),
     longitude: longitude.toFixed(5),
     timezone: "America/Detroit",
+    timeformat: "unixtime",
     temperature_unit: "fahrenheit",
     wind_speed_unit: "mph",
+    precipitation_unit: "inch",
     current: "temperature_2m,wind_gusts_10m,weather_code",
-    daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+    hourly:
+      "temperature_2m,precipitation_probability,rain,snowfall,wind_gusts_10m",
+    daily:
+      "temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
+    past_days: "1",
     forecast_days: "2",
   });
   const airParams = new URLSearchParams({
@@ -170,6 +230,49 @@ async function fetchPointWeather(
     if (matching.length) aqi = Math.max(...matching);
   }
 
+  const nowSeconds = Date.now() / 1000;
+  const hourlyTimes = forecast.hourly?.time ?? [];
+  const rain = forecast.hourly?.rain ?? [];
+  const snowfall = forecast.hourly?.snowfall ?? [];
+  const recentIndexes = hourlyTimes
+    .map((time, index) => ({ time, index }))
+    .filter(({ time }) => time >= nowSeconds - 86_400 && time <= nowSeconds);
+  const futureIndexes = hourlyTimes
+    .map((time, index) => ({ time, index }))
+    .filter(({ time }) => time >= nowSeconds && time <= nowSeconds + 21_600);
+
+  const recentRain = recentIndexes
+    .map(({ index }) => rain[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .reduce((sum, value) => sum + value, 0);
+  // Open-Meteo reports snowfall depth in centimeters even when liquid precipitation uses inches.
+  const recentSnowCm = recentIndexes
+    .map(({ index }) => snowfall[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .reduce((sum, value) => sum + value, 0);
+
+  const precipitationValues = futureIndexes
+    .map(({ index }) => forecast.hourly?.precipitation_probability?.[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const gustValues = futureIndexes
+    .map(({ index }) => forecast.hourly?.wind_gusts_10m?.[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const temperatureValues = futureIndexes
+    .map(({ index }) => forecast.hourly?.temperature_2m?.[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+  const timeLabel = (seconds: number) =>
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Detroit",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(seconds * 1000));
+
+  const sunset =
+    (forecast.daily?.sunset ?? []).find(
+      (value) => typeof value === "number" && Number.isFinite(value) && value > nowSeconds,
+    ) ?? null;
+
   return {
     temperature: numberOrNull(forecast.current?.temperature_2m),
     high: numberOrNull(forecast.daily?.temperature_2m_max?.[0]),
@@ -178,6 +281,23 @@ async function fetchPointWeather(
     windGust: numberOrNull(forecast.current?.wind_gusts_10m),
     aqi,
     weatherCode: numberOrNull(forecast.current?.weather_code),
+    recentRainInches: recentIndexes.length ? Number(recentRain.toFixed(2)) : null,
+    recentSnowInches: recentIndexes.length ? Number((recentSnowCm / 2.54).toFixed(1)) : null,
+    daylightHoursRemaining:
+      sunset === null ? null : Number(Math.max(0, (sunset - nowSeconds) / 3600).toFixed(1)),
+    outingWindow:
+      futureIndexes.length > 0
+        ? {
+            start: timeLabel(futureIndexes[0].time),
+            end: timeLabel(futureIndexes[futureIndexes.length - 1].time),
+            maxPrecipitationProbability: precipitationValues.length
+              ? Math.max(...precipitationValues)
+              : null,
+            maxWindGust: gustValues.length ? Math.max(...gustValues) : null,
+            minTemperature: temperatureValues.length ? Math.min(...temperatureValues) : null,
+            maxTemperature: temperatureValues.length ? Math.max(...temperatureValues) : null,
+          }
+        : null,
   };
 }
 
@@ -357,10 +477,11 @@ function buildOverpassTrailQuery(latitude: number, longitude: number) {
   const lat = latitude.toFixed(5);
   const lon = longitude.toFixed(5);
   return (
-    "[out:json][timeout:12];(" +
-    `relation(around:3000,${lat},${lon})["route"~"^(hiking|foot)$"];` +
-    `way(around:1800,${lat},${lon})["highway"~"^(path|footway|track)$"];` +
-    ");out tags center 80;"
+    "[out:json][timeout:12];" +
+    `relation(around:3500,${lat},${lon})["route"~"^(hiking|foot)$"]->.routes;` +
+    ".routes out body center 20;" +
+    "way(r.routes);out tags geom 160;" +
+    `way(around:1800,${lat},${lon})["highway"~"^(path|footway|track)$"];out tags center 60;`
   );
 }
 
@@ -446,6 +567,126 @@ function difficultyRank(value: string | undefined) {
   return value ? order.indexOf(value) : -1;
 }
 
+function osmElementDistance(
+  element: OSMElement,
+  latitude: number,
+  longitude: number,
+) {
+  const lat = element.lat ?? element.center?.lat ?? element.geometry?.[0]?.lat;
+  const lon = element.lon ?? element.center?.lon ?? element.geometry?.[0]?.lon;
+  return typeof lat === "number" && typeof lon === "number"
+    ? haversineMiles(latitude, longitude, lat, lon)
+    : Number.POSITIVE_INFINITY;
+}
+
+function selectOsmRoute(
+  elements: OSMElement[],
+  latitude: number,
+  longitude: number,
+) {
+  return (
+    elements
+      .filter((element) => element.type === "relation")
+      .map((element) => ({
+        element,
+        distance: osmElementDistance(element, latitude, longitude),
+        named: Boolean(element.tags?.name || element.tags?.ref),
+      }))
+      .sort(
+        (a, b) =>
+          Number(b.named) - Number(a.named) ||
+          a.distance - b.distance ||
+          a.element.id - b.element.id,
+      )[0]?.element ?? null
+  );
+}
+
+function routeMemberWays(route: OSMElement | null, elements: OSMElement[]) {
+  if (!route?.members?.length) return [];
+  const wayById = new Map(
+    elements
+      .filter((element) => element.type === "way")
+      .map((element) => [element.id, element] as const),
+  );
+  return route.members
+    .filter((member) => member.type === "way")
+    .map((member) => ({ member, way: wayById.get(member.ref) }))
+    .filter(
+      (item): item is {
+        member: { type: "node" | "way" | "relation"; ref: number; role?: string };
+        way: OSMElement;
+      } => Boolean(item.way?.geometry?.length),
+    );
+}
+
+function geometryDistanceMiles(geometry: Array<{ lat: number; lon: number }>) {
+  let miles = 0;
+  for (let index = 1; index < geometry.length; index += 1) {
+    miles += haversineMiles(
+      geometry[index - 1].lat,
+      geometry[index - 1].lon,
+      geometry[index].lat,
+      geometry[index].lon,
+    );
+  }
+  return miles;
+}
+
+function orderedRoutePoints(route: OSMElement | null, elements: OSMElement[]) {
+  const parts = routeMemberWays(route, elements);
+  const points: Array<{ lat: number; lon: number }> = [];
+  let previous: { lat: number; lon: number } | null = null;
+
+  for (const { member, way } of parts) {
+    let geometry = [...(way.geometry ?? [])];
+    if (!geometry.length) continue;
+
+    if (member.role === "backward" || member.role === "-1") {
+      geometry.reverse();
+    } else if (previous && geometry.length > 1) {
+      const first = geometry[0];
+      const last = geometry[geometry.length - 1];
+      const firstGap = haversineMiles(previous.lat, previous.lon, first.lat, first.lon);
+      const lastGap = haversineMiles(previous.lat, previous.lon, last.lat, last.lon);
+      if (lastGap < firstGap) geometry.reverse();
+    }
+
+    if (points.length && geometry.length) {
+      const first = geometry[0];
+      const lastPoint = points[points.length - 1];
+      if (haversineMiles(lastPoint.lat, lastPoint.lon, first.lat, first.lon) < 0.01) {
+        geometry = geometry.slice(1);
+      }
+    }
+
+    points.push(...geometry);
+    previous = points[points.length - 1] ?? previous;
+  }
+
+  return points;
+}
+
+function routeKind(tags: Record<string, string>) {
+  const roundtrip = tags.roundtrip?.toLowerCase();
+  if (roundtrip === "yes" || roundtrip === "true" || roundtrip === "1") return "loop" as const;
+  if (roundtrip === "no" || tags.from || tags.to) return "point-to-point" as const;
+  return "unknown" as const;
+}
+
+function difficultyLabel(value: string | null) {
+  if (!value) return null;
+  const labels: Record<string, string> = {
+    strolling: "strolling",
+    hiking: "hiking",
+    mountain_hiking: "mountain hiking",
+    demanding_mountain_hiking: "demanding mountain hiking",
+    alpine_hiking: "alpine hiking",
+    demanding_alpine_hiking: "demanding alpine hiking",
+    difficult_alpine_hiking: "difficult alpine hiking",
+  };
+  return labels[value] ?? value.replaceAll("_", " ");
+}
+
 function summarizeOsmTrailMetadata(
   elements: OSMElement[],
   latitude: number,
@@ -453,31 +694,30 @@ function summarizeOsmTrailMetadata(
 ): TrailMetadataIntelligence | null {
   if (!elements.length) return null;
 
-  const scored = elements
-    .map((element) => {
-      const lat = element.lat ?? element.center?.lat;
-      const lon = element.lon ?? element.center?.lon;
-      const distance =
-        typeof lat === "number" && typeof lon === "number"
-          ? haversineMiles(latitude, longitude, lat, lon)
-          : Number.POSITIVE_INFINITY;
-      return { element, distance };
-    })
-    .sort((a, b) => a.distance - b.distance);
+  const route = selectOsmRoute(elements, latitude, longitude);
+  const routeWays = routeMemberWays(route, elements).map(({ way }) => way);
+  const nearbyWays = elements
+    .filter((element) => element.type === "way")
+    .sort(
+      (a, b) =>
+        osmElementDistance(a, latitude, longitude) -
+        osmElementDistance(b, latitude, longitude),
+    )
+    .slice(0, 24);
+  const ways = routeWays.length ? routeWays : nearbyWays;
 
-  const route = scored.find(({ element }) => element.type === "relation");
-  const ways = scored.filter(({ element }) => element.type === "way").slice(0, 20);
-  const hardest = ways
-    .map(({ element }) => element.tags?.sac_scale)
-    .filter((value): value is string => Boolean(value))
-    .sort((a, b) => difficultyRank(b) - difficultyRank(a))[0] ?? null;
+  const hardest =
+    ways
+      .map((element) => element.tags?.sac_scale)
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => difficultyRank(b) - difficultyRank(a))[0] ?? null;
   const visibility =
-    ways.map(({ element }) => element.tags?.trail_visibility).find(Boolean) ?? null;
-  const surface = ways.map(({ element }) => element.tags?.surface).find(Boolean) ?? null;
+    ways.map((element) => element.tags?.trail_visibility).find(Boolean) ?? null;
+  const surface = ways.map((element) => element.tags?.surface).find(Boolean) ?? null;
   const footAccess =
-    ways.map(({ element }) => element.tags?.foot || element.tags?.access).find(Boolean) ?? null;
+    ways.map((element) => element.tags?.foot || element.tags?.access).find(Boolean) ?? null;
 
-  const routeTags = route?.element.tags ?? {};
+  const routeTags = route?.tags ?? {};
   const taggedDistance =
     parseDistanceMiles(routeTags.distance, "km") ??
     parseDistanceMiles(routeTags.length, "m") ??
@@ -495,6 +735,93 @@ function summarizeOsmTrailMetadata(
     surface,
     footAccess,
     source: "OpenStreetMap",
+  };
+}
+
+async function buildTrailTruth(
+  elements: OSMElement[],
+  latitude: number,
+  longitude: number,
+): Promise<TrailRouteTruth | null> {
+  const route = selectOsmRoute(elements, latitude, longitude);
+  if (!route) return null;
+
+  const routeTags = route.tags ?? {};
+  const memberWays = routeMemberWays(route, elements);
+  const routePoints = orderedRoutePoints(route, elements);
+  const taggedDistance =
+    parseDistanceMiles(routeTags.distance, "km") ??
+    parseDistanceMiles(routeTags.length, "m") ??
+    parseDistanceMiles(routeTags["distance:mi"], "mi");
+  const geometryDistance = memberWays.length
+    ? memberWays.reduce(
+        (sum, { way }) => sum + geometryDistanceMiles(way.geometry ?? []),
+        0,
+      )
+    : 0;
+  const taggedAscent = parseElevationFeet(routeTags.ascent);
+  const sampledAscent =
+    taggedAscent === null && routePoints.length >= 8
+      ? await fetchRouteAscentFeet(routePoints)
+      : null;
+  const routeWays = memberWays.map(({ way }) => way);
+  const hardest =
+    routeWays
+      .map((way) => way.tags?.sac_scale)
+      .filter((value): value is string => Boolean(value))
+      .sort((a, b) => difficultyRank(b) - difficultyRank(a))[0] ?? null;
+  const surface = routeWays.map((way) => way.tags?.surface).find(Boolean) ?? null;
+  const trailVisibility =
+    routeWays.map((way) => way.tags?.trail_visibility).find(Boolean) ?? null;
+  const footAccess =
+    routeWays.map((way) => way.tags?.foot || way.tags?.access).find(Boolean) ?? null;
+  const distanceMiles =
+    taggedDistance ??
+    (geometryDistance > 0.2 ? Number(geometryDistance.toFixed(1)) : null);
+  const distanceSource =
+    taggedDistance !== null
+      ? ("osm-tag" as const)
+      : distanceMiles !== null
+        ? ("osm-geometry" as const)
+        : null;
+  const routeName = routeTags.name || routeTags.ref || null;
+  const confidence: TrailRouteTruth["confidence"] =
+    routeName && taggedDistance !== null
+      ? "high"
+      : routeName && distanceMiles !== null && memberWays.length >= 2
+        ? "medium"
+        : "limited";
+  const caveats = [
+    distanceSource === "osm-geometry"
+      ? "Mileage is computed from mapped OSM relation members, not an official land-manager route statement."
+      : "",
+    sampledAscent !== null
+      ? "Ascent is sampled from mapped route geometry and terrain elevation; it is an estimate, not a surveyed route total."
+      : "",
+    "Use the official land manager for closures, reroutes, seasonal rules and the final route choice.",
+  ].filter(Boolean);
+
+  return {
+    routeName,
+    routeKind: routeKind(routeTags),
+    distanceMiles,
+    distanceSource,
+    ascentFeet: taggedAscent ?? sampledAscent,
+    ascentSource:
+      taggedAscent !== null
+        ? "osm-tag"
+        : sampledAscent !== null
+          ? "sampled-route"
+          : null,
+    difficulty: hardest,
+    difficultyLabel: difficultyLabel(hardest),
+    surface,
+    trailVisibility,
+    footAccess,
+    relationId: route.id,
+    mappedWayCount: memberWays.length,
+    confidence,
+    caveats,
   };
 }
 
@@ -556,6 +883,165 @@ async function fetchElevationRange(
   }
 }
 
+async function fetchRouteAscentFeet(
+  routePoints: Array<{ lat: number; lon: number }>,
+) {
+  const selected =
+    routePoints.length <= 96
+      ? routePoints
+      : Array.from({ length: 96 }, (_, index) => {
+          const step = (routePoints.length - 1) / 95;
+          return routePoints[Math.round(index * step)];
+        });
+
+  const params = new URLSearchParams({
+    latitude: selected.map((point) => point.lat.toFixed(5)).join(","),
+    longitude: selected.map((point) => point.lon.toFixed(5)).join(","),
+  });
+
+  try {
+    const response = await fetch(`https://api.open-meteo.com/v1/elevation?${params}`, {
+      signal: AbortSignal.timeout(1_800),
+      next: { revalidate: 86_400 },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { elevation?: Array<number | null> };
+    const feet = (payload.elevation ?? [])
+      .map((value) =>
+        typeof value === "number" && Number.isFinite(value) ? value * 3.28084 : null,
+      )
+      .filter((value): value is number => value !== null);
+    if (feet.length < 8) return null;
+
+    let gain = 0;
+    for (let index = 1; index < feet.length; index += 1) {
+      const delta = feet[index] - feet[index - 1];
+      // Ignore tiny DEM jitter so sampled terrain does not manufacture climb.
+      if (delta > 6) gain += delta;
+    }
+
+    if (!Number.isFinite(gain) || gain <= 0 || gain > 15_000) return null;
+    return Math.round(gain);
+  } catch {
+    return null;
+  }
+}
+
+export function deriveGoSignal(args: {
+  weather: PointWeatherIntelligence | null;
+  access: AccessIntelligence;
+  trailTruth: TrailRouteTruth | null;
+}): GoSignal {
+  const { weather, access, trailTruth } = args;
+  const reasons: string[] = [];
+  const cautions: string[] = [];
+
+  if (access.closureCount > 0) {
+    cautions.push(
+      `Michigan DNR returned ${access.closureCount} nearby closure item${access.closureCount === 1 ? "" : "s"}.`,
+    );
+  }
+  if (access.rerouteCount > 0) {
+    cautions.push(
+      `Michigan DNR returned ${access.rerouteCount} nearby reroute item${access.rerouteCount === 1 ? "" : "s"}.`,
+    );
+  }
+
+  if (!weather) {
+    return {
+      status: access.closureCount > 0 ? "poor" : access.rerouteCount > 0 ? "mixed" : "unknown",
+      headline:
+        access.closureCount > 0
+          ? "Access deserves a check before committing."
+          : "Current weather did not return, so the day cannot be ranked confidently.",
+      reasons,
+      cautions,
+    };
+  }
+
+  const window = weather.outingWindow;
+  const naturalSurface =
+    !trailTruth?.surface ||
+    !["paved", "asphalt", "concrete", "paving_stones"].includes(trailTruth.surface);
+
+  if (
+    window?.maxPrecipitationProbability !== null &&
+    window?.maxPrecipitationProbability !== undefined
+  ) {
+    if (window.maxPrecipitationProbability >= 70) {
+      cautions.push(
+        `Rain chance reaches ${Math.round(window.maxPrecipitationProbability)}% in the next several hours.`,
+      );
+    } else if (window.maxPrecipitationProbability <= 30) {
+      reasons.push("The next several hours have a relatively low rain signal.");
+    }
+  }
+
+  if (window?.maxWindGust !== null && window?.maxWindGust !== undefined) {
+    if (window.maxWindGust >= 30) {
+      cautions.push(`Gusts may reach about ${Math.round(window.maxWindGust)} mph.`);
+    } else if (window.maxWindGust < 20) {
+      reasons.push("Wind looks relatively modest in the near-term window.");
+    }
+  }
+
+  if (weather.aqi !== null) {
+    if (weather.aqi >= 101) {
+      cautions.push(`Air quality reaches AQI ${Math.round(weather.aqi)}.`);
+    } else if (weather.aqi <= 80) {
+      reasons.push("Air quality is not currently a major negative signal.");
+    }
+  }
+
+  if (naturalSurface && weather.recentRainInches !== null && weather.recentRainInches >= 0.35) {
+    cautions.push(
+      `About ${weather.recentRainInches.toFixed(2)} in of rain was reported in the prior 24 hours; natural surfaces may be wet or muddy.`,
+    );
+  }
+
+  if (weather.recentSnowInches !== null && weather.recentSnowInches >= 0.5) {
+    cautions.push(
+      `Recent snowfall is about ${weather.recentSnowInches.toFixed(1)} in; route footing may differ from normal conditions.`,
+    );
+  }
+
+  if (weather.daylightHoursRemaining !== null) {
+    if (weather.daylightHoursRemaining < 2) {
+      cautions.push(
+        `Only about ${weather.daylightHoursRemaining.toFixed(1)} hours of daylight remain.`,
+      );
+    } else if (weather.daylightHoursRemaining >= 4) {
+      reasons.push(
+        `About ${weather.daylightHoursRemaining.toFixed(1)} hours of daylight remain.`,
+      );
+    }
+  }
+
+  const severeWeatherSignal =
+    (window?.maxPrecipitationProbability ?? 0) >= 85 ||
+    (window?.maxWindGust ?? 0) >= 40 ||
+    (weather.aqi ?? 0) >= 151;
+  const status: GoSignal["status"] =
+    access.closureCount > 0 || severeWeatherSignal
+      ? "poor"
+      : cautions.length > 0
+        ? "mixed"
+        : reasons.length >= 2
+          ? "good"
+          : "unknown";
+
+  const headline =
+    status === "good"
+      ? "This place is making a relatively strong case for the next several hours."
+      : status === "mixed"
+        ? "The day is workable on paper, but one or more conditions deserve a second look."
+        : status === "poor"
+          ? "A current condition or access signal argues for checking an alternative."
+          : "There is not enough current evidence to make a strong go-or-skip call.";
+
+  return { status, headline, reasons: reasons.slice(0, 4), cautions: cautions.slice(0, 5) };
+}
+
 export async function fetchPlaceIntelligence(args: {
   latitude: number;
   longitude: number;
@@ -605,16 +1091,28 @@ export async function fetchPlaceIntelligence(args: {
       : ({ type: "FeatureCollection", features: [] } as UniverseGeoJson);
   const osmElements = osmResult.status === "fulfilled" ? osmResult.value : [];
 
-  const elevation = await fetchElevationRange(trails.features, args.latitude, args.longitude);
+  const [elevation, trailTruth] = await Promise.all([
+    fetchElevationRange(trails.features, args.latitude, args.longitude),
+    buildTrailTruth(osmElements, args.latitude, args.longitude),
+  ]);
+  const weather = weatherResult.status === "fulfilled" ? weatherResult.value : null;
+  const access = summarizeAccess(closures, reroutes, args.latitude, args.longitude);
+  const trailMetadata = summarizeOsmTrailMetadata(
+    osmElements,
+    args.latitude,
+    args.longitude,
+  );
 
   return {
     generatedAt: new Date().toISOString(),
-    weather: weatherResult.status === "fulfilled" ? weatherResult.value : null,
+    weather,
     trailSystems: summarizeTrailSystems(trails.features, args.latitude, args.longitude),
-    trailMetadata: summarizeOsmTrailMetadata(osmElements, args.latitude, args.longitude),
+    trailMetadata,
+    trailTruth,
+    goSignal: deriveGoSignal({ weather, access, trailTruth }),
     elevation,
-    access: summarizeAccess(closures, reroutes, args.latitude, args.longitude),
+    access,
     confidenceNote:
-      "Weather and air quality come from Open-Meteo. Nearby official trail and access-change data come from Michigan DNR. OSM difficulty, surface, route-distance and visibility fields appear only when nearby mapped trail data includes those tags. Elevation is a sampled nearby-trail terrain range, not total route gain.",
+      "Current weather, recent rain, daylight and air quality come from Open-Meteo. Nearby official trail and access-change data come from Michigan DNR. Trail Truth resolves the nearest mapped OSM hiking relation when one is available: tagged route distance is strongest, relation-member geometry is the fallback, and sampled ascent is explicitly estimated. Official land-manager maps and notices remain the final source for route choice, closures and seasonal rules.",
   };
 }

@@ -141,14 +141,14 @@ export const guides: SearchGuide[] = [
     description:
       "Find Michigan hiking day-trip ideas from your city. Compare drive time, rain, temperature, wind, AQI, scenery, access notes, maps, and official trail information.",
     directAnswer:
-      "For a Michigan hiking day trip, first choose a realistic drive radius and the day, then compare rain, temperature, air quality, trail setting, and official access. The planner recommends destinations, not individual trail difficulty, so use the official map to choose the route that fits your group.",
+      "For a Michigan hiking day trip, first choose a realistic drive radius and the day, then compare rain, temperature, air quality, trail setting, and official access. Open a selected result to load Trail Truth when a mapped hiking relation is available, including route mileage, route type, difficulty tags, surface, and ascent evidence. The official land-manager map remains the final route and closure source.",
     audience: "Casual walkers and hikers who know how far they will drive but have not chosen a park or recreation area.",
     bestFor: "Woodland walks, overlooks, dunes, waterfalls, wildlife areas, and flexible trail systems.",
     planStart: "This weekend · up to 2 hours · hiking and scenery",
     weatherPivot: "Heavy rain, heat, smoke, snow, ice, or strong exposure can make a shorter or more sheltered route the better day.",
     planner: { date: "weekend", maxDriveHours: 2, activities: ["hiking", "scenic"], kids: false, dog: false, accessible: false },
     tips: [
-      { title: "Choose the destination first", text: "This tool narrows the region and park; the official trail map should determine distance, grade, surface, and route." },
+      { title: "Separate route truth from trip fit", text: "Use published land-manager mileage or the selected route evidence for distance and terrain, then use current conditions to decide whether today is the right day." },
       { title: "Match the forecast to exposure", text: "A windy shoreline bluff and a sheltered forest can feel very different under the same regional forecast." },
       { title: "Leave margin", text: "Drive estimates are rough and not live traffic. Keep daylight, parking, route-finding, and rest time outside the hiking estimate." },
     ],
@@ -160,7 +160,7 @@ export const guides: SearchGuide[] = [
     ],
     destinationIds: ["kensington-metropark", "hartwick-pines", "lumbermans-monument", "pictured-rocks", "porcupine-mountains"],
     faqs: [
-      { question: "Does this planner rate Michigan trail difficulty?", answer: "No. It ranks destination fit. Trail length, grade, surface, and current condition must be checked on the official map or with the land manager." },
+      { question: "Does this planner show Michigan trail difficulty?", answer: "When a selected hiking result resolves to a mapped OSM route, Trail Truth can show route mileage, route type, difficulty tags, surface, visibility, and ascent evidence. Those mapped fields are planning context, not an official difficulty rating; use the land-manager map and notices for the final route decision." },
       { question: "Can I require dog-friendly hiking?", answer: "Yes. Select dog allowed, then verify leash rules, restricted areas, and seasonal rules with the official destination." },
       { question: "Why does rain affect the hiking order?", answer: "Higher rain chances can reduce comfort and may worsen mud, flooding, or slippery surfaces. The score is only a planning comparison, not a trail-condition report." },
     ],

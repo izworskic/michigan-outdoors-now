@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { growthEventNames } from "../../lib/growth-contract";
 import { landingQualitySummary, searchLandingIntents } from "../../lib/search-landings";
 import { siteUrl } from "../../lib/site";
+import { trailSearchPages } from "../../lib/trail-search-pages";
 
 export const runtime = "nodejs";
 
@@ -18,6 +19,8 @@ export async function GET() {
         locationIntentPages: quality.total,
         originsCovered: quality.originsCovered,
         families: searchLandingIntents.map((intent) => intent.slug),
+        trailIntentPages: trailSearchPages.length,
+        trailFamilies: trailSearchPages.map((page) => page.slug),
         excludedCanonicalOwners: {
           beaches: "https://chrisizworski.com/great-lakes-beaches/",
           freighters: "https://chrisizworski.com/great-lakes-freighter-tracking/",

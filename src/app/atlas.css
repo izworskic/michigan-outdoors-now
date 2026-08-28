@@ -3615,3 +3615,228 @@ body{background:#f8f5ef;color:#243139}
     width:100%;
   }
 }
+
+
+/* Trail Truth + Build My Day */
+.canvas-go-signal{
+  display:grid;
+  gap:5px;
+  margin:10px 0 8px;
+  padding:11px 12px;
+  border:1px solid rgba(31,61,69,.12);
+  border-radius:10px;
+  background:#f8faf8;
+}
+.canvas-go-signal>span{
+  color:#6a7f83;
+  font-size:7px;
+  font-weight:880;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.canvas-go-signal>strong{
+  color:#1d4148;
+  font:500 15px/1.15 Georgia,serif;
+}
+.canvas-go-signal>p,
+.canvas-go-signal>small{
+  margin:0;
+  color:#566d72;
+  font-size:8px;
+  line-height:1.45;
+}
+.canvas-go-signal.is-good{
+  border-color:rgba(49,95,85,.22);
+  background:#f2f7f3;
+}
+.canvas-go-signal.is-mixed{
+  border-color:rgba(143,107,80,.24);
+  background:#faf6ee;
+}
+.canvas-go-signal.is-poor{
+  border-color:rgba(143,81,54,.28);
+  background:#faeee8;
+}
+.canvas-compare-build{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  margin:0 0 11px;
+  padding:10px 11px;
+  border:1px solid rgba(31,61,69,.12);
+  border-radius:9px;
+  background:#f7f8f4;
+}
+.canvas-compare-build button{
+  min-height:34px;
+  padding:7px 12px;
+  border:1px solid #173f35;
+  border-radius:7px;
+  background:#173f35;
+  color:#fff;
+  font-size:9px;
+  font-weight:860;
+  cursor:pointer;
+}
+.canvas-compare-build button:disabled{opacity:.6;cursor:wait}
+.canvas-compare-build small{
+  color:#6b7c80;
+  font-size:8px;
+  line-height:1.35;
+}
+.canvas-day-plan{
+  position:fixed;
+  z-index:64;
+  inset:12px;
+  max-width:760px;
+  margin:auto;
+  overflow:auto;
+  padding:18px;
+  border:1px solid rgba(255,255,255,.86);
+  border-radius:16px;
+  background:rgba(248,248,243,.99);
+  box-shadow:0 28px 90px rgba(15,38,44,.30);
+  backdrop-filter:blur(22px);
+}
+.canvas-day-plan-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  padding-bottom:11px;
+  border-bottom:1px solid rgba(31,61,69,.10);
+}
+.canvas-day-plan-head>div{display:grid;gap:2px}
+.canvas-day-plan-head span,
+.canvas-day-plan-leg span,
+.canvas-day-plan-stop-copy>span{
+  color:#8f5136;
+  font-size:7px;
+  font-weight:860;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.canvas-day-plan-head strong{
+  color:#24464d;
+  font:500 18px/1.08 Georgia,serif;
+}
+.canvas-day-plan-head>button{
+  width:32px;
+  height:32px;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#647b80;
+  font-size:22px;
+  cursor:pointer;
+}
+.canvas-day-plan-summary{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  padding:17px 2px 13px;
+}
+.canvas-day-plan-summary strong{
+  color:#17343c;
+  font:500 25px/1 Georgia,serif;
+}
+.canvas-day-plan-summary span{
+  color:#6c8084;
+  font-size:9px;
+}
+.canvas-day-plan-stops{
+  display:grid;
+  gap:8px;
+  margin:0;
+  padding:0;
+  list-style:none;
+}
+.canvas-day-plan-stops li{
+  display:grid;
+  grid-template-columns:128px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  padding:12px;
+  border:1px solid rgba(31,61,69,.11);
+  border-radius:10px;
+  background:#fff;
+}
+.canvas-day-plan-leg,
+.canvas-day-plan-stop-copy{
+  display:grid;
+  gap:3px;
+}
+.canvas-day-plan-leg strong{
+  color:#315f55;
+  font-size:9px;
+}
+.canvas-day-plan-stop-copy h2{
+  margin:0;
+  color:#1d3c43;
+  font:500 18px/1.05 Georgia,serif;
+}
+.canvas-day-plan-stop-copy p{
+  margin:0;
+  color:#718186;
+  font-size:8px;
+}
+.canvas-day-plan-actions{
+  display:flex;
+  flex-direction:column;
+  gap:5px;
+}
+.canvas-day-plan-actions button,
+.canvas-day-plan-actions a,
+.canvas-day-plan-footer button{
+  min-height:31px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:6px 9px;
+  border:1px solid rgba(31,61,69,.16);
+  border-radius:7px;
+  background:#f9faf7;
+  color:#294f57;
+  font-size:8px;
+  font-weight:820;
+  text-decoration:none;
+  cursor:pointer;
+}
+.canvas-day-plan-note{
+  margin:11px 1px 0;
+  color:#6d7f83;
+  font-size:8px;
+  line-height:1.45;
+}
+.canvas-day-plan-footer{
+  display:flex;
+  gap:7px;
+  margin-top:11px;
+}
+@media(max-width:700px){
+  .canvas-compare-build{align-items:flex-start;flex-direction:column}
+  .canvas-day-plan{
+    inset:7px;
+    max-width:none;
+    margin:0;
+    padding:14px;
+    border-radius:13px;
+  }
+  .canvas-day-plan-summary{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+  .canvas-day-plan-stops li{
+    grid-template-columns:1fr;
+    gap:8px;
+  }
+  .canvas-day-plan-actions{
+    flex-direction:row;
+  }
+  .canvas-day-plan-footer{
+    display:grid;
+    grid-template-columns:1fr;
+  }
+}

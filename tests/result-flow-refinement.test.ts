@@ -137,7 +137,7 @@ test("selected semantic places load current trip confidence intelligence", async
   assert.match(hub, /className="canvas-field-intelligence"/);
   assert.match(hub, /What we know before you leave\./);
   assert.match(hub, /Open-Meteo weather \+ air quality/);
-  assert.match(hub, /DNR mapped mi in the nearby window/);
+  assert.match(hub, /DNR shows .* mapped mi in the nearby trail window/);
   assert.match(hub, /nearby elevation span/);
   assert.match(hub, /DNR closure item/);
   assert.match(css, /\.canvas-field-intelligence\{/);
@@ -187,4 +187,43 @@ test("Get me out of here becomes a sparse departure mode", async () => {
   assert.match(css, /\.has-departure \.canvas-topbar,[\s\S]*?visibility:hidden;/);
   assert.match(css, /\.has-departure \.canvas-result-dock/);
   assert.doesNotMatch(hub, /canvas-departure[\s\S]*?you may also like/i);
+});
+
+
+test("Trail Truth resolves route-specific evidence and current go signal in selected detail", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const intelligence = await readFile(new URL("../src/lib/place-intelligence.ts", import.meta.url), "utf8");
+
+  assert.match(hub, />Trail Truth</);
+  assert.match(hub, /Should I go\?/);
+  assert.match(hub, /trailTruth\.distanceMiles/);
+  assert.match(hub, /trailTruth\.ascentFeet/);
+  assert.match(intelligence, /way\(r\.routes\)/);
+  assert.match(intelligence, /distanceSource/);
+  assert.match(intelligence, /sampled-route/);
+  assert.match(intelligence, /deriveGoSignal/);
+});
+
+test("Decision Board can build a routed multi-stop day without adding another discovery wizard", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
+
+  assert.match(hub, /async function buildMyDay\(\)/);
+  assert.match(hub, /fetch\("\/api\/day-plan"/);
+  assert.match(hub, />Build my day</);
+  assert.match(hub, /className="canvas-day-plan"/);
+  assert.match(hub, /total driving/);
+  assert.match(hub, /Reorder the choices/);
+  assert.match(css, /\.canvas-day-plan\{/);
+});
+
+test("structured planner distinguishes routed road travel from fallback estimates", async () => {
+  const planner = await readFile(new URL("../src/components/planner.tsx", import.meta.url), "utf8");
+  const route = await readFile(new URL("../src/app/api/recommendations/route.ts", import.meta.url), "utf8");
+
+  assert.match(route, /fetchRoutedPoints/);
+  assert.match(route, /travelSource: "routed"/);
+  assert.match(planner, /plan\.travelSource === "routed"/);
+  assert.match(planner, /road.*rough/);
+  assert.doesNotMatch(planner, /Drive times are rough estimates, not live traffic/);
 });

@@ -169,12 +169,15 @@ for (const slug of placeSlugs) {
 const searchLandingPageCount = htmlFiles.filter((file) =>
   /\/from\/[^/]+\/[^/]+\.html$/.test(file),
 ).length;
+const trailSearchPageCount = htmlFiles.filter((file) =>
+  /\/hiking\/[^/]+\.html$/.test(file),
+).length;
 
 const sitemapPath = files.find((file) => file.endsWith("sitemap.xml.body"));
 assert.ok(sitemapPath, "built sitemap body was not found");
 const sitemap = await readFile(sitemapPath, "utf8");
 const expectedSitemapUrls =
-  placeSlugs.length + originSlugs.length + guideSlugs.length + searchLandingPageCount + 4;
+  placeSlugs.length + originSlugs.length + guideSlugs.length + searchLandingPageCount + trailSearchPageCount + 4;
 assert.equal((sitemap.match(/<url>/g) ?? []).length, expectedSitemapUrls);
 assert.doesNotMatch(sitemap, /<priority>|<changefreq>|<lastmod>/);
 
@@ -183,4 +186,4 @@ assert.ok(robotsPath, "built robots body was not found");
 const robots = await readFile(robotsPath, "utf8");
 assert.match(robots, /Disallow: \//);
 
-console.log(`SEO check passed: ${originSlugs.length} origin hubs, ${searchLandingPageCount} qualified location-intent pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, ${expectedSitemapUrls} sitemap URLs, and preview noindex.`);
+console.log(`SEO check passed: ${originSlugs.length} origin hubs, ${searchLandingPageCount} qualified location-intent pages, ${trailSearchPageCount} route-specific hiking pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, ${expectedSitemapUrls} sitemap URLs, and preview noindex.`);

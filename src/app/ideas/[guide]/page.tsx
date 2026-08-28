@@ -6,6 +6,7 @@ import { destinations } from "../../../data/destinations";
 import { guides, guidesBySlug } from "../../../data/guides";
 import { activityLabels } from "../../../lib/planner";
 import { searchLandingsForGuide } from "../../../lib/search-landings";
+import { trailSearchPages } from "../../../lib/trail-search-pages";
 import { jsonLd, personSchema, siteUrl } from "../../../lib/site";
 
 export const dynamicParams = false;
@@ -44,6 +45,7 @@ export default async function GuidePage({ params }: { params: Promise<{ guide: s
     )
     .slice(0, 3);
   const cityDecisionPages = searchLandingsForGuide(guide.slug).slice(0, 8);
+  const trailIntentPages = guide.slug === "hiking-day-trips" ? trailSearchPages : [];
   const pageUrl = `${siteUrl}/ideas/${guide.slug}`;
   const structuredData = {
     "@context": "https://schema.org",
@@ -196,6 +198,29 @@ export default async function GuidePage({ params }: { params: Promise<{ guide: s
             ))}
           </div>
         </section>
+
+        {trailIntentPages.length > 0 && (
+          <section className="search-landing-network content-wrap" aria-labelledby="trail-truth-search-pages">
+            <div>
+              <p className="eyebrow">Route-specific hiking</p>
+              <h2 id="trail-truth-search-pages">Choose by actual route length and terrain.</h2>
+              <div className="search-landing-link-list">
+                {trailIntentPages.slice(0, 6).map((page) => (
+                  <Link href={`/hiking/${page.slug}`} key={page.slug}>
+                    {page.h1}<span>→</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="eyebrow">Trail Truth</p>
+              <h2>Official route facts stay separate from live conditions.</h2>
+              <p>
+                Route-search pages use land-manager mileage. Open a live result to add current weather, access changes, mapped OSM route evidence, and routed driving without pretending those sources are the same thing.
+              </p>
+            </div>
+          </section>
+        )}
 
         {cityDecisionPages.length > 0 && (
           <section className="search-landing-network content-wrap" aria-labelledby="guide-city-decisions">

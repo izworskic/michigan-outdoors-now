@@ -65,7 +65,8 @@ async function main() {
       intelligence.includes("DNR_TRAIL_SERVICE") &&
       intelligence.includes("esriGeometryEnvelope") &&
       intelligence.includes("SegmentLengthMiles") &&
-      hub.includes("DNR mapped mi in the nearby window"),
+      hub.includes("DNR shows") &&
+      hub.includes("mapped mi in the nearby trail window"),
     terrainElevation:
       intelligence.includes("api.open-meteo.com/v1/elevation") &&
       intelligence.includes("rangeFeet") &&
@@ -79,7 +80,7 @@ async function main() {
       intelligenceTests.includes("route distance defaults to kilometers") &&
       intelligenceTests.includes("length defaults to meters") &&
       intelligenceTests.includes("ascent defaults to meters") &&
-      hub.includes("Difficulty/surface tags not available here"),
+      hub.includes("Difficulty/surface tags not available on the selected relation"),
     officialAccessChanges:
       intelligence.includes("DNR_TRAIL_CLOSURES_SERVICE") &&
       intelligence.includes("DNR_TRAIL_REROUTES_SERVICE") &&

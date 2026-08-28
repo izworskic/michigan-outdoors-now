@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
+import type { DayPlanResponse } from "../lib/day-plan";
 import type { DiscoveryPlace, DiscoveryResponse } from "../lib/discovery";
 import type { PlaceIntelligence } from "../lib/place-intelligence";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
@@ -204,14 +205,11 @@ function checkedAgeLabel(generatedAt: string | undefined) {
 
 function confidenceUnknowns(place: DiscoveryPlace, intelligence: PlaceIntelligence | null) {
   const unknowns: string[] = [];
-  const nearbyMappedMiles = intelligence?.trailSystems[0]?.nearbyMappedMiles ?? 0;
   if (place.travelSource !== "routed") unknowns.push("road-routed drive time");
   if (!intelligence?.weather) unknowns.push("fresh point weather");
-  if (!intelligence?.trailMetadata?.taggedDistanceMiles && nearbyMappedMiles <= 0) {
-    unknowns.push("exact hike mileage");
-  }
-  if (!intelligence?.trailMetadata?.difficulty) unknowns.push("verified trail difficulty");
-  if (!intelligence?.trailMetadata?.taggedAscentFeet) unknowns.push("route ascent");
+  if (!intelligence?.trailTruth?.distanceMiles) unknowns.push("selected-route mileage");
+  if (!intelligence?.trailTruth?.difficulty) unknowns.push("route difficulty tag");
+  if (!intelligence?.trailTruth?.ascentFeet) unknowns.push("route ascent");
   return unknowns;
 }
 
@@ -248,6 +246,9 @@ export function OutdoorIntentHub() {
   const [compareOpen, setCompareOpen] = useState(false);
   const [dismissedDiscoveryIds, setDismissedDiscoveryIds] = useState<string[]>([]);
   const [departureOpen, setDepartureOpen] = useState(false);
+  const [dayPlan, setDayPlan] = useState<DayPlanResponse | null>(null);
+  const [dayPlanOpen, setDayPlanOpen] = useState(false);
+  const [dayPlanning, setDayPlanning] = useState(false);
   const [placeIntelligence, setPlaceIntelligence] = useState<PlaceIntelligence | null>(null);
   const [placeIntelligenceLoading, setPlaceIntelligenceLoading] = useState(false);
   const [planning, setPlanning] = useState(false);
@@ -439,6 +440,9 @@ export function OutdoorIntentHub() {
     setComparisonPlaces([]);
     setCompareOpen(false);
     setDepartureOpen(false);
+    setDayPlan(null);
+    setDayPlanOpen(false);
+    setDayPlanning(false);
     setAroundOpen(false);
   }
 
@@ -737,6 +741,8 @@ export function OutdoorIntentHub() {
     const alreadyKept = comparisonPlaces.some((candidate) => candidate.id === place.id);
     if (alreadyKept) {
       const next = comparisonPlaces.filter((candidate) => candidate.id !== place.id);
+      setDayPlan(null);
+      setDayPlanOpen(false);
       trackGrowthEvent("place_unkept", semanticGrowthContext, {
         keptCount: next.length,
         category: place.category,
@@ -752,6 +758,8 @@ export function OutdoorIntentHub() {
     }
 
     const nextPlaces = [...comparisonPlaces, place];
+    setDayPlan(null);
+    setDayPlanOpen(false);
     trackGrowthEvent("place_kept", semanticGrowthContext, {
       keptCount: nextPlaces.length,
       category: place.category,
@@ -769,6 +777,56 @@ export function OutdoorIntentHub() {
     setDepartureOpen(false);
     setActiveDiscoveryId("");
     setCompareOpen(true);
+  }
+
+  async function buildMyDay() {
+    if (!discovery || comparisonPlaces.length < 2) {
+      setMessage("Keep two or three places before building a day.");
+      return;
+    }
+
+    setDayPlanning(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/day-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: discovery.origin,
+          places: comparisonPlaces.map((place) => ({
+            id: place.id,
+            name: place.name,
+            area: place.area,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            category: place.categoryLabel,
+          })),
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !("stops" in payload)) {
+        throw new Error(payload.error ?? "Could not build the day.");
+      }
+
+      const result = payload as DayPlanResponse;
+      setDayPlan(result);
+      setCompareOpen(false);
+      setDayPlanOpen(true);
+      trackGrowthEvent("day_plan_built", semanticGrowthContext, {
+        stopCount: result.stops.length,
+        routeSource: result.source,
+        totalDriveMinutes: result.totalDriveMinutes,
+      });
+      trackGrowthEvent("day_plan_opened", semanticGrowthContext, {
+        stopCount: result.stops.length,
+        routeSource: result.source,
+      });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not build the day.");
+    } finally {
+      setDayPlanning(false);
+    }
   }
 
   function openDeparture() {
@@ -1438,6 +1496,16 @@ export function OutdoorIntentHub() {
             </div>
           ) : null}
 
+          {placeIntelligence?.goSignal && (
+            <div className={`canvas-go-signal is-${placeIntelligence.goSignal.status}`}>
+              <span>Current case</span>
+              <strong>{placeIntelligence.goSignal.headline}</strong>
+              {placeIntelligence.goSignal.cautions.length > 0 && (
+                <small>{placeIntelligence.goSignal.cautions.join(" ")}</small>
+              )}
+            </div>
+          )}
+
           <div className="canvas-departure-grid">
             <article>
               <span>Weather</span>
@@ -1446,13 +1514,13 @@ export function OutdoorIntentHub() {
             <article>
               <span>Trail</span>
               <strong>
-                {placeIntelligence?.trailSystems[0]?.name ??
-                  placeIntelligence?.trailMetadata?.routeName ??
+                {placeIntelligence?.trailTruth?.routeName ??
+                  placeIntelligence?.trailSystems[0]?.name ??
                   "Exact route still needs choosing"}
               </strong>
               <small>
-                {placeIntelligence?.trailMetadata?.taggedDistanceMiles
-                  ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi tagged route`
+                {placeIntelligence?.trailTruth?.distanceMiles
+                  ? `${placeIntelligence.trailTruth.distanceMiles} mi ${placeIntelligence.trailTruth.distanceSource === "osm-tag" ? "tagged route" : "mapped relation"}`
                   : placeIntelligence?.trailSystems[0]?.nearbyMappedMiles
                     ? `${placeIntelligence.trailSystems[0].nearbyMappedMiles} DNR mapped mi nearby`
                     : "Mileage not verified"}
@@ -1461,8 +1529,8 @@ export function OutdoorIntentHub() {
             <article>
               <span>Terrain</span>
               <strong>
-                {placeIntelligence?.trailMetadata?.taggedAscentFeet
-                  ? `${placeIntelligence.trailMetadata.taggedAscentFeet} ft tagged ascent`
+                {placeIntelligence?.trailTruth?.ascentFeet
+                  ? `${placeIntelligence.trailTruth.ascentFeet} ft ${placeIntelligence.trailTruth.ascentSource === "osm-tag" ? "tagged" : "sampled"} ascent`
                   : placeIntelligence?.elevation
                     ? `~${placeIntelligence.elevation.rangeFeet} ft nearby elevation span`
                     : "Profile not verified"}
@@ -1504,10 +1572,69 @@ export function OutdoorIntentHub() {
             <summary>Source truth</summary>
             <p>
               {activeDiscovery.travelSource === "routed" ? "Road travel is routed through OSRM. " : "Drive time is still a planning estimate. "}
-              Weather uses Open-Meteo. Trail/access checks use Michigan DNR and mapped trail metadata uses OpenStreetMap when present.
+              Weather, recent rain, daylight and AQI use Open-Meteo. Trail/access changes use Michigan DNR. Trail Truth uses an OpenStreetMap hiking relation when one resolves; geometry-derived mileage and sampled ascent remain explicitly estimated.
               {activeUnknowns.length ? ` Still unknown: ${activeUnknowns.join(", ")}.` : ""}
             </p>
           </details>
+        </aside>
+      )}
+
+      {dayPlanOpen && dayPlan && (
+        <aside className="canvas-day-plan" aria-label="Built day plan" aria-live="polite">
+          <div className="canvas-day-plan-head">
+            <div>
+              <span>Build my day</span>
+              <strong>{dayPlan.source === "routed" ? "A routed order for the places you kept." : "A fallback order while routing is unavailable."}</strong>
+            </div>
+            <button type="button" onClick={() => setDayPlanOpen(false)} aria-label="Close day plan">×</button>
+          </div>
+
+          <div className="canvas-day-plan-summary">
+            <strong>{driveTimeLabel(dayPlan.totalDriveMinutes / 60)} total driving</strong>
+            <span>{dayPlan.totalDriveMiles} {dayPlan.source === "routed" ? "road" : "rough"} mi · {dayPlan.stops.length} stops</span>
+          </div>
+
+          <ol className="canvas-day-plan-stops">
+            {dayPlan.stops.map((stop) => {
+              const leg = dayPlan.legs.find((candidate) => candidate.toId === stop.id);
+              const sourcePlace = comparisonPlaces.find((candidate) => candidate.id === stop.id);
+              return (
+                <li key={stop.id}>
+                  <div className="canvas-day-plan-leg">
+                    <span>{stop.order === 1 ? "From your start" : "From previous stop"}</span>
+                    <strong>
+                      {leg ? `${driveTimeLabel(leg.driveMinutes / 60)} · ${leg.distanceMiles} mi` : "Travel unavailable"}
+                    </strong>
+                  </div>
+                  <div className="canvas-day-plan-stop-copy">
+                    <span>{stop.arrivalLabel}–{stop.leaveLabel} · ~{stop.suggestedMinutes} min there</span>
+                    <h2>{stop.name}</h2>
+                    <p>{stop.area}</p>
+                  </div>
+                  <div className="canvas-day-plan-actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDayPlanOpen(false);
+                        activateDiscovery(stop.id);
+                      }}
+                    >
+                      Open this stop
+                    </button>
+                    {sourcePlace && (
+                      <a href={sourcePlace.directionsUrl} target="_blank" rel="noopener">Directions</a>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+
+          <p className="canvas-day-plan-note">{dayPlan.note}</p>
+          <div className="canvas-day-plan-footer">
+            <button type="button" onClick={() => setDayPlanOpen(false)}>Back to the map</button>
+            <button type="button" onClick={() => setCompareOpen(true)}>Reorder the choices</button>
+          </div>
         </aside>
       )}
 
@@ -1520,6 +1647,14 @@ export function OutdoorIntentHub() {
             </div>
             <button type="button" onClick={() => setCompareOpen(false)} aria-label="Close comparison">×</button>
           </div>
+          {comparisonPlaces.length >= 2 && (
+            <div className="canvas-compare-build">
+              <button type="button" onClick={() => void buildMyDay()} disabled={dayPlanning}>
+                {dayPlanning ? "Routing the day…" : "Build my day"}
+              </button>
+              <small>Order two or three kept places to reduce driving from your starting point.</small>
+            </div>
+          )}
           <div className="canvas-compare-grid">
             {comparisonPlaces.map((place) => (
               <article key={place.id}>
@@ -1637,6 +1772,19 @@ export function OutdoorIntentHub() {
                 </div>
 
                 {placeIntelligence && (
+                  <div className={`canvas-go-signal is-${placeIntelligence.goSignal.status}`}>
+                    <span>Should I go?</span>
+                    <strong>{placeIntelligence.goSignal.headline}</strong>
+                    {placeIntelligence.goSignal.reasons.length > 0 && (
+                      <p>{placeIntelligence.goSignal.reasons.join(" ")}</p>
+                    )}
+                    {placeIntelligence.goSignal.cautions.length > 0 && (
+                      <small>{placeIntelligence.goSignal.cautions.join(" ")}</small>
+                    )}
+                  </div>
+                )}
+
+                {placeIntelligence && (
                   <div className="canvas-field-intelligence-grid">
                     <article>
                       <span>Drive</span>
@@ -1651,54 +1799,57 @@ export function OutdoorIntentHub() {
                     </article>
 
                     <article>
-                      <span>Trail nearby</span>
-                      {placeIntelligence.trailSystems[0] ? (
+                      <span>Trail Truth</span>
+                      {placeIntelligence.trailTruth ? (
+                        <>
+                          <strong>
+                            {placeIntelligence.trailTruth.routeName ?? "Mapped hiking relation"}
+                          </strong>
+                          <small>
+                            {[
+                              placeIntelligence.trailTruth.distanceMiles
+                                ? `${placeIntelligence.trailTruth.distanceMiles} mi ${placeIntelligence.trailTruth.distanceSource === "osm-tag" ? "tagged route" : "mapped relation"}`
+                                : null,
+                              placeIntelligence.trailTruth.routeKind !== "unknown"
+                                ? placeIntelligence.trailTruth.routeKind
+                                : null,
+                              `${placeIntelligence.trailTruth.confidence} confidence`,
+                            ].filter(Boolean).join(" · ")}
+                          </small>
+                        </>
+                      ) : placeIntelligence.trailSystems[0] ? (
                         <>
                           <strong>{placeIntelligence.trailSystems[0].name}</strong>
                           <small>
-                            {placeIntelligence.trailSystems[0].nearbyMappedMiles > 0
-                              ? `${placeIntelligence.trailSystems[0].nearbyMappedMiles} DNR mapped mi in the nearby window`
-                              : `${placeIntelligence.trailSystems[0].nearestMiles} mi from the selected place`}
-                          </small>
-                        </>
-                      ) : placeIntelligence.trailMetadata?.routeName ? (
-                        <>
-                          <strong>{placeIntelligence.trailMetadata.routeName}</strong>
-                          <small>
-                            {placeIntelligence.trailMetadata.taggedDistanceMiles
-                              ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi OSM-tagged route`
-                              : "Named OSM hiking route nearby; mapped distance is not tagged."}
+                            No selected OSM route resolved. DNR shows {placeIntelligence.trailSystems[0].nearbyMappedMiles} mapped mi in the nearby trail window.
                           </small>
                         </>
                       ) : (
                         <>
-                          <strong>No nearby official or named route returned</strong>
-                          <small>This does not mean there is no trail; the nearby source queries may be incomplete.</small>
+                          <strong>No route-specific trail truth returned</strong>
+                          <small>Nearby source coverage may be incomplete; verify the official map before choosing a route.</small>
                         </>
                       )}
                     </article>
 
                     <article>
-                      <span>Terrain</span>
+                      <span>Route profile</span>
                       <strong>
-                        {placeIntelligence.trailMetadata?.taggedDistanceMiles
-                          ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi tagged route`
+                        {placeIntelligence.trailTruth?.ascentFeet
+                          ? `${placeIntelligence.trailTruth.ascentFeet} ft ${placeIntelligence.trailTruth.ascentSource === "osm-tag" ? "tagged" : "sampled"} ascent`
                           : placeIntelligence.elevation
                             ? `~${placeIntelligence.elevation.rangeFeet} ft nearby elevation span`
-                            : "Route profile not verified"}
+                            : "Route ascent not verified"}
                       </strong>
                       <small>
                         {[
-                          placeIntelligence.trailMetadata?.taggedAscentFeet
-                            ? `${placeIntelligence.trailMetadata.taggedAscentFeet} ft tagged ascent`
+                          placeIntelligence.trailTruth?.difficultyLabel,
+                          displayTrailValue(placeIntelligence.trailTruth?.surface),
+                          displayTrailValue(placeIntelligence.trailTruth?.trailVisibility),
+                          placeIntelligence.trailTruth?.footAccess
+                            ? `foot access: ${displayTrailValue(placeIntelligence.trailTruth.footAccess)}`
                             : null,
-                          displayTrailValue(placeIntelligence.trailMetadata?.difficulty),
-                          displayTrailValue(placeIntelligence.trailMetadata?.surface),
-                          displayTrailValue(placeIntelligence.trailMetadata?.trailVisibility),
-                          placeIntelligence.trailMetadata?.footAccess
-                            ? `foot access: ${displayTrailValue(placeIntelligence.trailMetadata.footAccess)}`
-                            : null,
-                        ].filter(Boolean).join(" · ") || "Difficulty/surface tags not available here"}
+                        ].filter(Boolean).join(" · ") || "Difficulty/surface tags not available on the selected relation"}
                       </small>
                     </article>
 
@@ -1751,9 +1902,11 @@ export function OutdoorIntentHub() {
 
                     <span>Map metadata</span>
                     <strong>
-                      {activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
-                        ? "OpenStreetMap contributors"
-                        : "Used only when mapped metadata exists"}
+                      {placeIntelligence?.trailTruth
+                        ? `OpenStreetMap hiking relation ${placeIntelligence.trailTruth.relationId ?? ""} · ${placeIntelligence.trailTruth.confidence} confidence`
+                        : activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
+                          ? "OpenStreetMap contributors"
+                          : "Used only when mapped metadata exists"}
                     </strong>
 
                     <span>Freshness</span>
@@ -1805,9 +1958,9 @@ export function OutdoorIntentHub() {
             </>
           ) : activePlan ? (
             <>
-              <p className="canvas-sheet-kicker">{pull.label} · {driveTimeLabel(activePlan.driveHours)} away</p>
+              <p className="canvas-sheet-kicker">{pull.label} · {activePlan.travelSource === "routed" ? "" : "~"}{driveTimeLabel(activePlan.driveHours)} away</p>
               <h1>{activePlan.destination.name}</h1>
-              <p className="canvas-sheet-area">{activePlan.destination.area} · about {activePlan.distanceMiles} rough miles</p>
+              <p className="canvas-sheet-area">{activePlan.destination.area} · {activePlan.travelSource === "routed" ? "" : "about "}{activePlan.distanceMiles} {activePlan.travelSource === "routed" ? "road" : "rough"} miles</p>
               <p className="canvas-sheet-summary">{activePlan.destination.summary}</p>
 
               <div className="canvas-now">

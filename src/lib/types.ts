@@ -110,6 +110,8 @@ export type Plan = {
   activityScores: ActivityDecisionSummary[];
   distanceMiles: number;
   driveHours: number;
+  driveMinutes?: number;
+  travelSource?: "routed" | "estimated";
   reasons: string[];
   cautions: string[];
   weather: WeatherSnapshot | null;
@@ -137,6 +139,8 @@ export type RangeOption = {
   score: number;
   distanceMiles: number;
   driveHours: number;
+  driveMinutes?: number;
+  travelSource?: "routed" | "estimated";
   conditionsStatus: "live" | "estimated";
   forecastDate: string | null;
 };

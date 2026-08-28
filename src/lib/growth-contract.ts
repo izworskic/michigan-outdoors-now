@@ -37,6 +37,8 @@ export const growthEventNames = [
   "place_kept",
   "place_unkept",
   "comparison_opened",
+  "day_plan_built",
+  "day_plan_opened",
   "decision_argument_opened",
   "proof_ledger_opened",
   "departure_mode_opened",
