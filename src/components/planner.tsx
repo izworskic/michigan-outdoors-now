@@ -1,6 +1,5 @@
 "use client";
 
-import { track } from "@vercel/analytics";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { origins } from "../data/origins";
@@ -11,6 +10,7 @@ import {
   isPlausibleMichiganCoordinate,
 } from "../lib/planner";
 import { parsePlannerFragment, serializePlannerFragment } from "../lib/planner-share";
+import { trackGrowthEvent, type GrowthContext, type GrowthEventProperties } from "../lib/growth-analytics";
 import {
   activityIds,
   type ActivityId,
@@ -52,15 +52,9 @@ type PlannerProps = {
   initialKids?: boolean;
   initialDog?: boolean;
   initialAccessible?: boolean;
+  analyticsContext?: GrowthContext;
 };
 
-function safeTrack(name: string, properties?: Record<string, string | number | boolean>) {
-  try {
-    track(name, properties);
-  } catch {
-    // Analytics must never interfere with trip planning.
-  }
-}
 
 export function Planner({
   defaultOrigin = "Bay City",
@@ -71,6 +65,7 @@ export function Planner({
   initialKids = false,
   initialDog = false,
   initialAccessible = false,
+  analyticsContext = { surface: "homepage_planner" },
 }: PlannerProps) {
   const [origin, setOrigin] = useState(defaultOrigin);
   const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
@@ -90,6 +85,10 @@ export function Planner({
   const [setupStatus, setSetupStatus] = useState("");
   const [shareStatus, setShareStatus] = useState("");
   const startTracked = useRef(false);
+
+  function trackEvent(name: Parameters<typeof trackGrowthEvent>[0], properties: GrowthEventProperties = {}) {
+    trackGrowthEvent(name, analyticsContext, properties);
+  }
 
   const plannerRequest = useMemo<PlannerRequest>(() => ({
     origin,
@@ -119,7 +118,7 @@ export function Planner({
       setDog(shared.dog);
       setAccessible(shared.accessible);
       setSetupStatus("Shared setup loaded. Review it, then build the plan with current conditions.");
-      safeTrack("shared_setup_loaded", { activityCount: shared.activities.length });
+      trackEvent("shared_setup_loaded", { activityCount: shared.activities.length });
     }, 0);
 
     return () => window.clearTimeout(timer);
@@ -128,7 +127,7 @@ export function Planner({
   function trackStart() {
     if (startTracked.current) return;
     startTracked.current = true;
-    safeTrack("planner_started");
+    trackEvent("planner_started");
   }
 
   function useMyLocation() {
@@ -160,7 +159,7 @@ export function Planner({
         setActivePreset("");
         setSetupStatus(`Using your device location near ${nearest.name} for this request. It is not placed in the URL or analytics.`);
         setLocating(false);
-        safeTrack("device_location_used");
+        trackEvent("device_location_used");
       },
       () => {
         setError("Location was not available. Allow it in your browser or type a Michigan city or ZIP.");
@@ -176,7 +175,7 @@ export function Planner({
     setMaxDriveHours(next);
     setResponse(null);
     setSetupStatus(`Drive window widened to ${next} ${next === 1 ? "hour" : "hours"}. Build the plan again.`);
-    safeTrack("no_results_recovery", { action: "widen_drive" });
+    trackEvent("no_results_recovery", { action: "widen_drive" });
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
     window.setTimeout(() => document.getElementById("planner")?.scrollIntoView({ behavior }), 0);
   }
@@ -187,7 +186,7 @@ export function Planner({
     setAccessible(false);
     setResponse(null);
     setSetupStatus("Extra requirements cleared. Build the plan again, then confirm details for any result.");
-    safeTrack("no_results_recovery", { action: "clear_requirements" });
+    trackEvent("no_results_recovery", { action: "clear_requirements" });
     const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
     window.setTimeout(() => document.getElementById("planner")?.scrollIntoView({ behavior }), 0);
   }
@@ -201,7 +200,7 @@ export function Planner({
     setAccessible(false);
     setActivePreset(preset.id);
     setSetupStatus(`${preset.label} setup applied. Change anything you like.`);
-    safeTrack("planner_preset_selected", { preset: preset.id });
+    trackEvent("planner_preset_selected", { preset: preset.id });
   }
 
   function toggleActivity(activity: ActivityId) {
@@ -217,13 +216,13 @@ export function Planner({
     if (destinationId === primaryId) return;
     setPrimaryId(destinationId);
     if (destinationId === backupId) setBackupId(primaryId);
-    safeTrack("trip_primary_changed");
+    trackEvent("trip_primary_changed");
   }
 
   function chooseBackup(destinationId: string) {
     if (destinationId === primaryId) return;
     setBackupId(destinationId);
-    safeTrack("trip_backup_changed");
+    trackEvent("trip_backup_changed");
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -251,7 +250,7 @@ export function Planner({
       setResponse(payload);
       setPrimaryId(payload.plans[0]?.destination.id ?? "");
       setBackupId(payload.plans[1]?.destination.id ?? "");
-      safeTrack("planner_completed", {
+      trackEvent("planner_completed", {
         planCount: payload.plans.length,
         activityCount: activities.length,
         conditions: payload.conditionsStatus,
@@ -259,7 +258,7 @@ export function Planner({
       window.setTimeout(() => document.getElementById("planner-results")?.focus(), 0);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The planner could not finish. Try again.");
-      safeTrack("planner_failed");
+      trackEvent("planner_failed");
     } finally {
       setLoading(false);
     }
@@ -283,7 +282,7 @@ export function Planner({
         setShareStatus("Plan link copied. Send it to your group when ready.");
       }
       window.history.replaceState(null, "", url);
-      safeTrack("trip_plan_shared", { method: shareMethod });
+      trackEvent("trip_plan_shared", { method: shareMethod });
     } catch (caught) {
       if (caught instanceof DOMException && caught.name === "AbortError") return;
       setShareStatus("Could not copy automatically. Use your browser’s Share command to send this page.");
@@ -532,10 +531,10 @@ export function Planner({
                       )}
                       <details className="access-note"><summary>Access note</summary><p>{plan.destination.accessNote}</p></details>
                       <div className="result-actions">
-                        <Link href={`/places/${plan.destination.id}`} onClick={() => safeTrack("place_detail_opened")}>Plan this place →</Link>
-                        <a href={plan.mapUrl} target="_blank" rel="noreferrer" onClick={() => safeTrack("outbound_map_opened")}>Open in Maps ↗</a>
-                        <a href={plan.destination.officialUrl} target="_blank" rel="noreferrer" onClick={() => safeTrack("outbound_official_opened")}>Official details ↗</a>
-                        {plan.relatedTool && <a href={plan.relatedTool.url} onClick={() => safeTrack("related_tool_opened")}>{plan.relatedTool.label} →</a>}
+                        <Link href={`/places/${plan.destination.id}`} onClick={() => trackEvent("place_detail_opened")}>Plan this place →</Link>
+                        <a href={plan.mapUrl} target="_blank" rel="noreferrer" onClick={() => trackEvent("outbound_map_opened")}>Open in Maps ↗</a>
+                        <a href={plan.destination.officialUrl} target="_blank" rel="noreferrer" onClick={() => trackEvent("outbound_official_opened")}>Official details ↗</a>
+                        {plan.relatedTool && <a href={plan.relatedTool.url} onClick={() => trackEvent("related_tool_opened")}>{plan.relatedTool.label} →</a>}
                       </div>
                     </div>
                   </li>
