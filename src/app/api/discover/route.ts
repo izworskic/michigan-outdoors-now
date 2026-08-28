@@ -174,7 +174,11 @@ function osmPlaces(
     }
 
     const category = categoryFromTags(tags);
-    if (!args.intent.categories.includes(category)) continue;
+    const categoryAccepted =
+      args.intent.categories.includes(category) ||
+      (category === "wildlife" && args.intent.categories.includes("park")) ||
+      (category === "park" && args.intent.categories.includes("wildlife"));
+    if (!categoryAccepted) continue;
 
     const dedupeKey = `${name.toLowerCase()}|${category}|${latitude.toFixed(3)}|${longitude.toFixed(3)}`;
     if (seen.has(dedupeKey)) continue;
