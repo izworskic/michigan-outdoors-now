@@ -217,7 +217,12 @@ function osmPlaces(
       .filter((trait) => ["quiet", "wild", "water", "short", "night"].includes(trait))
       .slice(0, 2)
       .map((trait) => trait.replace("-", " "));
-    const traitLine = traits.length ? ` It fits the ${traits.join(" / ")} direction you described, but crowd level and access still need a current check.` : "";
+    const effortCaution = args.intent.traits.includes("long")
+      ? " This is a mapped trailhead or place candidate; exact route length and mileage are not verified here."
+      : "";
+    const traitLine = traits.length
+      ? ` It fits the ${traits.join(" / ")} direction you described, but crowd level and access still need a current check.`
+      : "";
 
     places.push({
       id: `osm:${element.type}:${element.id}`,
@@ -230,7 +235,7 @@ function osmPlaces(
       distanceMiles: metrics.distanceMiles,
       driveHours: metrics.driveHours,
       score: metrics.score,
-      why: `${categoryName} matched to your outdoor search.${traitLine}`,
+      why: `${categoryName} matched to your outdoor search.${traitLine}${effortCaution}`,
       source: "OpenStreetMap",
       sourceUrl: `https://www.openstreetmap.org/${element.type}/${element.id}`,
       directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${latitude.toFixed(6)},${longitude.toFixed(6)}`,

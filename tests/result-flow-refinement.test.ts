@@ -19,7 +19,7 @@ test("semantic results live in a persistent result rail instead of the query sta
 test("opening and closing detail preserves the result dock", async () => {
   const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
 
-  assert.match(hub, /onClick=\{\(\) => activateDiscovery\(place\.id\)\}/);
+  assert.match(hub, /activateDiscovery\(place\.id\)/);
   assert.match(hub, /setFocusPoint\(\{[\s\S]*?latitude: place\.latitude,[\s\S]*?longitude: place\.longitude/);
   assert.match(hub, /canvas-sheet-discovery/);
   assert.match(hub, /aria-label="Close place detail">×<\/button>/);
@@ -76,7 +76,7 @@ test("result-first taste exposes every returned destination and keeps comparison
   assert.match(hub, /discovery\.places\.map\(\(place, index\) =>/);
   assert.doesNotMatch(hub, /discovery\.places\.slice\(/);
   assert.match(hub, /canvas-result-rank/);
-  assert.match(hub, /driveTimeLabel\(place\.driveHours\)\} away/);
+  assert.match(hub, /~\{driveTimeLabel\(place\.driveHours\)\} drive/);
   assert.match(hub, /\{place\.categoryLabel\}/);
   assert.match(hub, /<p>\{place\.why\}<\/p>/);
 });
@@ -89,4 +89,39 @@ test("active discovery has continuous previous and next navigation", async () =>
   assert.match(hub, /moveDiscoverySelection\(-1\)/);
   assert.match(hub, /moveDiscoverySelection\(1\)/);
   assert.match(hub, /scrollIntoView\(\{ behavior: "smooth", block: "nearest", inline: "center" \}\)/);
+});
+
+
+test("users can keep up to three semantic places and compare without losing map continuity", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /const \[comparisonPlaces, setComparisonPlaces\] = useState<DiscoveryPlace\[]>\(\[\]\)/);
+  assert.match(hub, /if \(comparisonPlaces\.length >= 3\)/);
+  assert.match(hub, /Compare \{comparisonPlaces\.length\}/);
+  assert.match(hub, /className="canvas-compare"/);
+  assert.match(hub, /Compare before you commit\./);
+  assert.match(hub, /Full guide/);
+  assert.match(hub, /Mapped lead/);
+  assert.match(hub, /setCompareOpen\(false\);\s*activateDiscovery\(place\.id\)/);
+});
+
+test("semantic cards label rough drive estimates and planning depth", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /~\{driveTimeLabel\(place\.driveHours\)\} drive/);
+  assert.match(hub, /place\.curatedPlaceId \? "Full guide" : "Mapped lead"/);
+  assert.match(hub, /Drive times are rough planning estimates/);
+});
+
+
+test("Go farther preserves the kept comparison set", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const start = hub.indexOf("function changeRange");
+  const end = hub.indexOf("function restoreInclusiveDiscovery", start);
+  assert.ok(start >= 0 && end > start);
+  const rangeBody = hub.slice(start, end);
+
+  assert.match(rangeBody, /runDiscovery\(discovery\.query, next, delta > 0 \? previousMax : 0\)/);
+  assert.doesNotMatch(rangeBody, /setComparisonPlaces/);
+  assert.doesNotMatch(rangeBody, /setCompareOpen\(false\)/);
 });

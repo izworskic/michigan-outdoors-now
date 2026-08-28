@@ -1,0 +1,17 @@
+{
+  "name": "decision-depth",
+  "version": 1,
+  "baselineScore": 61,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "criteria": [
+    {"key":"effortIntent","weight":20},
+    {"key":"shortlistUpToThree","weight":15},
+    {"key":"compareBoard","weight":20},
+    {"key":"shortlistSurvivesFartherSearch","weight":10},
+    {"key":"planningDepthVisible","weight":10},
+    {"key":"roughDriveHonesty","weight":10},
+    {"key":"mapComparisonContinuity","weight":10},
+    {"key":"regressionCoverage","weight":5}
+  ]
+}

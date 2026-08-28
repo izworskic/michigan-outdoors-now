@@ -47,7 +47,7 @@ async function main() {
     decisionDenseCards:
       hub.includes("canvas-result-rank") &&
       hub.includes("canvas-result-facts") &&
-      hub.includes("driveTimeLabel(place.driveHours)} away") &&
+      hub.includes("~{driveTimeLabel(place.driveHours)} drive") &&
       hub.includes("{place.categoryLabel}") &&
       hub.includes("<p>{place.why}</p>"),
     continuousResultNavigation:

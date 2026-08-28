@@ -5,7 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
-import type { DiscoveryResponse } from "../lib/discovery";
+import type { DiscoveryPlace, DiscoveryResponse } from "../lib/discovery";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse, SpecialistSignal } from "../lib/types";
@@ -117,6 +117,8 @@ export function OutdoorIntentHub() {
   const [discoveryRange, setDiscoveryRange] = useState<{ minDriveHours: number; maxDriveHours: number } | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [activeDiscoveryId, setActiveDiscoveryId] = useState("");
+  const [comparisonPlaces, setComparisonPlaces] = useState<DiscoveryPlace[]>([]);
+  const [compareOpen, setCompareOpen] = useState(false);
   const [planning, setPlanning] = useState(false);
   const [message, setMessage] = useState("");
   const [activeId, setActiveId] = useState("");
@@ -298,6 +300,8 @@ export function OutdoorIntentHub() {
     setDiscoveryRange(null);
     setActiveId("");
     setActiveDiscoveryId("");
+    setComparisonPlaces([]);
+    setCompareOpen(false);
     setAroundOpen(false);
   }
 
@@ -402,6 +406,7 @@ export function OutdoorIntentHub() {
     const controller = new AbortController();
     discoveryRequestRef.current = controller;
     setDiscovering(true);
+    setCompareOpen(false);
     setMessage("");
 
     try {
@@ -482,6 +487,30 @@ export function OutdoorIntentHub() {
     const currentIndex = Math.max(0, places.findIndex((place) => place.id === activeDiscoveryId));
     const nextIndex = (currentIndex + delta + places.length) % places.length;
     activateDiscovery(places[nextIndex].id);
+  }
+
+  function toggleComparison(place: DiscoveryPlace) {
+    const alreadyKept = comparisonPlaces.some((candidate) => candidate.id === place.id);
+    if (alreadyKept) {
+      const next = comparisonPlaces.filter((candidate) => candidate.id !== place.id);
+      setComparisonPlaces(next);
+      if (!next.length) setCompareOpen(false);
+      return;
+    }
+
+    if (comparisonPlaces.length >= 3) {
+      setMessage("Keep up to three places at a time so the comparison stays useful.");
+      return;
+    }
+
+    setComparisonPlaces([...comparisonPlaces, place]);
+    setMessage("");
+  }
+
+  function openComparison() {
+    if (!comparisonPlaces.length) return;
+    setActiveDiscoveryId("");
+    setCompareOpen(true);
   }
 
   function requestTrailLayer(nextLayer: UniverseLayerId) {
@@ -731,6 +760,8 @@ export function OutdoorIntentHub() {
               setOriginFeedback("Press Set start to confirm this Michigan location.");
               setPlans(null);
               setDiscovery(null);
+              setComparisonPlaces([]);
+              setCompareOpen(false);
               setActiveId("");
               setActiveDiscoveryId("");
               setAroundOpen(false);
@@ -878,6 +909,11 @@ export function OutdoorIntentHub() {
               </strong>
             </div>
             <div className="canvas-result-dock-actions">
+              {comparisonPlaces.length > 0 && (
+                <button type="button" onClick={openComparison}>
+                  Compare {comparisonPlaces.length}
+                </button>
+              )}
               {discoveryRange && (
                 <button type="button" onClick={restoreInclusiveDiscovery} disabled={discovering}>
                   Show all within {driveHours} hr
@@ -896,28 +932,51 @@ export function OutdoorIntentHub() {
             </div>
           </div>
           <div className="canvas-result-rail">
-            {discovery.places.map((place, index) => (
-              <button
-                type="button"
-                key={place.id}
-                ref={(node) => {
-                  if (node) resultCardRefs.current.set(place.id, node);
-                  else resultCardRefs.current.delete(place.id);
-                }}
-                className={place.id === activeDiscoveryId ? "is-active" : ""}
-                aria-pressed={place.id === activeDiscoveryId}
-                onClick={() => activateDiscovery(place.id)}
-              >
-                <span className="canvas-result-rank">{String(index + 1).padStart(2, "0")}</span>
-                <strong>{place.name}</strong>
-                <span className="canvas-result-area">{place.area}</span>
-                <div className="canvas-result-facts">
-                  <b>{driveTimeLabel(place.driveHours)} away</b>
-                  <small>{place.categoryLabel}</small>
-                </div>
-                <p>{place.why}</p>
-              </button>
-            ))}
+            {discovery.places.map((place, index) => {
+              const kept = comparisonPlaces.some((candidate) => candidate.id === place.id);
+              return (
+                <article
+                  key={place.id}
+                  className={`canvas-result-card ${place.id === activeDiscoveryId ? "is-active" : ""} ${kept ? "is-kept" : ""}`}
+                >
+                  <button
+                    type="button"
+                    ref={(node) => {
+                      if (node) resultCardRefs.current.set(place.id, node);
+                      else resultCardRefs.current.delete(place.id);
+                    }}
+                    className="canvas-result-card-main"
+                    aria-pressed={place.id === activeDiscoveryId}
+                    onClick={() => {
+                      setCompareOpen(false);
+                      activateDiscovery(place.id);
+                    }}
+                  >
+                    <span className="canvas-result-rank">{String(index + 1).padStart(2, "0")}</span>
+                    <strong>{place.name}</strong>
+                    <span className="canvas-result-area">{place.area}</span>
+                    <div className="canvas-result-facts">
+                      <b>~{driveTimeLabel(place.driveHours)} drive</b>
+                      <small>{place.categoryLabel}</small>
+                    </div>
+                    <p>{place.why}</p>
+                  </button>
+                  <div className="canvas-result-card-footer">
+                    <span className={place.curatedPlaceId ? "is-deep" : "is-lead"}>
+                      {place.curatedPlaceId ? "Full guide" : "Mapped lead"}
+                    </span>
+                    <button
+                      type="button"
+                      className="canvas-result-keep"
+                      aria-pressed={kept}
+                      onClick={() => toggleComparison(place)}
+                    >
+                      {kept ? "Kept" : "Keep to compare"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : (
@@ -1044,6 +1103,48 @@ export function OutdoorIntentHub() {
       )}
 
 
+      {compareOpen && comparisonPlaces.length > 0 && (
+        <aside className="canvas-compare" aria-label="Compare outdoor possibilities" aria-live="polite">
+          <div className="canvas-compare-head">
+            <div>
+              <span>Decision board</span>
+              <strong>Compare before you commit.</strong>
+            </div>
+            <button type="button" onClick={() => setCompareOpen(false)} aria-label="Close comparison">×</button>
+          </div>
+          <div className="canvas-compare-grid">
+            {comparisonPlaces.map((place) => (
+              <article key={place.id}>
+                <div className="canvas-compare-meta">
+                  <span>{place.curatedPlaceId ? "Full guide" : "Mapped lead"}</span>
+                  <small>{place.categoryLabel}</small>
+                </div>
+                <h2>{place.name}</h2>
+                <p className="canvas-compare-area">{place.area}</p>
+                <strong className="canvas-compare-drive">~{driveTimeLabel(place.driveHours)} drive</strong>
+                <p>{place.why}</p>
+                <div className="canvas-compare-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCompareOpen(false);
+                      activateDiscovery(place.id);
+                    }}
+                  >
+                    View on map
+                  </button>
+                  <a href={place.directionsUrl} target="_blank" rel="noopener">Directions</a>
+                  <button type="button" onClick={() => toggleComparison(place)}>Remove</button>
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="canvas-compare-note">
+            Drive times are rough planning estimates. “Full guide” means Michigan Outdoors Now has a curated place page; “Mapped lead” means the place came from live map data and route length, access, and current conditions still need verification.
+          </p>
+        </aside>
+      )}
+
       {(activeDiscovery || activeDestination || activePlan) && (
         <aside className={`canvas-sheet ${activeDiscovery ? "canvas-sheet-discovery" : ""}`} aria-live="polite">
           <button type="button" className="canvas-sheet-close" onClick={() => { setActiveId(""); setActiveDiscoveryId(""); }} aria-label="Close place detail">×</button>
@@ -1059,7 +1160,7 @@ export function OutdoorIntentHub() {
                 </span>
                 <button type="button" onClick={() => moveDiscoverySelection(1)}>Next ›</button>
               </div>
-              <p className="canvas-sheet-kicker">Found from your description · {driveTimeLabel(activeDiscovery.driveHours)} away</p>
+              <p className="canvas-sheet-kicker">Found from your description · ~{driveTimeLabel(activeDiscovery.driveHours)} drive</p>
               <h1>{activeDiscovery.name}</h1>
               <p className="canvas-sheet-area">{activeDiscovery.area} · about {activeDiscovery.distanceMiles} rough miles</p>
               <p className="canvas-sheet-summary">{activeDiscovery.why}</p>
@@ -1071,6 +1172,13 @@ export function OutdoorIntentHub() {
               </div>
 
               <div className="canvas-sheet-actions">
+                <button
+                  type="button"
+                  aria-pressed={comparisonPlaces.some((place) => place.id === activeDiscovery.id)}
+                  onClick={() => toggleComparison(activeDiscovery)}
+                >
+                  {comparisonPlaces.some((place) => place.id === activeDiscovery.id) ? "Kept for compare" : "Keep to compare"}
+                </button>
                 {activeDiscovery.curatedPlaceId ? (
                   <Link href={`/places/${activeDiscovery.curatedPlaceId}`}>Open the place</Link>
                 ) : activeDiscovery.website ? (
