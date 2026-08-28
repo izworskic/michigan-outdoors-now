@@ -78,6 +78,19 @@ export type WeatherSnapshot = {
   hourly?: HourlyWeatherSignal[];
 };
 
+export type SpecialistSignal = {
+  id: "aurora" | "river" | "beach";
+  kind: "live" | "coverage";
+  label: string;
+  headline: string;
+  detail: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  toolLabel: string;
+  toolUrl: string;
+  observedAt: string | null;
+};
+
 export type Plan = {
   destination: Pick<
     Destination,
