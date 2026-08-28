@@ -20,6 +20,17 @@ export type PointWeatherIntelligence = {
   windGust: number | null;
   aqi: number | null;
   weatherCode: number | null;
+  recentRainInches: number | null;
+  recentSnowInches: number | null;
+  daylightHoursRemaining: number | null;
+  outingWindow: {
+    start: string;
+    end: string;
+    maxPrecipitationProbability: number | null;
+    maxWindGust: number | null;
+    minTemperature: number | null;
+    maxTemperature: number | null;
+  } | null;
 };
 
 export type TrailSystemIntelligence = {
@@ -42,6 +53,31 @@ export type TrailMetadataIntelligence = {
   source: "OpenStreetMap" | null;
 };
 
+export type TrailRouteTruth = {
+  routeName: string | null;
+  routeKind: "loop" | "point-to-point" | "unknown";
+  distanceMiles: number | null;
+  distanceSource: "osm-tag" | "osm-geometry" | null;
+  ascentFeet: number | null;
+  ascentSource: "osm-tag" | "sampled-route" | null;
+  difficulty: string | null;
+  difficultyLabel: string | null;
+  surface: string | null;
+  trailVisibility: string | null;
+  footAccess: string | null;
+  relationId: number | null;
+  mappedWayCount: number;
+  confidence: "high" | "medium" | "limited";
+  caveats: string[];
+};
+
+export type GoSignal = {
+  status: "good" | "mixed" | "poor" | "unknown";
+  headline: string;
+  reasons: string[];
+  cautions: string[];
+};
+
 export type ElevationIntelligence = {
   lowFeet: number;
   highFeet: number;
@@ -61,6 +97,8 @@ export type PlaceIntelligence = {
   weather: PointWeatherIntelligence | null;
   trailSystems: TrailSystemIntelligence[];
   trailMetadata: TrailMetadataIntelligence | null;
+  trailTruth: TrailRouteTruth | null;
+  goSignal: GoSignal;
   elevation: ElevationIntelligence | null;
   access: AccessIntelligence;
   confidenceNote: string;
@@ -73,6 +111,12 @@ type OSMElement = {
   lat?: number;
   lon?: number;
   tags?: Record<string, string>;
+  members?: Array<{
+    type: "node" | "way" | "relation";
+    ref: number;
+    role?: string;
+  }>;
+  geometry?: Array<{ lat: number; lon: number }>;
 };
 
 type GeoJsonPayload = Partial<UniverseGeoJson> & {
@@ -85,10 +129,20 @@ type ForecastPayload = {
     wind_gusts_10m?: number | null;
     weather_code?: number | null;
   };
+  hourly?: {
+    time?: number[];
+    temperature_2m?: Array<number | null>;
+    precipitation_probability?: Array<number | null>;
+    rain?: Array<number | null>;
+    snowfall?: Array<number | null>;
+    wind_gusts_10m?: Array<number | null>;
+  };
   daily?: {
     temperature_2m_max?: Array<number | null>;
     temperature_2m_min?: Array<number | null>;
     precipitation_probability_max?: Array<number | null>;
+    sunrise?: number[];
+    sunset?: number[];
   };
 };
 
