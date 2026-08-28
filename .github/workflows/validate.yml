@@ -40,6 +40,9 @@ jobs:
       - name: Verify live specialist links
         run: npm run check:specialists
 
+      - name: Score core planner flow
+        run: npm run score:core-flow
+
       - name: Build production output
         run: npm run build
 

@@ -28,21 +28,39 @@ export async function resolveMichiganOrigin(value: string): Promise<ResolvedOrig
     };
   }
 
-  const params = new URLSearchParams({
-    name: value.trim(),
-    count: "10",
-    language: "en",
-    format: "json",
-    countryCode: "US",
-  });
-  const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`, {
-    signal: AbortSignal.timeout(requestTimeoutMs),
-    next: { revalidate: 86_400 },
-  });
+  const rawValue = value.trim();
+  const locationName = rawValue.split(",")[0]?.trim() || rawValue;
+  const searchTerms = [...new Set([
+    `${locationName}, Michigan`,
+    rawValue,
+  ])];
 
-  if (!response.ok) throw new Error(`Geocoding returned ${response.status}`);
-  const payload = (await response.json()) as { results?: GeocodingResult[] };
-  const result = payload.results?.find(
+  const attempts = await Promise.allSettled(
+    searchTerms.map(async (searchTerm) => {
+      const params = new URLSearchParams({
+        name: searchTerm,
+        count: "10",
+        language: "en",
+        format: "json",
+        countryCode: "US",
+      });
+      const response = await fetch(`https://geocoding-api.open-meteo.com/v1/search?${params}`, {
+        signal: AbortSignal.timeout(5_000),
+        next: { revalidate: 86_400 },
+      });
+      if (!response.ok) throw new Error(`Geocoding returned ${response.status}`);
+      return (await response.json()) as { results?: GeocodingResult[] };
+    }),
+  );
+
+  const candidates = attempts.flatMap((attempt) =>
+    attempt.status === "fulfilled" ? attempt.value.results ?? [] : [],
+  );
+  if (!candidates.length && attempts.every((attempt) => attempt.status === "rejected")) {
+    throw new Error("Geocoding service unavailable");
+  }
+
+  const result = candidates.find(
     (candidate) =>
       candidate.country_code === "US" &&
       candidate.admin1?.toLowerCase() === "michigan" &&

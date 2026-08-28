@@ -10,46 +10,58 @@ function functionBody(source: string, start: string, end: string) {
   return source.slice(from, to);
 }
 
-test("setting a typed start does not auto-open the legacy recommendation card", async () => {
+test("typed start resolves through the origin endpoint before intent search", async () => {
   const source = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const resolver = functionBody(source, "async function resolveTypedOrigin", "function submitOrigin");
   const submit = functionBody(source, "function submitOrigin", "async function runDiscovery");
 
-  assert.doesNotMatch(submit, /\bvoid\s+run\s*\(/);
-  assert.match(submit, /clearOpenResults\(\)/);
+  assert.match(resolver, /fetch\("\/api\/origin"/);
+  assert.match(resolver, /setOriginCoordinates\(coordinates\)/);
+  assert.match(resolver, /setUserLocation\(coordinates\)/);
+  assert.match(resolver, /setOriginStatus\("resolved"\)/);
+  assert.match(resolver, /setFocusPoint\(/);
+  assert.match(submit, /resolveTypedOrigin\(\)/);
   assert.match(submit, /focusWishInput\(\)/);
 });
 
-test("device location establishes origin without launching recommendations", async () => {
+test("intent search self-heals an unresolved typed start", async () => {
+  const source = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const discovery = functionBody(source, "async function runDiscovery", "function submitDiscovery");
+
+  assert.match(discovery, /if \(!coordinates\)/);
+  assert.match(discovery, /await resolveTypedOrigin\(chosenOrigin\)/);
+  assert.match(discovery, /originCoordinates: coordinates/);
+});
+
+test("device location populates the same resolved-origin state", async () => {
   const source = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
   const useLocation = functionBody(source, "function useLocation", "function changeRange");
 
-  assert.doesNotMatch(useLocation, /\bvoid\s+run\s*\(/);
-  assert.match(useLocation, /setOrigin\("My location"\)/);
+  assert.match(useLocation, /setOriginCoordinates\(coordinates\)/);
   assert.match(useLocation, /setUserLocation\(coordinates\)/);
-  assert.match(useLocation, /setPlanning\(false\)/);
-  assert.match(useLocation, /focusWishInput\(\)/);
+  assert.match(useLocation, /setOriginStatus\("resolved"\)/);
+  assert.match(useLocation, /setOriginFeedback\("Starting from your current location"\)/);
+  assert.match(useLocation, /setFocusPoint\(/);
 });
 
-test("free-form input stays focusable and closes any covering result sheet", async () => {
+test("search completion shows choices without auto-opening a detail sheet", async () => {
   const source = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
 
-  assert.match(source, /const wishInputRef = useRef<HTMLInputElement \| null>\(null\)/);
-  assert.match(source, /ref=\{wishInputRef\}/);
-  assert.match(source, /onFocus=\{\(\) => \{\s*setActiveId\(""\);\s*setActiveDiscoveryId\(""\);/s);
+  assert.doesNotMatch(source, /setActiveDiscoveryId\(result\.places\[0\]/);
+  assert.match(source, /className="canvas-wish-results"/);
+  assert.match(source, /discovery\.places\.slice\(0, 3\)/);
+  assert.match(source, /onClick=\{\(\) => setActiveDiscoveryId\(place\.id\)\}/);
 });
 
-test("result sheet cannot cover the free-form search on desktop, tablet, or phone", async () => {
+test("location intent feedback and results share one non-overlapping layout stack", async () => {
+  const source = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
-  const discoveryCss = css.slice(css.indexOf("/* Free-form Michigan discovery */"));
 
-  assert.match(discoveryCss, /\.canvas-sheet\{\s*top:220px;\s*\}/s);
-  assert.match(
-    discoveryCss,
-    /@media\(max-width:900px\)[\s\S]*?\.canvas-sheet\{top:278px\}/,
-  );
-  assert.match(
-    discoveryCss,
-    /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet\{\s*top:auto;\s*bottom:56px;\s*max-height:48svh;/,
-  );
-  assert.match(discoveryCss, /\.canvas-wish-form\{[\s\S]*?pointer-events:auto;/);
+  assert.match(source, /className="canvas-query-stack"/);
+  assert.match(source, /canvas-origin-status/);
+  assert.match(source, /canvas-message canvas-message-inline/);
+  assert.match(css, /\.canvas-query-stack\{[\s\S]*?display:grid;/);
+  assert.match(css, /\.canvas-wish\{[\s\S]*?position:static;/);
+  assert.match(css, /\.canvas-message-inline\{[\s\S]*?position:static;/);
+  assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet\{\s*top:auto;\s*bottom:56px;/);
 });

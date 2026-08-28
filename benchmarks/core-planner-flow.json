@@ -1,0 +1,17 @@
+{
+  "name": "core-planner-flow",
+  "version": 1,
+  "baselineScore": 34,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "criteria": [
+    {"key":"typedOriginResolution","weight":20},
+    {"key":"explicitOriginState","weight":15},
+    {"key":"deviceOriginParity","weight":10},
+    {"key":"fastDiscoveryFallback","weight":20},
+    {"key":"searchDoesNotAutoOpenSheet","weight":15},
+    {"key":"visibleSearchResults","weight":10},
+    {"key":"responsiveNonOverlap","weight":5},
+    {"key":"runtimeEndpointCoverage","weight":5}
+  ]
+}

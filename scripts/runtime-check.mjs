@@ -51,6 +51,45 @@ try {
   assert.equal(home.headers.get("x-frame-options"), "DENY");
   assert.equal(home.headers.get("x-content-type-options"), "nosniff");
 
+  const typedOrigin = await fetch(`${origin}/api/origin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ origin: "Bay City" }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(typedOrigin.status, 200);
+  assert.match(typedOrigin.headers.get("cache-control") ?? "", /no-store/);
+  const typedOriginPayload = await typedOrigin.json();
+  assert.match(typedOriginPayload.origin.name, /Bay City, Michigan/);
+  assert.ok(Number.isFinite(typedOriginPayload.origin.latitude));
+  assert.ok(Number.isFinite(typedOriginPayload.origin.longitude));
+
+  const discoveryStarted = performance.now();
+  const discoveryResponse = await fetch(`${origin}/api/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: typedOriginPayload.origin.name,
+      originCoordinates: {
+        latitude: typedOriginPayload.origin.latitude,
+        longitude: typedOriginPayload.origin.longitude,
+      },
+      query: "beach and scenic water",
+      maxDriveHours: 8,
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  const discoveryElapsed = performance.now() - discoveryStarted;
+  assert.equal(discoveryResponse.status, 200);
+  assert.ok(discoveryElapsed <= 3_000, `discovery exceeded 3 second interaction budget: ${Math.round(discoveryElapsed)}ms`);
+  assert.match(discoveryResponse.headers.get("cache-control") ?? "", /no-store/);
+  const discoveryPayload = await discoveryResponse.json();
+  assert.ok(["live", "fallback"].includes(discoveryPayload.status));
+  assert.ok(Array.isArray(discoveryPayload.places));
+  assert.ok(discoveryPayload.places.length > 0);
+  assert.match(discoveryPayload.origin.name, /Bay City.*area/);
+  assert.match(discoveryPayload.intent.summary, /beach|water/i);
+
   const statewide = await fetch(`${origin}/api/statewide?date=today&mode=best`, {
     signal: AbortSignal.timeout(25_000),
   });

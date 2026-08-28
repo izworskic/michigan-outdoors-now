@@ -92,31 +92,37 @@ function buildOverpassQuery(
 }
 
 async function fetchOverpass(query: string) {
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12_000);
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          Accept: "application/json",
-          "User-Agent": "MichiganOutdoorsNow/1.0 (https://michiganoutdoorsnow.chrisizworski.com/)",
-        },
-        body: new URLSearchParams({ data: query }).toString(),
-        signal: controller.signal,
-        cache: "no-store",
-      });
-      if (!response.ok) continue;
-      const payload = (await response.json()) as { elements?: OverpassElement[] };
-      if (Array.isArray(payload.elements)) return payload.elements;
-    } catch {
-      // Try the next public Overpass instance.
-    } finally {
-      clearTimeout(timeout);
-    }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1_600);
+
+  const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Accept: "application/json",
+        "User-Agent": "MichiganOutdoorsNow/1.0 (https://michiganoutdoorsnow.chrisizworski.com/)",
+      },
+      body: new URLSearchParams({ data: query }).toString(),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error(`Overpass returned ${response.status}`);
+    const payload = (await response.json()) as { elements?: OverpassElement[] };
+    if (!Array.isArray(payload.elements)) throw new Error("Overpass returned no elements");
+    return payload.elements;
+  });
+
+  try {
+    const result = await Promise.any(attempts);
+    controller.abort();
+    return result;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
   }
-  return null;
 }
 
 function cleanArea(tags: Record<string, string>) {
@@ -281,6 +287,9 @@ export async function POST(request: Request) {
   if (!origin) return invalid("Enter a Michigan city or ZIP code.");
 
   const intent = interpretOutdoorQuery(body.query);
+
+  // Curated results are the guaranteed first layer. Public POI enrichment is
+  // optional and strictly time-bounded so a useful response never waits on it.
   const curated = curatedDiscoveryPlaces({
     destinations,
     intent,
@@ -315,8 +324,8 @@ export async function POST(request: Request) {
     generatedAt: new Date().toISOString(),
     status: elements ? "live" : "fallback",
     sourceNote: elements
-      ? "Mapped candidates come from OpenStreetMap contributors and are blended with Michigan Outdoors Now curated destinations. Drive times are rough planning estimates, not route-engine ETAs."
-      : "The live map-place service did not respond, so these results use the curated Michigan Outdoors Now destination set. Try the search again for deeper mapped-place discovery.",
+      ? "Fast mapped-place enrichment from OpenStreetMap contributors is blended with Michigan Outdoors Now curated destinations. Drive times are rough planning estimates, not route-engine ETAs."
+      : "Results are from the curated Michigan Outdoors Now destination set. Live mapped-place enrichment did not answer inside the fast-search budget, so it was skipped rather than delaying your results.",
   };
 
   console.info(
