@@ -6,6 +6,7 @@ import { destinations } from "../../../data/destinations";
 import { guidesBySlug } from "../../../data/guides";
 import { origins, originsBySlug } from "../../../data/origins";
 import { haversineMiles } from "../../../lib/planner";
+import { searchLandingsForOrigin } from "../../../lib/search-landings";
 import { jsonLd, siteUrl } from "../../../lib/site";
 
 export const dynamicParams = false;
@@ -66,6 +67,7 @@ export default async function OriginPage({ params }: { params: Promise<{ origin:
   const localGuides = ["outdoors-today", "family-day-trips", "hiking-day-trips"]
     .map((guideSlug) => guidesBySlug.get(guideSlug))
     .filter((guide) => guide !== undefined);
+  const localSearchLandings = searchLandingsForOrigin(origin.slug);
 
   return (
     <>
@@ -110,9 +112,17 @@ export default async function OriginPage({ params }: { params: Promise<{ origin:
         <Link className="text-link" href="/ideas">Explore Michigan trip guides →</Link>
       </section>
 
-      <nav className="related-guides content-wrap local-guide-links" aria-label={`Popular outdoor guides from ${origin.name}`}>
+      <nav className="related-guides content-wrap local-guide-links" aria-label={`Popular outdoor decisions from ${origin.name}`}>
         <p className="eyebrow">Choose the kind of day</p>
         <div>
+          {localSearchLandings.map((landing) => (
+            <Link
+              href={`/from/${origin.slug}/${landing.intent.slug}`}
+              key={landing.intent.slug}
+            >
+              {landing.intent.label}<span>→</span>
+            </Link>
+          ))}
           {localGuides.map((guide) => (
             <Link href={`/ideas/${guide.slug}`} key={guide.slug}>{guide.shortTitle}<span>→</span></Link>
           ))}
