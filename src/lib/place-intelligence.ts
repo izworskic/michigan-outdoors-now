@@ -1091,16 +1091,28 @@ export async function fetchPlaceIntelligence(args: {
       : ({ type: "FeatureCollection", features: [] } as UniverseGeoJson);
   const osmElements = osmResult.status === "fulfilled" ? osmResult.value : [];
 
-  const elevation = await fetchElevationRange(trails.features, args.latitude, args.longitude);
+  const [elevation, trailTruth] = await Promise.all([
+    fetchElevationRange(trails.features, args.latitude, args.longitude),
+    buildTrailTruth(osmElements, args.latitude, args.longitude),
+  ]);
+  const weather = weatherResult.status === "fulfilled" ? weatherResult.value : null;
+  const access = summarizeAccess(closures, reroutes, args.latitude, args.longitude);
+  const trailMetadata = summarizeOsmTrailMetadata(
+    osmElements,
+    args.latitude,
+    args.longitude,
+  );
 
   return {
     generatedAt: new Date().toISOString(),
-    weather: weatherResult.status === "fulfilled" ? weatherResult.value : null,
+    weather,
     trailSystems: summarizeTrailSystems(trails.features, args.latitude, args.longitude),
-    trailMetadata: summarizeOsmTrailMetadata(osmElements, args.latitude, args.longitude),
+    trailMetadata,
+    trailTruth,
+    goSignal: buildGoSignal({ weather, access, trailTruth }),
     elevation,
-    access: summarizeAccess(closures, reroutes, args.latitude, args.longitude),
+    access,
     confidenceNote:
-      "Weather and air quality come from Open-Meteo. Nearby official trail and access-change data come from Michigan DNR. OSM difficulty, surface, route-distance and visibility fields appear only when nearby mapped trail data includes those tags. Elevation is a sampled nearby-trail terrain range, not total route gain.",
+      "Current weather, recent rain, daylight and air quality come from Open-Meteo. Nearby official trail and access-change data come from Michigan DNR. Trail Truth resolves the nearest mapped OSM hiking relation when one is available: tagged route distance is strongest, relation-member geometry is the fallback, and sampled ascent is explicitly estimated. Official land-manager maps and notices remain the final source for route choice, closures and seasonal rules.",
   };
 }
