@@ -90,6 +90,26 @@ try {
   assert.match(discoveryPayload.origin.name, /Bay City.*area/);
   assert.match(discoveryPayload.intent.summary, /beach|water/i);
 
+  const longHikeDiscovery = await fetch(`${origin}/api/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: typedOriginPayload.origin.name,
+      originCoordinates: {
+        latitude: typedOriginPayload.origin.latitude,
+        longitude: typedOriginPayload.origin.longitude,
+      },
+      query: "long hike",
+      maxDriveHours: 8,
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(longHikeDiscovery.status, 200);
+  const longHikePayload = await longHikeDiscovery.json();
+  assert.ok(Array.isArray(longHikePayload.places));
+  assert.ok(longHikePayload.places.length > 0, "Bay City long hike search returned no possibilities");
+  assert.match(longHikePayload.intent.summary, /trailhead|natural area|viewpoint|waterfall|hiking/i);
+
   const fartherDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
