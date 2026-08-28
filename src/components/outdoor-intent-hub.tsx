@@ -262,7 +262,7 @@ export function OutdoorIntentHub() {
     void run();
   }
 
-  async function runDiscovery(queryOverride?: string) {
+  async function runDiscovery(queryOverride?: string, driveOverride = driveHours) {
     const chosenOrigin = origin.trim();
     const query = (queryOverride ?? wish).trim();
 
@@ -292,7 +292,7 @@ export function OutdoorIntentHub() {
           origin: chosenOrigin || "My location",
           ...(originCoordinates ? { originCoordinates } : {}),
           query,
-          maxDriveHours: driveHours,
+          maxDriveHours: driveOverride,
         }),
       });
       const payload = await response.json();
@@ -401,7 +401,11 @@ export function OutdoorIntentHub() {
     const next = Math.max(1, Math.min(8, driveHours + delta));
     if (next === driveHours) return;
     setDriveHours(next);
-    if (origin.trim() || originCoordinates) void run(pull, next);
+    if (discovery?.query) {
+      void runDiscovery(discovery.query, next);
+    } else if (origin.trim() || originCoordinates) {
+      void run(pull, next);
+    }
   }
 
   function nextIdea() {
