@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
+import type { DayPlanResponse } from "../lib/day-plan";
 import type { DiscoveryPlace, DiscoveryResponse } from "../lib/discovery";
 import type { PlaceIntelligence } from "../lib/place-intelligence";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
@@ -248,6 +249,9 @@ export function OutdoorIntentHub() {
   const [compareOpen, setCompareOpen] = useState(false);
   const [dismissedDiscoveryIds, setDismissedDiscoveryIds] = useState<string[]>([]);
   const [departureOpen, setDepartureOpen] = useState(false);
+  const [dayPlan, setDayPlan] = useState<DayPlanResponse | null>(null);
+  const [dayPlanOpen, setDayPlanOpen] = useState(false);
+  const [dayPlanning, setDayPlanning] = useState(false);
   const [placeIntelligence, setPlaceIntelligence] = useState<PlaceIntelligence | null>(null);
   const [placeIntelligenceLoading, setPlaceIntelligenceLoading] = useState(false);
   const [planning, setPlanning] = useState(false);
@@ -439,6 +443,9 @@ export function OutdoorIntentHub() {
     setComparisonPlaces([]);
     setCompareOpen(false);
     setDepartureOpen(false);
+    setDayPlan(null);
+    setDayPlanOpen(false);
+    setDayPlanning(false);
     setAroundOpen(false);
   }
 
