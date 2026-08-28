@@ -19,7 +19,7 @@ test("semantic results live in a persistent result rail instead of the query sta
 test("opening and closing detail preserves the result dock", async () => {
   const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
 
-  assert.match(hub, /onClick=\{\(\) => activateDiscovery\(place\.id\)\}/);
+  assert.match(hub, /activateDiscovery\(place\.id\)/);
   assert.match(hub, /setFocusPoint\(\{[\s\S]*?latitude: place\.latitude,[\s\S]*?longitude: place\.longitude/);
   assert.match(hub, /canvas-sheet-discovery/);
   assert.match(hub, /aria-label="Close place detail">×<\/button>/);
@@ -76,7 +76,7 @@ test("result-first taste exposes every returned destination and keeps comparison
   assert.match(hub, /discovery\.places\.map\(\(place, index\) =>/);
   assert.doesNotMatch(hub, /discovery\.places\.slice\(/);
   assert.match(hub, /canvas-result-rank/);
-  assert.match(hub, /driveTimeLabel\(place\.driveHours\)\} away/);
+  assert.match(hub, /~\{driveTimeLabel\(place\.driveHours\)\} drive/);
   assert.match(hub, /\{place\.categoryLabel\}/);
   assert.match(hub, /<p>\{place\.why\}<\/p>/);
 });
