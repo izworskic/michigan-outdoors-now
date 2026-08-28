@@ -214,7 +214,7 @@ function osmPlaces(
 
     const categoryName = categoryLabel(category);
     const traits = args.intent.traits
-      .filter((trait) => ["quiet", "wild", "water", "short", "long", "night"].includes(trait))
+      .filter((trait) => ["quiet", "wild", "water", "short", "night"].includes(trait))
       .slice(0, 2)
       .map((trait) => trait.replace("-", " "));
     const effortCaution = args.intent.traits.includes("long")
