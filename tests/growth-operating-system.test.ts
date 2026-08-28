@@ -161,3 +161,22 @@ test("CTR creative no longer advertises the obsolete three-plan product", async 
   assert.match(landingOg, /landing\.intent\.label/);
   assert.match(landingOg, /landing\.origin\.name/);
 });
+
+
+test("weekly Search Console collection uses final page by query data and fails closed without credentials", async () => {
+  const fetchScript = await readFile(
+    new URL("../scripts/fetch-search-console.mjs", import.meta.url),
+    "utf8",
+  );
+  const workflow = await readFile(
+    new URL("../.github/workflows/growth-intelligence.yml", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(fetchScript, /dimensions: \["page", "query"\]/);
+  assert.match(fetchScript, /dataState: "final"/);
+  assert.match(fetchScript, /GSC_SERVICE_ACCOUNT_JSON is required/);
+  assert.match(workflow, /GSC_SERVICE_ACCOUNT_JSON/);
+  assert.match(workflow, /configured=false/);
+  assert.match(workflow, /Upload growth intelligence artifact/);
+});
