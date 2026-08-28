@@ -49,7 +49,7 @@ test("search completion shows choices without auto-opening a detail sheet", asyn
 
   assert.doesNotMatch(source, /setActiveDiscoveryId\(result\.places\[0\]/);
   assert.match(source, /className="canvas-result-dock"/);
-  assert.match(source, /discovery\.places\.slice\(0, 8\)/);
+  assert.match(source, /discovery\.places\.map\(\(place, index\) =>/);
   assert.match(source, /onClick=\{\(\) => activateDiscovery\(place\.id\)\}/);
 });
 
