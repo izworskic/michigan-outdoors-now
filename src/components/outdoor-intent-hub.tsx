@@ -136,6 +136,7 @@ export function OutdoorIntentHub() {
   const originInputRef = useRef<HTMLInputElement | null>(null);
   const wishInputRef = useRef<HTMLInputElement | null>(null);
   const resultDockRef = useRef<HTMLElement | null>(null);
+  const resultCardRefs = useRef(new Map<string, HTMLButtonElement>());
 
   useEffect(() => {
     if (!trailRequested) return;
@@ -183,6 +184,13 @@ export function OutdoorIntentHub() {
 
     return () => window.clearTimeout(timer);
   }, [discovery?.generatedAt, discovery?.places.length]);
+
+  useEffect(() => {
+    if (!activeDiscoveryId) return;
+    const card = resultCardRefs.current.get(activeDiscoveryId);
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeDiscoveryId]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -468,6 +476,14 @@ export function OutdoorIntentHub() {
   }, [discovery?.places]);
 
 
+  function moveDiscoverySelection(delta: number) {
+    const places = discovery?.places ?? [];
+    if (!places.length) return;
+    const currentIndex = Math.max(0, places.findIndex((place) => place.id === activeDiscoveryId));
+    const nextIndex = (currentIndex + delta + places.length) % places.length;
+    activateDiscovery(places[nextIndex].id);
+  }
+
   function requestTrailLayer(nextLayer: UniverseLayerId) {
     setTrailLayer(nextLayer);
     setTrailRequested(true);
@@ -666,7 +682,10 @@ export function OutdoorIntentHub() {
   }, [boatLaunches.count, boatLaunches.status, trailRequested, universe.label, universe.status, universe.systemCount]);
 
   return (
-    <main className="michigan-canvas" aria-label="Explore Michigan outdoors">
+    <main
+      className={`michigan-canvas ${discovery?.places.length ? "has-discovery-results" : ""} ${activeDiscovery ? "has-active-discovery" : ""}`}
+      aria-label="Explore Michigan outdoors"
+    >
       <div className="michigan-canvas-map">
         <MichiganDestinationMap
           activeId={activeId}
@@ -851,11 +870,11 @@ export function OutdoorIntentHub() {
         >
           <div className="canvas-result-dock-head">
             <div>
-              <span>{discoveryRange ? "Farther-out results" : "Your possibilities"}</span>
+              <span>{discoveryRange ? "Farther-out results" : `${discovery.places.length} matches`}</span>
               <strong>
                 {discoveryRange
-                  ? `${discoveryRange.minDriveHours}–${discoveryRange.maxDriveHours} hr from your start`
-                  : `Up to ${driveHours} hr from your start`}
+                  ? `${discoveryRange.minDriveHours}–${discoveryRange.maxDriveHours} hr · ${discovery.query}`
+                  : `Up to ${driveHours} hr · ${discovery.query}`}
               </strong>
             </div>
             <div className="canvas-result-dock-actions">
@@ -877,17 +896,26 @@ export function OutdoorIntentHub() {
             </div>
           </div>
           <div className="canvas-result-rail">
-            {discovery.places.slice(0, 8).map((place) => (
+            {discovery.places.map((place, index) => (
               <button
                 type="button"
                 key={place.id}
+                ref={(node) => {
+                  if (node) resultCardRefs.current.set(place.id, node);
+                  else resultCardRefs.current.delete(place.id);
+                }}
                 className={place.id === activeDiscoveryId ? "is-active" : ""}
                 aria-pressed={place.id === activeDiscoveryId}
                 onClick={() => activateDiscovery(place.id)}
               >
+                <span className="canvas-result-rank">{String(index + 1).padStart(2, "0")}</span>
                 <strong>{place.name}</strong>
-                <span>{place.area}</span>
-                <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
+                <span className="canvas-result-area">{place.area}</span>
+                <div className="canvas-result-facts">
+                  <b>{driveTimeLabel(place.driveHours)} away</b>
+                  <small>{place.categoryLabel}</small>
+                </div>
+                <p>{place.why}</p>
               </button>
             ))}
           </div>
@@ -1022,6 +1050,15 @@ export function OutdoorIntentHub() {
 
           {activeDiscovery ? (
             <>
+              <div className="canvas-detail-nav" aria-label="Navigate search results">
+                <button type="button" onClick={() => moveDiscoverySelection(-1)}>‹ Previous</button>
+                <span>
+                  {Math.max(1, (discovery?.places.findIndex((place) => place.id === activeDiscovery.id) ?? 0) + 1)}
+                  {" of "}
+                  {discovery?.places.length ?? 0}
+                </span>
+                <button type="button" onClick={() => moveDiscoverySelection(1)}>Next ›</button>
+              </div>
               <p className="canvas-sheet-kicker">Found from your description · {driveTimeLabel(activeDiscovery.driveHours)} away</p>
               <h1>{activeDiscovery.name}</h1>
               <p className="canvas-sheet-area">{activeDiscovery.area} · about {activeDiscovery.distanceMiles} rough miles</p>
@@ -1163,12 +1200,6 @@ export function OutdoorIntentHub() {
       {plans && !activeId && leadPlan && (
         <button type="button" className="canvas-return-pick" onClick={() => setActiveId(leadPlan.destination.id)}>
           Return to {leadPlan.destination.name}
-        </button>
-      )}
-
-      {discovery && !activeDiscoveryId && discovery.places[0] && (
-        <button type="button" className="canvas-return-pick" onClick={() => setActiveDiscoveryId(discovery.places[0].id)}>
-          Return to {discovery.places[0].name}
         </button>
       )}
 
