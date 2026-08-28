@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "kind": "product-funnel-normalized",
+  "window": {
+    "label": "instrumentation baseline",
+    "through": "2026-08-28"
+  },
+  "source": {
+    "type": "none-before-release",
+    "note": "The attributed funnel did not exist before this release. Do not backfill invented conversion counts."
+  },
+  "rows": []
+}
