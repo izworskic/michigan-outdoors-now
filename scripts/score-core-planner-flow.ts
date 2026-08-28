@@ -60,7 +60,8 @@ async function main() {
       (hub.includes('className="canvas-wish-results"') ||
         hub.includes('className="canvas-result-dock"')) &&
       (hub.includes("discovery.places.slice(0, 3)") ||
-        hub.includes("discovery.places.slice(0, 8)")) &&
+        hub.includes("discovery.places.slice(0, 8)") ||
+        hub.includes("discovery.places.map((place, index)")) &&
       hub.includes("possibilities"),
     responsiveNonOverlap:
       hub.includes('className="canvas-query-stack"') &&
