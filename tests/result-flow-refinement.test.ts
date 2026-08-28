@@ -42,7 +42,7 @@ test("the result UI tells the user whether results are inclusive or farther-only
   const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
 
   assert.match(hub, /Farther-out results/);
-  assert.match(hub, /Up to \$\{driveHours\} hr from your start/);
+  assert.match(hub, /Up to \$\{driveHours\} hr · \$\{discovery\.query\}/);
   assert.match(hub, /Show all within \{driveHours\} hr/);
 });
 
