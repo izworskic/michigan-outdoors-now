@@ -119,7 +119,6 @@ export function OutdoorIntentHub() {
 
   useEffect(() => {
     const trailsController = new AbortController();
-    setUniverse(emptyUniverse(trailLayer));
 
     fetch(`/api/outdoor-universe?layer=${trailLayer}`, { signal: trailsController.signal })
       .then((response) => {
@@ -274,7 +273,7 @@ export function OutdoorIntentHub() {
     if (universe.status === "live") pieces.push(`${universe.systemCount.toLocaleString()} ${universe.label.toLowerCase()}`);
     if (boatLaunches.status === "live") pieces.push(`${boatLaunches.count.toLocaleString()} launches`);
     return pieces.join(" · ");
-  }, [boatLaunches.count, boatLaunches.status, universe.status, universe.systemCount]);
+  }, [boatLaunches.count, boatLaunches.status, universe.label, universe.status, universe.systemCount]);
 
   return (
     <main className="michigan-canvas" aria-label="Explore Michigan outdoors">
