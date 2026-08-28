@@ -1,0 +1,125 @@
+# Michigan Outdoors Now growth operating system
+
+The growth system is not a page generator. It joins three kinds of evidence:
+
+1. **Search acquisition** — query × page impressions, clicks, CTR, and average position from Google Search Console.
+2. **Product value** — privacy-safe Vercel events that show whether a visitor actually plans, compares, commits, and opens directions.
+3. **Portfolio governance** — ChrisIzworski.com remains the source of truth for canonical intent ownership, experiment freezes, entity strategy, and cross-tool promotion.
+
+## Funnel
+
+For qualified location-intent pages:
+
+**Search landing view → planner start → planner completion → result consideration → commitment/directions**
+
+Every event carries a fixed context:
+- surface
+- origin slug
+- intent slug
+- page key
+
+The context must never include:
+- exact coordinates
+- device location
+- the visitor's free-text semantic query
+
+The flagship semantic planner uses the same event taxonomy from search through departure:
+
+**semantic search → result open → keep → compare → decision argument → provenance → departure → directions**
+
+## Search actions
+
+The report engine can return:
+
+- **PUSH_CTR** — meaningful impressions, near page one, weak CTR for position. Work on title/snippet/preview/first-answer alignment before more pages.
+- **BUILD_AUTHORITY** — Google is testing the page but rank is the limiting factor. Improve answer depth and contextual inbound links.
+- **UX_REPAIR** — the page gets visits but too few people start planning. Fix intent/product fit before trying to grow impressions.
+- **PROTECT** — visibility and CTR are healthy enough to hold the treatment.
+- **HOLD** — not enough evidence for a search-facing change.
+
+## Family expansion
+
+A search family does not earn more URLs from impressions alone.
+
+**EXPAND_FAMILY** requires, in a comparable measured window:
+- at least 250 Search Console impressions
+- at least 5 clicks
+- at least 10 completed plans
+- at least 3 directions opens
+
+Even then, every new URL must still pass the existing distinct-intent, duplicate-signature, cannibalization, canonical, and usefulness gates.
+
+If a family has at least 500 impressions and at least 100 landing views but fewer than 2% start the planner, the system returns **DO_NOT_EXPAND**.
+
+## Cadence
+
+### Weekly
+Use leading indicators only:
+- indexing/canonical health
+- emerging queries
+- page position bands
+- CTR gaps
+- funnel breakpoints
+- source/runtime regressions
+
+Do not declare winners from partial windows.
+
+### Complete 28-day window
+Join Search Console and product funnel snapshots. Then:
+- protect winners
+- push CTR where rank already exists
+- build authority where impressions exist but rank lags
+- repair UX where clicks do not become planning
+- expand only families that prove both demand and downstream value
+
+## Cross-repo contract
+
+Michigan Outdoors Now exposes a noindex machine-readable contract at:
+
+`/growth-manifest.json`
+
+ChrisIzworski.com remains the portfolio source of truth for:
+- Chris Izworski entity ownership
+- Tool Network Registry
+- Search Authority Portfolio
+- growth experiment ledger
+- cannibalization boundaries
+- cross-tool promotion
+
+This keeps the tool's event/funnel implementation close to the product while central strategy remains coordinated across the whole owned network.
+
+
+## Automated Search Console collection
+
+`.github/workflows/growth-intelligence.yml` runs weekly and can also be triggered manually.
+
+When `GSC_SERVICE_ACCOUNT_JSON` is configured with read access to the Search Console property, the workflow:
+1. queries final Search Console data for the latest complete 28-day window;
+2. requests `page × query` dimensions for the Michigan Outdoors Now host;
+3. normalizes each row into the same shape used by `report:growth`;
+4. produces a growth report artifact retained for 45 days.
+
+`GSC_SITE_URL` may be set when the authorized Search Console property is not the default `sc-domain:chrisizworski.com`.
+
+If credentials are absent, the workflow exits cleanly and records that collection is inactive. It never substitutes synthetic Search Console data.
+
+The product-event side remains intentionally separate because Vercel custom events are the source of truth for downstream behavior. The committed product baseline stays empty until attributed events actually exist.
+
+
+## Automated product-funnel collection
+
+Vercel Web Analytics custom events are the downstream-value source.
+
+When `VERCEL_ANALYTICS_TOKEN` and `VERCEL_ANALYTICS_PROJECT_ID` are configured, the weekly workflow queries Vercel's custom-event aggregate API for the same measurement window and groups events by the fixed `eventData/page` key.
+
+It normalizes:
+- `search_landing_viewed` → landing views
+- `planner_started` → planner starts
+- `planner_completed` → completed plans
+- `place_detail_opened` → result consideration
+- `departure_mode_opened` → commitments
+- `directions_opened` and `outbound_map_opened` → directions intent
+
+The configured team is the existing Chris Izworski Vercel team. The project ID remains a GitHub secret so the workflow does not guess across projects.
+
+When the Vercel credentials are absent, the Search Console report still runs against the explicit empty pre-attribution product baseline and the workflow says that product collection is inactive. It does not silently treat missing event data as zero user interest.

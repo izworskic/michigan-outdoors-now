@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Planner } from "../../../../components/planner";
+import { SearchLandingTracker } from "../../../../components/search-landing-tracker";
 import {
   landingDirectAnswer,
   searchLandingByKey,
@@ -10,6 +11,7 @@ import {
   searchLandingsForOrigin,
 } from "../../../../lib/search-landings";
 import { jsonLd, personSchema, siteUrl } from "../../../../lib/site";
+import type { GrowthContext } from "../../../../lib/growth-analytics";
 
 export const dynamicParams = false;
 
@@ -64,6 +66,12 @@ export default async function LocationIntentPage({
   if (!landing) notFound();
 
   const pageUrl = `${siteUrl}/from/${landing.origin.slug}/${landing.intent.slug}`;
+  const analyticsContext: GrowthContext = {
+    surface: "location_intent",
+    originSlug: landing.origin.slug,
+    intentSlug: landing.intent.slug,
+    pageKey: `from/${landing.origin.slug}/${landing.intent.slug}`,
+  };
   const siblingIntents = searchLandingsForOrigin(landing.origin.slug)
     .filter((candidate) => candidate.intent.slug !== landing.intent.slug)
     .slice(0, 5);
@@ -126,7 +134,12 @@ export default async function LocationIntentPage({
 
   return (
     <>
-      <article>
+      <SearchLandingTracker context={analyticsContext} />
+      <article
+        data-search-growth-surface="location-intent"
+        data-search-growth-origin={landing.origin.slug}
+        data-search-growth-intent={landing.intent.slug}
+      >
         <header className="search-landing-hero">
           <div className="content-wrap search-landing-hero-grid">
             <div>
@@ -206,6 +219,7 @@ export default async function LocationIntentPage({
             initialKids={landing.guide.planner.kids}
             initialDog={landing.guide.planner.dog}
             initialAccessible={landing.guide.planner.accessible}
+            analyticsContext={analyticsContext}
           />
         </div>
 

@@ -9,6 +9,7 @@ import type { DiscoveryPlace, DiscoveryResponse } from "../lib/discovery";
 import type { PlaceIntelligence } from "../lib/place-intelligence";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
+import { trackGrowthEvent, type GrowthContext } from "../lib/growth-analytics";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse, SpecialistSignal } from "../lib/types";
 import { MichiganDestinationMap, type MapFocusPoint, type MapViewport } from "./michigan-destination-map";
 
@@ -32,6 +33,12 @@ const pulls: Pull[] = [
   { id: "long", label: "Long haul", short: "Open the whole state", driveHours: 8, date: "today", activities: ["hiking", "scenic"] },
   { id: "weekend", label: "Weekend", short: "Let both days compete", driveHours: 8, date: "weekend", activities: ["hiking", "scenic", "birding"] },
 ];
+
+const semanticGrowthContext: GrowthContext = {
+  surface: "flagship_semantic",
+  pageKey: "home",
+};
+
 
 function emptyUniverse(layer: UniverseLayerId = "hiking"): OutdoorUniverseResponse {
   return {
@@ -540,6 +547,12 @@ export function OutdoorIntentHub() {
     setCompareOpen(false);
     setDepartureOpen(false);
     setMessage("");
+    trackGrowthEvent("semantic_search_started", semanticGrowthContext, {
+      mode: surpriseMode ? "surprise" : "search",
+      driveHours: driveOverride,
+      hasMinimumBand: minDriveOverride > 0,
+      queryLength: query.length,
+    });
 
     try {
       const response = await fetch("/api/discover", {
@@ -575,6 +588,13 @@ export function OutdoorIntentHub() {
         latitude: result.origin.latitude,
         longitude: result.origin.longitude,
       });
+      trackGrowthEvent("semantic_search_completed", semanticGrowthContext, {
+        mode: surpriseMode ? "surprise" : "search",
+        resultCount: result.places.length,
+        routedCount: result.places.filter((place) => place.travelSource === "routed").length,
+        driveHours: driveOverride,
+        hasMinimumBand: minDriveOverride > 0,
+      });
       if (!result.places.length) {
         setMessage(
           minDriveOverride > 0
@@ -585,6 +605,10 @@ export function OutdoorIntentHub() {
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       if (discoveryRequestRef.current !== controller) return;
+      trackGrowthEvent("semantic_search_failed", semanticGrowthContext, {
+        mode: surpriseMode ? "surprise" : "search",
+        driveHours: driveOverride,
+      });
       setMessage(error instanceof Error ? error.message : "Could not search Michigan right now.");
     } finally {
       if (discoveryRequestRef.current === controller) {
@@ -600,6 +624,7 @@ export function OutdoorIntentHub() {
   }
 
   function surpriseMe() {
+    trackGrowthEvent("surprise_me_used", semanticGrowthContext, { driveHours });
     void runDiscovery(
       "wild quiet overlooked outdoor place worth discovering",
       driveHours,
@@ -609,6 +634,10 @@ export function OutdoorIntentHub() {
   }
 
   function dismissDiscoveryPlace(place: DiscoveryPlace) {
+    trackGrowthEvent("surprise_rejected", semanticGrowthContext, {
+      category: place.category,
+      curated: Boolean(place.curatedPlaceId),
+    });
     setDismissedDiscoveryIds((current) =>
       current.includes(place.id) ? current : [...current, place.id].slice(-50),
     );
@@ -678,6 +707,13 @@ export function OutdoorIntentHub() {
     setActiveId("");
     setActiveDiscoveryId(placeId);
     if (place) {
+      const rank = Math.max(1, (discovery?.places.findIndex((candidate) => candidate.id === place.id) ?? 0) + 1);
+      trackGrowthEvent("semantic_result_opened", semanticGrowthContext, {
+        rank,
+        category: place.category,
+        curated: Boolean(place.curatedPlaceId),
+        travelSource: place.travelSource ?? "estimated",
+      });
       loadPlaceIntelligence(place);
       setFocusPoint({
         key: `discovery-${place.id}-${Date.now()}`,
@@ -701,6 +737,10 @@ export function OutdoorIntentHub() {
     const alreadyKept = comparisonPlaces.some((candidate) => candidate.id === place.id);
     if (alreadyKept) {
       const next = comparisonPlaces.filter((candidate) => candidate.id !== place.id);
+      trackGrowthEvent("place_unkept", semanticGrowthContext, {
+        keptCount: next.length,
+        category: place.category,
+      });
       setComparisonPlaces(next);
       if (!next.length) setCompareOpen(false);
       return;
@@ -711,12 +751,21 @@ export function OutdoorIntentHub() {
       return;
     }
 
-    setComparisonPlaces([...comparisonPlaces, place]);
+    const nextPlaces = [...comparisonPlaces, place];
+    trackGrowthEvent("place_kept", semanticGrowthContext, {
+      keptCount: nextPlaces.length,
+      category: place.category,
+      curated: Boolean(place.curatedPlaceId),
+    });
+    setComparisonPlaces(nextPlaces);
     setMessage("");
   }
 
   function openComparison() {
     if (!comparisonPlaces.length) return;
+    trackGrowthEvent("comparison_opened", semanticGrowthContext, {
+      comparedCount: comparisonPlaces.length,
+    });
     setDepartureOpen(false);
     setActiveDiscoveryId("");
     setCompareOpen(true);
@@ -724,6 +773,12 @@ export function OutdoorIntentHub() {
 
   function openDeparture() {
     if (!activeDiscoveryId) return;
+    const place = discovery?.places.find((candidate) => candidate.id === activeDiscoveryId);
+    trackGrowthEvent("departure_mode_opened", semanticGrowthContext, {
+      category: place?.category ?? "unknown",
+      curated: Boolean(place?.curatedPlaceId),
+      travelSource: place?.travelSource ?? "estimated",
+    });
     setCompareOpen(false);
     setAroundOpen(false);
     setDepartureOpen(true);
@@ -1424,7 +1479,15 @@ export function OutdoorIntentHub() {
           </div>
 
           <div className="canvas-departure-actions">
-            <a href={activeDiscovery.directionsUrl} target="_blank" rel="noopener">
+            <a
+              href={activeDiscovery.directionsUrl}
+              target="_blank"
+              rel="noopener"
+              onClick={() => trackGrowthEvent("directions_opened", semanticGrowthContext, {
+                phase: "departure",
+                category: activeDiscovery.category,
+              })}
+            >
               Start directions
             </a>
             {activeDiscovery.curatedPlaceId ? (
@@ -1533,7 +1596,16 @@ export function OutdoorIntentHub() {
               <p className="canvas-sheet-summary">{activeDiscovery.why}</p>
 
               {decisionArgument && (
-                <details className="canvas-decision-argument">
+                <details
+                  className="canvas-decision-argument"
+                  onToggle={(event) => {
+                    if (event.currentTarget.open) {
+                      trackGrowthEvent("decision_argument_opened", semanticGrowthContext, {
+                        category: activeDiscovery.category,
+                      });
+                    }
+                  }}
+                >
                   <summary>Why this one over the others?</summary>
                   <div>
                     <strong>{decisionArgument.headline}</strong>
@@ -1648,7 +1720,16 @@ export function OutdoorIntentHub() {
                   <p className="canvas-field-confidence-note">{placeIntelligence.confidenceNote}</p>
                 )}
 
-                <details className="canvas-proof-ledger">
+                <details
+                  className="canvas-proof-ledger"
+                  onToggle={(event) => {
+                    if (event.currentTarget.open) {
+                      trackGrowthEvent("proof_ledger_opened", semanticGrowthContext, {
+                        category: activeDiscovery.category,
+                      });
+                    }
+                  }}
+                >
                   <summary>Why should I trust this?</summary>
                   <div className="canvas-proof-ledger-grid">
                     <span>Drive</span>
@@ -1702,7 +1783,17 @@ export function OutdoorIntentHub() {
                 ) : (
                   <a href={activeDiscovery.sourceUrl} target="_blank" rel="noopener">Map details</a>
                 )}
-                <a href={activeDiscovery.directionsUrl} target="_blank" rel="noopener">Directions</a>
+                <a
+                  href={activeDiscovery.directionsUrl}
+                  target="_blank"
+                  rel="noopener"
+                  onClick={() => trackGrowthEvent("directions_opened", semanticGrowthContext, {
+                    phase: "detail",
+                    category: activeDiscovery.category,
+                  })}
+                >
+                  Directions
+                </a>
               </div>
 
               <div className="canvas-branch">

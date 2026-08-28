@@ -1,0 +1,18 @@
+{
+  "name": "growth-operating-system",
+  "version": 1,
+  "baselineScore": 41,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "criteria": [
+    {"key":"attributedSeoFunnel","weight":20},
+    {"key":"semanticDecisionFunnel","weight":20},
+    {"key":"privacyBoundary","weight":15},
+    {"key":"searchProductJoin","weight":15},
+    {"key":"familyExpansionGate","weight":10},
+    {"key":"machineReadableContract","weight":5},
+    {"key":"ctrCreative","weight":5},
+    {"key":"centralPortfolioHandoff","weight":5},
+    {"key":"regressionCoverage","weight":5}
+  ]
+}

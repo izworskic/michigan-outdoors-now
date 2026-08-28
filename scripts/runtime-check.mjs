@@ -194,6 +194,19 @@ try {
   assert.ok(Number.isInteger(placeIntelligencePayload.access.rerouteCount));
   assert.match(placeIntelligencePayload.confidenceNote, /Open-Meteo|Michigan DNR/);
 
+  const growthManifest = await fetch(`${origin}/growth-manifest.json`, {
+    signal: AbortSignal.timeout(4_000),
+  });
+  assert.equal(growthManifest.status, 200);
+  assert.match(growthManifest.headers.get("x-robots-tag") ?? "", /noindex/);
+  const growthManifestPayload = await growthManifest.json();
+  assert.equal(growthManifestPayload.version, "1.0.0");
+  assert.equal(growthManifestPayload.owner, "https://chrisizworski.com/#person");
+  assert.equal(growthManifestPayload.launch.locationIntentPages, 54);
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("planner_completed"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("departure_mode_opened"));
+  assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("exact coordinates"));
+
   const fartherDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
