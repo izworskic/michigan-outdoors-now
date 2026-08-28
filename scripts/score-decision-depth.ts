@@ -39,7 +39,7 @@ async function main() {
   const checks: Record<string, boolean> = {
     effortIntent:
       discovery.includes('| "long"') &&
-      discovery.includes('["long", ["long", "long hike"') &&
+      discovery.includes('["long", ["long hike", "long walk", "long trail"') &&
       discovery.includes("destinationEffortFit") &&
       discoveryTests.includes("long-hike intent favors stronger backcountry signals"),
     shortlistUpToThree:
