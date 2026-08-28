@@ -175,6 +175,7 @@ export function MichiganDestinationMap({
         id: trailLayerId,
         type: "line",
         source: trailSourceId,
+        minzoom: 5.9,
         paint: {
           "line-color": "#477f91",
           "line-opacity": 0.62,
@@ -288,6 +289,7 @@ export function MichiganDestinationMap({
         id: rerouteLayerId,
         type: "line",
         source: rerouteSourceId,
+        minzoom: 6.1,
         paint: {
           "line-color": "#a86a45",
           "line-opacity": 0.96,
@@ -301,6 +303,7 @@ export function MichiganDestinationMap({
         id: closureLayerId,
         type: "line",
         source: closureSourceId,
+        minzoom: 6.1,
         paint: {
           "line-color": "#9b4b43",
           "line-opacity": 0.96,
