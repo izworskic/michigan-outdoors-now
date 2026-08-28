@@ -1,0 +1,18 @@
+{
+  "name": "field-confidence",
+  "version": 1,
+  "baselineScore": 43,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "criteria": [
+    {"key":"batchedRoutedTravel","weight":20},
+    {"key":"routingFallback","weight":10},
+    {"key":"currentWeather","weight":15},
+    {"key":"nearbyOfficialTrailData","weight":15},
+    {"key":"terrainElevation","weight":10},
+    {"key":"osmDifficultyMetadata","weight":10},
+    {"key":"officialAccessChanges","weight":10},
+    {"key":"visibleConfidenceUI","weight":5},
+    {"key":"runtimeCoverage","weight":5}
+  ]
+}
