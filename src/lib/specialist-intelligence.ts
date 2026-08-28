@@ -228,6 +228,10 @@ function beachCoverageSignal(destination: Destination): SpecialistSignal | null 
   };
 }
 
+export function specialistSignalsNeedWeather(destination: Destination) {
+  return destination.activities.includes("dark-sky");
+}
+
 export async function fetchSpecialistSignals(
   destination: Destination,
   weather: WeatherSnapshot | null,
