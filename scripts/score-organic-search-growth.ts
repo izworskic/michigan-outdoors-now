@@ -64,7 +64,9 @@ async function main() {
       !slugs.has("beaches") &&
       !slugs.has("beach-day-trips") &&
       !slugs.has("freighters") &&
-      !slugs.has("freighter-watching"),
+      !slugs.has("freighter-watching") &&
+      !slugs.has("birding") &&
+      !slugs.has("birding-day-trips"),
     internalDiscoveryNetwork:
       originPage.includes("searchLandingsForOrigin") &&
       guidePage.includes("searchLandingsForGuide") &&
@@ -81,7 +83,7 @@ async function main() {
     regressionCoverage:
       tests.includes("meaningful but bounded search surface area") &&
       tests.includes("canonical Chris Izworski Person ID") &&
-      tests.includes("avoids beach and freighter cannibalization"),
+      tests.includes("avoids beach, freighter, and birding cannibalization"),
   };
 
   const scored = benchmark.criteria.map((criterion) => ({
