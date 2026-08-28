@@ -1354,6 +1354,102 @@ export function OutdoorIntentHub() {
       )}
 
 
+      {departureOpen && activeDiscovery && (
+        <aside className="canvas-departure" aria-label="Ready to leave" aria-live="polite">
+          <div className="canvas-departure-head">
+            <div>
+              <span>Decision made</span>
+              <strong>Get out the door.</strong>
+            </div>
+            <button type="button" onClick={() => setDepartureOpen(false)} aria-label="Back to place detail">×</button>
+          </div>
+
+          <div className="canvas-departure-place">
+            <p>{activeDiscovery.area}</p>
+            <h1>{activeDiscovery.name}</h1>
+            <strong>
+              {discoveryDriveLabel(activeDiscovery)}
+              {" · "}
+              arrive around {arrivalTimeLabel(activeDiscovery)} if you leave now
+            </strong>
+          </div>
+
+          {placeIntelligence?.access.closureCount ? (
+            <div className="canvas-departure-warning">
+              <span>Check before leaving</span>
+              <strong>
+                {placeIntelligence.access.closureCount} nearby DNR closure item
+                {placeIntelligence.access.closureCount === 1 ? "" : "s"}
+              </strong>
+              <small>{placeIntelligence.access.notes[0]}</small>
+            </div>
+          ) : null}
+
+          <div className="canvas-departure-grid">
+            <article>
+              <span>Weather</span>
+              <strong>{placeWeatherLine(placeIntelligence) ?? "Fresh weather still checking"}</strong>
+            </article>
+            <article>
+              <span>Trail</span>
+              <strong>
+                {placeIntelligence?.trailSystems[0]?.name ??
+                  placeIntelligence?.trailMetadata?.routeName ??
+                  "Exact route still needs choosing"}
+              </strong>
+              <small>
+                {placeIntelligence?.trailMetadata?.taggedDistanceMiles
+                  ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi tagged route`
+                  : placeIntelligence?.trailSystems[0]?.nearbyMappedMiles
+                    ? `${placeIntelligence.trailSystems[0].nearbyMappedMiles} DNR mapped mi nearby`
+                    : "Mileage not verified"}
+              </small>
+            </article>
+            <article>
+              <span>Terrain</span>
+              <strong>
+                {placeIntelligence?.trailMetadata?.taggedAscentFeet
+                  ? `${placeIntelligence.trailMetadata.taggedAscentFeet} ft tagged ascent`
+                  : placeIntelligence?.elevation
+                    ? `~${placeIntelligence.elevation.rangeFeet} ft nearby elevation span`
+                    : "Profile not verified"}
+              </strong>
+            </article>
+            <article>
+              <span>Access</span>
+              <strong>
+                {placeIntelligence?.access.rerouteCount
+                  ? `${placeIntelligence.access.rerouteCount} nearby DNR reroute${placeIntelligence.access.rerouteCount === 1 ? "" : "s"}`
+                  : "No nearby DNR reroute returned"}
+              </strong>
+            </article>
+          </div>
+
+          <div className="canvas-departure-actions">
+            <a href={activeDiscovery.directionsUrl} target="_blank" rel="noopener">
+              Start directions
+            </a>
+            {activeDiscovery.curatedPlaceId ? (
+              <Link href={`/places/${activeDiscovery.curatedPlaceId}`}>Open full guide</Link>
+            ) : activeDiscovery.website ? (
+              <a href={activeDiscovery.website} target="_blank" rel="noopener">Place website</a>
+            ) : (
+              <a href={activeDiscovery.sourceUrl} target="_blank" rel="noopener">Map source</a>
+            )}
+            <button type="button" onClick={() => setDepartureOpen(false)}>Back to decision</button>
+          </div>
+
+          <details className="canvas-departure-proof">
+            <summary>Source truth</summary>
+            <p>
+              {activeDiscovery.travelSource === "routed" ? "Road travel is routed through OSRM. " : "Drive time is still a planning estimate. "}
+              Weather uses Open-Meteo. Trail/access checks use Michigan DNR and mapped trail metadata uses OpenStreetMap when present.
+              {activeUnknowns.length ? ` Still unknown: ${activeUnknowns.join(", ")}.` : ""}
+            </p>
+          </details>
+        </aside>
+      )}
+
       {compareOpen && comparisonPlaces.length > 0 && (
         <aside className="canvas-compare" aria-label="Compare outdoor possibilities" aria-live="polite">
           <div className="canvas-compare-head">
@@ -1408,6 +1504,7 @@ export function OutdoorIntentHub() {
               placeIntelligenceRequestRef.current?.abort();
               setPlaceIntelligence(null);
               setPlaceIntelligenceLoading(false);
+              setDepartureOpen(false);
               setActiveId("");
               setActiveDiscoveryId("");
             }}
@@ -1436,6 +1533,25 @@ export function OutdoorIntentHub() {
                 {activeDiscovery.area} · {activeDiscovery.travelSource === "routed" ? "" : "about "}{activeDiscovery.distanceMiles} {activeDiscovery.travelSource === "routed" ? "road" : "rough"} miles
               </p>
               <p className="canvas-sheet-summary">{activeDiscovery.why}</p>
+
+              {decisionArgument && (
+                <details className="canvas-decision-argument">
+                  <summary>Why this one over the others?</summary>
+                  <div>
+                    <strong>{decisionArgument.headline}</strong>
+                    <p>{decisionArgument.evidence}</p>
+                    <small>{decisionArgument.tradeoff}</small>
+                    {decisionArgument.alternative && (
+                      <button
+                        type="button"
+                        onClick={() => activateDiscovery(decisionArgument.alternative!.id)}
+                      >
+                        Show {decisionArgument.alternative.name} instead
+                      </button>
+                    )}
+                  </div>
+                </details>
+              )}
 
               <div className="canvas-now">
                 <span>{activeDiscovery.categoryLabel}</span>
@@ -1533,9 +1649,47 @@ export function OutdoorIntentHub() {
                 {placeIntelligence && (
                   <p className="canvas-field-confidence-note">{placeIntelligence.confidenceNote}</p>
                 )}
+
+                <details className="canvas-proof-ledger">
+                  <summary>Why should I trust this?</summary>
+                  <div className="canvas-proof-ledger-grid">
+                    <span>Drive</span>
+                    <strong>
+                      {activeDiscovery.travelSource === "routed"
+                        ? "OSRM road route"
+                        : "Michigan Outdoors Now planning estimate"}
+                    </strong>
+
+                    <span>Weather</span>
+                    <strong>{placeIntelligence?.weather ? "Open-Meteo point forecast + AQI" : "Not returned yet"}</strong>
+
+                    <span>Trails / access</span>
+                    <strong>
+                      {placeIntelligence
+                        ? "Michigan DNR nearby trail, closure and reroute layers"
+                        : "Checking official Michigan DNR layers"}
+                    </strong>
+
+                    <span>Map metadata</span>
+                    <strong>
+                      {activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
+                        ? "OpenStreetMap contributors"
+                        : "Used only when mapped metadata exists"}
+                    </strong>
+
+                    <span>Freshness</span>
+                    <strong>{checkedAgeLabel(placeIntelligence?.generatedAt ?? discovery?.generatedAt)}</strong>
+
+                    <span>Still unknown</span>
+                    <strong>{activeUnknowns.length ? activeUnknowns.join(" · ") : "No major field left unknown in the current data set"}</strong>
+                  </div>
+                </details>
               </section>
 
               <div className="canvas-sheet-actions">
+                <button type="button" className="canvas-commit-action" onClick={openDeparture}>
+                  Get me out of here
+                </button>
                 <button
                   type="button"
                   aria-pressed={comparisonPlaces.some((place) => place.id === activeDiscovery.id)}
