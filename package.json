@@ -13,7 +13,7 @@
     "score:usefulness": "node scripts/score-usefulness.mjs",
     "score:search": "node --import tsx scripts/score-search-readiness.ts",
     "score:impact": "node --import tsx scripts/score-impact-readiness.ts",
-    "check": "npm run lint && npm run test && npm run check:specialists && npm run score:core-flow && npm run score:result-flow && npm run score:persona-taste && npm run score:decision-depth && npm run score:field-confidence && npm run score:skeptic-conversion && npm run score:organic-growth && npm run score:growth-system && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact && npm run score:platform && npm run score:interface",
+    "check": "npm run lint && npm run test && npm run check:specialists && npm run score:core-flow && npm run score:result-flow && npm run score:persona-taste && npm run score:decision-depth && npm run score:field-confidence && npm run score:skeptic-conversion && npm run score:organic-growth && npm run score:growth-system && npm run score:trail-stack && npm run build && npm run check:seo && npm run check:runtime && npm run score:usefulness && npm run score:search && npm run score:impact && npm run score:platform && npm run score:interface",
     "score:platform": "node --import tsx scripts/score-platform-quality.ts",
     "score:interface": "node --import tsx scripts/score-interface-loss.ts",
     "check:specialists": "node --import tsx scripts/check-specialist-links.ts",
@@ -27,7 +27,8 @@
     "score:growth-system": "node --import tsx scripts/score-growth-operating-system.ts",
     "report:growth": "node --import tsx scripts/report-growth-opportunities.ts",
     "fetch:gsc": "node scripts/fetch-search-console.mjs",
-    "fetch:vercel-events": "node scripts/fetch-vercel-product-events.mjs"
+    "fetch:vercel-events": "node scripts/fetch-vercel-product-events.mjs",
+    "score:trail-stack": "node --import tsx scripts/score-trail-decision-stack.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
