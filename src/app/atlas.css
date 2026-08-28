@@ -1806,3 +1806,208 @@ body{background:#f8f5ef;color:#243139}
     height:20px;
   }
 }
+
+
+/* Map wandering should reveal meaning without forcing precise taps. */
+.michigan-canvas .destination-pin-decision{
+  position:relative;
+  overflow:visible;
+}
+.destination-pin-label{
+  position:absolute;
+  left:50%;
+  top:50%;
+  z-index:-1;
+  width:max-content;
+  max-width:170px;
+  padding:5px 8px 5px 18px;
+  border:1px solid rgba(31,61,69,.12);
+  border-radius:7px;
+  background:rgba(250,249,245,.94);
+  box-shadow:0 5px 16px rgba(20,46,54,.11);
+  color:#18343d;
+  font:750 9px/1.15 system-ui,sans-serif;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  overflow:hidden;
+  opacity:0;
+  transform:translate(1px,-50%) scale(.96);
+  transform-origin:left center;
+  pointer-events:none;
+  transition:opacity .12s ease,transform .12s ease;
+  backdrop-filter:blur(8px);
+}
+.destination-map[data-labels="true"] .destination-pin-label,
+.michigan-canvas .destination-pin-decision:hover .destination-pin-label,
+.michigan-canvas .destination-pin-decision:focus-visible .destination-pin-label,
+.michigan-canvas .destination-pin-decision[data-active="true"] .destination-pin-label{
+  z-index:-1;
+  opacity:1;
+  transform:translate(1px,-50%) scale(1);
+}
+.michigan-canvas .destination-pin-decision[data-active="true"] .destination-pin-label{
+  background:#173b4b;
+  color:#fff;
+}
+.canvas-around-toggle{
+  position:absolute;
+  z-index:18;
+  left:18px;
+  bottom:86px;
+  width:min(250px,calc(100% - 36px));
+  min-height:52px;
+  display:grid;
+  gap:2px;
+  padding:9px 12px;
+  border:1px solid rgba(255,255,255,.82);
+  border-radius:10px;
+  background:rgba(249,248,243,.94);
+  box-shadow:0 12px 34px rgba(20,46,54,.16);
+  color:#193d48;
+  text-align:left;
+  cursor:pointer;
+  backdrop-filter:blur(16px);
+}
+.canvas-around-toggle strong{
+  font:500 17px/1.05 Georgia,serif;
+}
+.canvas-around-toggle span{
+  color:#667b80;
+  font-size:8px;
+  line-height:1.35;
+}
+.canvas-around-toggle[aria-expanded="true"]{
+  background:#173b4b;
+  color:#fff;
+}
+.canvas-around-toggle[aria-expanded="true"] span{
+  color:rgba(255,255,255,.72);
+}
+.canvas-around-panel{
+  position:absolute;
+  z-index:19;
+  left:18px;
+  bottom:150px;
+  width:min(370px,calc(100% - 36px));
+  max-height:calc(100dvh - 240px);
+  overflow:auto;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.84);
+  border-radius:13px;
+  background:rgba(249,248,243,.97);
+  box-shadow:0 20px 54px rgba(20,46,54,.22);
+  backdrop-filter:blur(20px);
+}
+.canvas-around-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  padding:2px 2px 12px;
+}
+.canvas-around-head>div{
+  display:grid;
+  gap:3px;
+}
+.canvas-around-head span,
+.canvas-around-label{
+  color:#8b5b42;
+  font-size:8px;
+  font-weight:850;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.canvas-around-head strong{
+  font:500 25px/1 Georgia,serif;
+  letter-spacing:-.035em;
+}
+.canvas-around-head>button{
+  width:44px;
+  min-width:44px;
+  height:44px;
+  display:grid;
+  place-content:center;
+  margin:-5px -5px 0 0;
+  border:0;
+  border-radius:50%;
+  background:transparent;
+  color:#62757a;
+  font-size:20px;
+  cursor:pointer;
+}
+.canvas-around-panel>section{
+  padding:13px 0 4px;
+  border-top:1px solid rgba(31,61,69,.12);
+}
+.canvas-around-list{
+  display:grid;
+  margin-top:6px;
+}
+.canvas-around-list>button{
+  min-height:48px;
+  display:grid;
+  gap:2px;
+  padding:9px 4px;
+  border:0;
+  border-bottom:1px solid rgba(31,61,69,.08);
+  background:transparent;
+  color:#1c343a;
+  text-align:left;
+  cursor:pointer;
+}
+.canvas-around-list>button:hover{
+  background:rgba(23,59,75,.05);
+}
+.canvas-around-list strong{
+  font:500 16px/1.08 Georgia,serif;
+}
+.canvas-around-list small{
+  color:#728186;
+  font-size:8px;
+  line-height:1.35;
+}
+.canvas-around-list-compact strong{
+  font:750 10px/1.2 system-ui,sans-serif;
+}
+.canvas-around-all{
+  min-height:44px;
+  display:flex;
+  align-items:center;
+  margin-top:5px;
+  padding:7px 4px;
+  color:#193d48;
+  font-size:9px;
+  font-weight:800;
+  text-decoration:none;
+}
+@media(max-width:700px){
+  .destination-map[data-labels="true"] .destination-pin-label{
+    opacity:0;
+  }
+  .michigan-canvas .destination-pin-decision:hover .destination-pin-label,
+  .michigan-canvas .destination-pin-decision:focus-visible .destination-pin-label,
+  .michigan-canvas .destination-pin-decision[data-active="true"] .destination-pin-label{
+    opacity:1;
+  }
+  .canvas-around-toggle{
+    left:8px;
+    bottom:66px;
+    width:min(225px,calc(100% - 16px));
+    min-height:48px;
+    padding:8px 10px;
+  }
+  .canvas-around-toggle strong{
+    font-size:16px;
+  }
+  .canvas-around-panel{
+    left:8px;
+    right:8px;
+    bottom:122px;
+    width:auto;
+    max-height:58svh;
+    padding:13px;
+  }
+  .canvas-around-head strong{
+    font-size:23px;
+  }
+}
