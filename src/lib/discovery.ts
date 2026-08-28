@@ -47,6 +47,8 @@ export type DiscoveryPlace = {
   categoryLabel: string;
   distanceMiles: number;
   driveHours: number;
+  driveMinutes?: number;
+  travelSource?: "routed" | "estimated";
   score: number;
   why: string;
   source: "OpenStreetMap" | "Michigan Outdoors Now";
