@@ -104,3 +104,22 @@ When `GSC_SERVICE_ACCOUNT_JSON` is configured with read access to the Search Con
 If credentials are absent, the workflow exits cleanly and records that collection is inactive. It never substitutes synthetic Search Console data.
 
 The product-event side remains intentionally separate because Vercel custom events are the source of truth for downstream behavior. The committed product baseline stays empty until attributed events actually exist.
+
+
+## Automated product-funnel collection
+
+Vercel Web Analytics custom events are the downstream-value source.
+
+When `VERCEL_ANALYTICS_TOKEN` and `VERCEL_ANALYTICS_PROJECT_ID` are configured, the weekly workflow queries Vercel's custom-event aggregate API for the same measurement window and groups events by the fixed `eventData/page` key.
+
+It normalizes:
+- `search_landing_viewed` → landing views
+- `planner_started` → planner starts
+- `planner_completed` → completed plans
+- `place_detail_opened` → result consideration
+- `departure_mode_opened` → commitments
+- `directions_opened` and `outbound_map_opened` → directions intent
+
+The configured team is the existing Chris Izworski Vercel team. The project ID remains a GitHub secret so the workflow does not guess across projects.
+
+When the Vercel credentials are absent, the Search Console report still runs against the explicit empty pre-attribution product baseline and the workflow says that product collection is inactive. It does not silently treat missing event data as zero user interest.
