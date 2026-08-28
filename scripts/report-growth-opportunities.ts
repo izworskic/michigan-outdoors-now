@@ -6,7 +6,7 @@ import process from "node:process";
 import {
   scoreFamilyGrowth,
   scoreSearchOpportunity,
-} from "../src/lib/growth-opportunities.ts";
+} from "../src/lib/growth-opportunities";
 
 const root = path.resolve(import.meta.dirname, "..");
 function arg(name, fallback) {
