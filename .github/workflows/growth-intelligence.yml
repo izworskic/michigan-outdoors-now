@@ -16,6 +16,9 @@ jobs:
       GSC_SERVICE_ACCOUNT_JSON: ${{ secrets.GSC_SERVICE_ACCOUNT_JSON }}
       GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
       GSC_OUTDOORS_HOST: michiganoutdoorsnow.chrisizworski.com
+      VERCEL_ANALYTICS_TOKEN: ${{ secrets.VERCEL_ANALYTICS_TOKEN }}
+      VERCEL_ANALYTICS_PROJECT_ID: ${{ secrets.VERCEL_ANALYTICS_PROJECT_ID }}
+      VERCEL_ANALYTICS_TEAM_ID: team_SibGYOKdlEddaSrq3xHqX8z0
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -40,17 +43,37 @@ jobs:
             echo "Search Console collection is not active because GSC_SERVICE_ACCOUNT_JSON is not configured." >> "$GITHUB_STEP_SUMMARY"
           fi
 
+      - name: Check Vercel Analytics configuration
+        id: vercel
+        shell: bash
+        run: |
+          if [ -n "${VERCEL_ANALYTICS_TOKEN}" ] && [ -n "${VERCEL_ANALYTICS_PROJECT_ID}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "Vercel product-funnel collection is not active because VERCEL_ANALYTICS_TOKEN and/or VERCEL_ANALYTICS_PROJECT_ID is not configured." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Fetch complete Search Console window
         if: steps.gsc.outputs.configured == 'true'
         run: node scripts/fetch-search-console.mjs --output artifacts/growth/search-console-latest.json
 
+      - name: Fetch attributed Vercel product funnel
+        if: steps.vercel.outputs.configured == 'true'
+        run: node scripts/fetch-vercel-product-events.mjs --output artifacts/growth/product-events-latest.json
+
       - name: Build growth opportunity report
         if: steps.gsc.outputs.configured == 'true'
+        shell: bash
         run: |
-          npm run report:growth -- --search artifacts/growth/search-console-latest.json --product data/growth/product-events-baseline.json | tee artifacts/growth/growth-report.txt
+          PRODUCT_FILE="data/growth/product-events-baseline.json"
+          if [ "${{ steps.vercel.outputs.configured }}" = "true" ]; then
+            PRODUCT_FILE="artifacts/growth/product-events-latest.json"
+          fi
+          npm run report:growth -- --search artifacts/growth/search-console-latest.json --product "${PRODUCT_FILE}" | tee artifacts/growth/growth-report.txt
 
       - name: Upload growth intelligence artifact
-        if: steps.gsc.outputs.configured == 'true'
+        if: steps.gsc.outputs.configured == 'true' || steps.vercel.outputs.configured == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: outdoors-now-growth-intelligence
