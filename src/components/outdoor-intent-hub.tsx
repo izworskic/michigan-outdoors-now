@@ -1285,10 +1285,19 @@ export function OutdoorIntentHub() {
                               : `${placeIntelligence.trailSystems[0].nearestMiles} mi from the selected place`}
                           </small>
                         </>
+                      ) : placeIntelligence.trailMetadata?.routeName ? (
+                        <>
+                          <strong>{placeIntelligence.trailMetadata.routeName}</strong>
+                          <small>
+                            {placeIntelligence.trailMetadata.taggedDistanceMiles
+                              ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi OSM-tagged route`
+                              : "Named OSM hiking route nearby; mapped distance is not tagged."}
+                          </small>
+                        </>
                       ) : (
                         <>
-                          <strong>No nearby DNR hiking segment returned</strong>
-                          <small>This does not mean there is no trail.</small>
+                          <strong>No nearby official or named route returned</strong>
+                          <small>This does not mean there is no trail; the nearby source queries may be incomplete.</small>
                         </>
                       )}
                     </article>
@@ -1310,6 +1319,9 @@ export function OutdoorIntentHub() {
                           displayTrailValue(placeIntelligence.trailMetadata?.difficulty),
                           displayTrailValue(placeIntelligence.trailMetadata?.surface),
                           displayTrailValue(placeIntelligence.trailMetadata?.trailVisibility),
+                          placeIntelligence.trailMetadata?.footAccess
+                            ? `foot access: ${displayTrailValue(placeIntelligence.trailMetadata.footAccess)}`
+                            : null,
                         ].filter(Boolean).join(" · ") || "Difficulty/surface tags not available here"}
                       </small>
                     </article>
