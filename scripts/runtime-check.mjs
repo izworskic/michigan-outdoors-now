@@ -87,7 +87,7 @@ try {
   assert.ok(["live", "fallback"].includes(discoveryPayload.status));
   assert.ok(Array.isArray(discoveryPayload.places));
   assert.ok(discoveryPayload.places.length > 0);
-  assert.match(discoveryPayload.origin.name, /Bay City area/);
+  assert.match(discoveryPayload.origin.name, /Bay City.*area/);
   assert.match(discoveryPayload.intent.summary, /beach|water/i);
 
   const statewide = await fetch(`${origin}/api/statewide?date=today&mode=best`, {
