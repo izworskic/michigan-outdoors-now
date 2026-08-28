@@ -646,6 +646,7 @@ export function OutdoorIntentHub() {
           <strong>Go find something.</strong>
         </div>
 
+        <div className="canvas-query-stack">
         <form className="canvas-origin" onSubmit={submitOrigin}>
           <input
             ref={originInputRef}
@@ -678,6 +679,84 @@ export function OutdoorIntentHub() {
             {originFeedback}
           </span>
         </form>
+
+        <section className="canvas-wish" aria-label="Describe the outdoor day you want">
+          <form className="canvas-wish-form" onSubmit={submitDiscovery}>
+            <div className="canvas-wish-copy">
+              <span>Describe the day</span>
+              <strong>What sounds good outside?</strong>
+            </div>
+            <div className="canvas-wish-input">
+              <input
+                ref={wishInputRef}
+                value={wish}
+                onFocus={() => {
+                  setActiveId("");
+                  setActiveDiscoveryId("");
+                }}
+                onChange={(event) => {
+                  setWish(event.target.value);
+                  setActiveId("");
+                  setActiveDiscoveryId("");
+                  setMessage("");
+                }}
+                placeholder="Quiet waterfall, short hike, not crowded…"
+                aria-label="Describe the Michigan outdoor experience you want"
+                maxLength={180}
+              />
+              <button type="submit" disabled={discovering || originStatus === "resolving"}>
+                {discovering ? "Searching…" : originStatus === "resolving" ? "Finding start…" : "Find it"}
+              </button>
+            </div>
+            <div className="canvas-wish-examples" aria-label="Example searches">
+              {[
+                "Wild shoreline and a short walk",
+                "Brook trout water with camping nearby",
+                "Quiet overlook away from crowds",
+              ].map((example) => (
+                <button
+                  type="button"
+                  key={example}
+                  onClick={() => {
+                    setWish(example);
+                    void runDiscovery(example);
+                  }}
+                >
+                  {example}
+                </button>
+              ))}
+            </div>
+            {discovery && (
+              <>
+                <div className="canvas-wish-status">
+                  <span>
+                    {discovery.places.length.toLocaleString()} possibilities · {discovery.intent.summary}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDiscovery(null);
+                      setActiveDiscoveryId("");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+                {discovery.places.length > 0 && (
+                  <div className="canvas-wish-results" aria-label="Top outdoor possibilities">
+                    {discovery.places.slice(0, 3).map((place) => (
+                      <button type="button" key={place.id} onClick={() => setActiveDiscoveryId(place.id)}>
+                        <strong>{place.name}</strong>
+                        <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </form>
+        </section>
+        </div>
 
         <div className="canvas-links">
           <Link href="/explore">Full atlas</Link>
@@ -726,83 +805,6 @@ export function OutdoorIntentHub() {
             </button>
           ))}
         </div>
-      </section>
-
-      <section className="canvas-wish" aria-label="Describe the outdoor day you want">
-        <form className="canvas-wish-form" onSubmit={submitDiscovery}>
-          <div className="canvas-wish-copy">
-            <span>Describe the day</span>
-            <strong>What sounds good outside?</strong>
-          </div>
-          <div className="canvas-wish-input">
-            <input
-              ref={wishInputRef}
-              value={wish}
-              onFocus={() => {
-                setActiveId("");
-                setActiveDiscoveryId("");
-              }}
-              onChange={(event) => {
-                setWish(event.target.value);
-                setActiveId("");
-                setActiveDiscoveryId("");
-                setMessage("");
-              }}
-              placeholder="Quiet waterfall, short hike, not crowded…"
-              aria-label="Describe the Michigan outdoor experience you want"
-              maxLength={180}
-            />
-            <button type="submit" disabled={discovering || originStatus === "resolving"}>
-              {discovering ? "Searching…" : originStatus === "resolving" ? "Finding start…" : "Find it"}
-            </button>
-          </div>
-          <div className="canvas-wish-examples" aria-label="Example searches">
-            {[
-              "Wild shoreline and a short walk",
-              "Brook trout water with camping nearby",
-              "Quiet overlook away from crowds",
-            ].map((example) => (
-              <button
-                type="button"
-                key={example}
-                onClick={() => {
-                  setWish(example);
-                  void runDiscovery(example);
-                }}
-              >
-                {example}
-              </button>
-            ))}
-          </div>
-          {discovery && (
-            <>
-              <div className="canvas-wish-status">
-                <span>
-                  {discovery.places.length.toLocaleString()} possibilities · {discovery.intent.summary}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDiscovery(null);
-                    setActiveDiscoveryId("");
-                  }}
-                >
-                  Clear
-                </button>
-              </div>
-              {discovery.places.length > 0 && (
-                <div className="canvas-wish-results" aria-label="Top outdoor possibilities">
-                  {discovery.places.slice(0, 3).map((place) => (
-                    <button type="button" key={place.id} onClick={() => setActiveDiscoveryId(place.id)}>
-                      <strong>{place.name}</strong>
-                      <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </form>
       </section>
 
       {!activeId && !activeDiscoveryId && (
