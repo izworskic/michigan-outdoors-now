@@ -112,3 +112,16 @@ test("semantic cards label rough drive estimates and planning depth", async () =
   assert.match(hub, /place\.curatedPlaceId \? "Full guide" : "Mapped lead"/);
   assert.match(hub, /Drive times are rough planning estimates/);
 });
+
+
+test("Go farther preserves the kept comparison set", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const start = hub.indexOf("function changeRange");
+  const end = hub.indexOf("function restoreInclusiveDiscovery", start);
+  assert.ok(start >= 0 && end > start);
+  const rangeBody = hub.slice(start, end);
+
+  assert.match(rangeBody, /runDiscovery\(discovery\.query, next, delta > 0 \? previousMax : 0\)/);
+  assert.doesNotMatch(rangeBody, /setComparisonPlaces/);
+  assert.doesNotMatch(rangeBody, /setCompareOpen\(false\)/);
+});
