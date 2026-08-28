@@ -5,7 +5,7 @@ import test from "node:test";
 test("destination marker CSS does not override MapLibre coordinate transforms", async () => {
   const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
 
-  const markerBlocks = [...css.matchAll(/\.michigan-canvas \.destination-pin-decision(?:[^\{]*)\{([^}]*)\}/g)]
+  const markerBlocks = [...css.matchAll(/\.michigan-canvas \.destination-pin-decision\s*\{([^}]*)\}/g)]
     .map((match) => match[1]);
 
   assert.ok(markerBlocks.length >= 2, "expected destination marker CSS blocks");
@@ -21,6 +21,16 @@ test("destination marker CSS does not override MapLibre coordinate transforms", 
   assert.equal(
     markerBlocks.some((block) => /\btransform\s*:/i.test(block)),
     false,
-    "destination marker element must not override MapLibre's inline transform",
+    "base destination marker blocks must not override MapLibre's inline transform",
+  );
+  assert.equal(
+    /\.destination-pin-decision:hover[^\{]*\{[^}]*\btransform\s*:/is.test(css),
+    false,
+    "hover state must not override MapLibre's inline transform",
+  );
+  assert.equal(
+    /\.destination-pin-decision\[data-active="true"\][^\{]*\{[^}]*\btransform\s*:/is.test(css),
+    false,
+    "active state must not override MapLibre's inline transform",
   );
 });
