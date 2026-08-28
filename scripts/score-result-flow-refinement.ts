@@ -36,8 +36,10 @@ async function main() {
     persistentResultDock:
       hub.includes('className="canvas-result-dock"') &&
       hub.includes('className="canvas-result-rail"') &&
-      hub.includes("discovery.places.slice(0, 8)") &&
+      hub.includes("discovery.places.map((place, index)") &&
+      !hub.includes("discovery.places.slice(0, 8)") &&
       css.includes(".canvas-result-dock{") &&
+      css.includes("position:fixed") &&
       css.includes("scroll-snap-type:x proximity"),
     detailReturnsToDock:
       hub.includes("canvas-sheet-discovery") &&
@@ -56,14 +58,15 @@ async function main() {
       runtime.includes("farther-band discovery returned a place inside the previous travel range"),
     rangeStateVisible:
       hub.includes("Farther-out results") &&
-      hub.includes("Up to " + "$" + "{driveHours} hr from your start") &&
+      hub.includes("Up to " + "$" + "{driveHours} hr · " + "$" + "{discovery.query}") &&
       hub.includes("Show all within {driveHours} hr"),
     responsiveNonOverlap:
-      css.includes(".canvas-sheet-discovery{\n  bottom:154px;") &&
+      css.includes(".has-active-discovery .canvas-sheet-discovery{") &&
       css.includes(".canvas-result-dock{") &&
-      /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{[\s\S]*?position:fixed;[\s\S]*?bottom:148px;[\s\S]*?max-height:44svh;/.test(css),
+      /@media\(max-width:700px\)[\s\S]*?\.canvas-result-dock\{[\s\S]*?top:103px;[\s\S]*?bottom:auto;/.test(css) &&
+      /@media\(max-width:700px\)[\s\S]*?\.has-active-discovery \.canvas-sheet-discovery\{[\s\S]*?top:auto;[\s\S]*?bottom:max\(7px,env\(safe-area-inset-bottom\)\);/.test(css),
     regressionCoverage:
-      tests.includes("persistent map dock") &&
+      tests.includes("persistent result rail") &&
       tests.includes("newly unlocked distance band") &&
       runtime.includes("fartherDiscovery"),
   };

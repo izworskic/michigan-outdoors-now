@@ -46,6 +46,9 @@ jobs:
       - name: Score result flow refinement
         run: npm run score:result-flow
 
+      - name: Score persona-led taste
+        run: npm run score:persona-taste
+
       - name: Build production output
         run: npm run build
 

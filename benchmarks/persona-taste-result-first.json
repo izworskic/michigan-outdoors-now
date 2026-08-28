@@ -1,0 +1,17 @@
+{
+  "name": "persona-taste-result-first",
+  "version": 1,
+  "baselineScore": 57,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "criteria": [
+    {"key":"resultFirstHierarchy","weight":25},
+    {"key":"brandYieldsToTask","weight":15},
+    {"key":"allReturnedPlacesReachable","weight":10},
+    {"key":"decisionDenseCards","weight":15},
+    {"key":"continuousResultNavigation","weight":15},
+    {"key":"progressiveDetail","weight":10},
+    {"key":"mobileViewportPriority","weight":5},
+    {"key":"regressionCoverage","weight":5}
+  ]
+}

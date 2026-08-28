@@ -2,15 +2,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("semantic results live in a persistent map dock instead of the top query stack", async () => {
+test("semantic results live in a persistent result rail instead of the query stack", async () => {
   const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
 
   assert.match(hub, /className="canvas-result-dock"/);
   assert.match(hub, /className="canvas-result-rail"/);
   assert.doesNotMatch(hub, /className="canvas-wish-results"/);
-  assert.match(hub, /discovery\.places\.slice\(0, 8\)/);
-  assert.match(css, /\.canvas-result-dock\{[\s\S]*?position:absolute;/);
+  assert.match(hub, /discovery\.places\.map\(\(place, index\) =>/);
+  assert.doesNotMatch(hub, /discovery\.places\.slice\(0, 8\)/);
+  assert.match(css, /\.canvas-result-dock\{[\s\S]*?position:fixed;[\s\S]*?top:74px;/);
   assert.match(css, /\.canvas-result-rail\{[\s\S]*?overflow-x:auto;[\s\S]*?scroll-snap-type:x proximity;/);
   assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.canvas-result-rail\{[\s\S]*?scroll-snap-type:x mandatory;/);
 });
@@ -41,15 +42,15 @@ test("the result UI tells the user whether results are inclusive or farther-only
   const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
 
   assert.match(hub, /Farther-out results/);
-  assert.match(hub, /Up to \$\{driveHours\} hr from your start/);
+  assert.match(hub, /Up to \$\{driveHours\} hr · \$\{discovery\.query\}/);
   assert.match(hub, /Show all within \{driveHours\} hr/);
 });
 
-test("discovery detail sits above the persistent dock on phone and desktop", async () => {
+test("discovery detail remains a secondary layer while the result rail stays visible", async () => {
   const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
 
-  assert.match(css, /\.canvas-sheet-discovery\{\s*bottom:154px;/);
-  assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.canvas-sheet-discovery\{[\s\S]*?position:fixed;[\s\S]*?bottom:148px;[\s\S]*?max-height:44svh;/);
+  assert.match(css, /\.has-active-discovery \.canvas-sheet-discovery\{[\s\S]*?top:224px;/);
+  assert.match(css, /@media\(max-width:700px\)[\s\S]*?\.has-active-discovery \.canvas-sheet-discovery\{[\s\S]*?position:fixed;[\s\S]*?top:auto;[\s\S]*?bottom:max\(7px,env\(safe-area-inset-bottom\)\);/);
 });
 
 
@@ -64,6 +65,28 @@ test("mobile search explicitly reveals returned result cards", async () => {
   assert.match(hub, />\s*See results\s*<\/button>/);
   assert.match(
     css,
-    /@media\(max-width:700px\)[\s\S]*?\.canvas-result-dock\{[\s\S]*?position:fixed;[\s\S]*?z-index:32;[\s\S]*?bottom:max\(8px,env\(safe-area-inset-bottom\)\);/,
+    /@media\(max-width:700px\)[\s\S]*?\.canvas-result-dock\{[\s\S]*?position:fixed;[\s\S]*?z-index:32;[\s\S]*?top:103px;[\s\S]*?bottom:auto;/,
   );
+});
+
+
+test("result-first taste exposes every returned destination and keeps comparison data on the card", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /discovery\.places\.map\(\(place, index\) =>/);
+  assert.doesNotMatch(hub, /discovery\.places\.slice\(/);
+  assert.match(hub, /canvas-result-rank/);
+  assert.match(hub, /driveTimeLabel\(place\.driveHours\)\} away/);
+  assert.match(hub, /\{place\.categoryLabel\}/);
+  assert.match(hub, /<p>\{place\.why\}<\/p>/);
+});
+
+test("active discovery has continuous previous and next navigation", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /function moveDiscoverySelection\(delta: number\)/);
+  assert.match(hub, /className="canvas-detail-nav"/);
+  assert.match(hub, /moveDiscoverySelection\(-1\)/);
+  assert.match(hub, /moveDiscoverySelection\(1\)/);
+  assert.match(hub, /scrollIntoView\(\{ behavior: "smooth", block: "nearest", inline: "center" \}\)/);
 });
