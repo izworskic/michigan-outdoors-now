@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { destinations } from "../../../../data/destinations";
 import { fetchWeatherSnapshots } from "../../../../lib/live-data";
 import { getDetroitDate } from "../../../../lib/planner";
-import { fetchSpecialistSignals } from "../../../../lib/specialist-intelligence";
+import {
+  fetchSpecialistSignals,
+  specialistSignalsNeedWeather,
+} from "../../../../lib/specialist-intelligence";
 
 export const runtime = "nodejs";
 
@@ -22,7 +25,9 @@ export async function GET(
   }
 
   const today = getDetroitDate();
-  const requestedDate = new URL(request.url).searchParams.get("date");
+  const requestUrl = new URL(request.url);
+  const signalsOnly = requestUrl.searchParams.get("signals") === "1";
+  const requestedDate = requestUrl.searchParams.get("date");
   const maxDate = new Date(`${today}T12:00:00Z`);
   maxDate.setUTCDate(maxDate.getUTCDate() + 10);
   const maxDateString = maxDate.toISOString().slice(0, 10);
@@ -34,9 +39,24 @@ export async function GET(
       ? requestedDate
       : today;
   try {
-    const snapshots = await fetchWeatherSnapshots([destination], targetDate);
+    const needsWeather = !signalsOnly || specialistSignalsNeedWeather(destination);
+    const snapshots = needsWeather
+      ? await fetchWeatherSnapshots([destination], targetDate)
+      : new Map();
     const weather = snapshots.get(destination.id) ?? null;
     const specialistSignals = await fetchSpecialistSignals(destination, weather);
+
+    if (signalsOnly) {
+      return NextResponse.json(
+        {
+          place: { id: destination.id, name: destination.name, area: destination.area },
+          generatedAt: new Date().toISOString(),
+          specialistSignals,
+        },
+        { headers },
+      );
+    }
+
     return NextResponse.json(
       {
         place: { id: destination.id, name: destination.name, area: destination.area },
@@ -50,14 +70,20 @@ export async function GET(
     );
   } catch {
     return NextResponse.json(
-      {
-        place: { id: destination.id, name: destination.name, area: destination.area },
-        targetDate,
-        generatedAt: new Date().toISOString(),
-        conditionsStatus: "estimated",
-        weather: null,
-        specialistSignals: [],
-      },
+      signalsOnly
+        ? {
+            place: { id: destination.id, name: destination.name, area: destination.area },
+            generatedAt: new Date().toISOString(),
+            specialistSignals: [],
+          }
+        : {
+            place: { id: destination.id, name: destination.name, area: destination.area },
+            targetDate,
+            generatedAt: new Date().toISOString(),
+            conditionsStatus: "estimated",
+            weather: null,
+            specialistSignals: [],
+          },
       { headers },
     );
   }
