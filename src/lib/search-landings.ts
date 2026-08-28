@@ -48,7 +48,7 @@ export const searchLandingIntents: SearchLandingIntent[] = [
     h1: (origin) => `Hiking day trips from ${origin.name}`,
     title: (origin) => `Hiking Near ${origin.name}, MI | Chris Izworski`,
     description: (origin) =>
-      `Find hiking day trips from ${origin.name}, Michigan. Compare trail settings, rough distance, current weather, access, and stronger alternatives before you drive.`,
+      `Find hiking day trips from ${origin.name}, Michigan. Compare trail setting, distance, current weather, access, and stronger alternatives before you drive.`,
     promise:
       "The closest trail is not always the best hiking day. Compare the character of the hike against the time it costs to reach it.",
   },
@@ -62,17 +62,6 @@ export const searchLandingIntents: SearchLandingIntent[] = [
       `Find paddling day trips from ${origin.name}, Michigan. Compare rivers, inland water and shore options by distance, wind, weather, access, and trip fit.`,
     promise:
       "A paddling destination is only useful when the water type, access, weather, and drive all fit the day you are actually planning.",
-  },
-  {
-    slug: "birding",
-    guideSlug: "birding-day-trips",
-    label: "Birding day trips",
-    h1: (origin) => `Birding day trips from ${origin.name}`,
-    title: (origin) => `Birding Near ${origin.name}, MI | Chris Izworski`,
-    description: (origin) =>
-      `Find Michigan birding day trips from ${origin.name}. Compare wetlands, shoreline, refuges and forest stops by distance, weather, access, and trip fit.`,
-    promise:
-      "This is a habitat-and-trip decision page, not a live sightings feed. Use it to choose where the day is worth spending.",
   },
   {
     slug: "dog-friendly",
