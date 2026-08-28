@@ -34,6 +34,8 @@ test("launch cluster avoids beach and freighter cannibalization", () => {
   assert.ok(!slugs.has("beach-day-trips"));
   assert.ok(!slugs.has("freighters"));
   assert.ok(!slugs.has("freighter-watching"));
+  assert.ok(!slugs.has("birding"));
+  assert.ok(!slugs.has("birding-day-trips"));
 });
 
 test("every search landing has SERP-safe metadata and a concrete local answer", () => {
