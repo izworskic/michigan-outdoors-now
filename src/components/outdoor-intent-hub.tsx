@@ -107,6 +107,8 @@ export function OutdoorIntentHub() {
   const [origin, setOrigin] = useState("");
   const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
   const [userLocation, setUserLocation] = useState<PlannerRequest["originCoordinates"]>();
+  const [originStatus, setOriginStatus] = useState<"idle" | "resolving" | "resolved" | "error">("idle");
+  const [originFeedback, setOriginFeedback] = useState("Choose a Michigan city or ZIP, or use your location.");
   const [pull, setPull] = useState<Pull>(pulls[0]);
   const [driveHours, setDriveHours] = useState(pulls[0].driveHours);
   const [plans, setPlans] = useState<PlannerResponse | null>(null);
@@ -127,6 +129,7 @@ export function OutdoorIntentHub() {
   const [boatLaunches, setBoatLaunches] = useState<BoatLaunchResponse>(() => emptyBoatLaunches());
   const [signalSnapshot, setSignalSnapshot] = useState<{ placeId: string; signals: SpecialistSignal[] } | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const originRequestRef = useRef<AbortController | null>(null);
   const discoveryRequestRef = useRef<AbortController | null>(null);
   const signalCacheRef = useRef(new Map<string, SpecialistSignal[]>());
   const originInputRef = useRef<HTMLInputElement | null>(null);
@@ -272,31 +275,96 @@ export function OutdoorIntentHub() {
     setAroundOpen(false);
   }
 
-  function submitOrigin(event: FormEvent) {
-    event.preventDefault();
-    if (!origin.trim() && !originCoordinates) {
+  async function resolveTypedOrigin(value = origin.trim()) {
+    const candidate = value.trim();
+    if (!candidate) {
+      setOriginStatus("error");
+      setOriginFeedback("Enter a Michigan city or ZIP.");
       setMessage("Enter a Michigan city or ZIP, or use your current location.");
       originInputRef.current?.focus();
-      return;
+      return null;
     }
 
-    clearOpenResults();
+    originRequestRef.current?.abort();
+    const controller = new AbortController();
+    originRequestRef.current = controller;
+    setOriginStatus("resolving");
+    setOriginFeedback(`Finding ${candidate}…`);
     setMessage("");
-    focusWishInput();
+
+    try {
+      const response = await fetch("/api/origin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({ origin: candidate }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.origin) {
+        throw new Error(payload.error ?? "I could not match that to a Michigan location.");
+      }
+      if (originRequestRef.current !== controller) return null;
+
+      const resolved = payload.origin as { name: string; latitude: number; longitude: number };
+      const coordinates = { latitude: resolved.latitude, longitude: resolved.longitude };
+      clearOpenResults();
+      setOrigin(resolved.name);
+      setOriginCoordinates(coordinates);
+      setUserLocation(coordinates);
+      setOriginStatus("resolved");
+      setOriginFeedback(`Starting from ${resolved.name}`);
+      setFocusPoint({
+        key: `origin-${resolved.latitude}-${resolved.longitude}-${Date.now()}`,
+        latitude: resolved.latitude,
+        longitude: resolved.longitude,
+        zoom: 7.1,
+      });
+      return resolved;
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return null;
+      if (originRequestRef.current !== controller) return null;
+      const detail = error instanceof Error ? error.message : "I could not match that to a Michigan location.";
+      setOriginCoordinates(undefined);
+      setUserLocation(undefined);
+      setOriginStatus("error");
+      setOriginFeedback(detail);
+      setMessage(detail);
+      return null;
+    } finally {
+      if (originRequestRef.current === controller) {
+        originRequestRef.current = null;
+      }
+    }
+  }
+
+  function submitOrigin(event: FormEvent) {
+    event.preventDefault();
+    void resolveTypedOrigin().then((resolved) => {
+      if (resolved) focusWishInput();
+    });
   }
 
   async function runDiscovery(queryOverride?: string, driveOverride = driveHours) {
-    const chosenOrigin = origin.trim();
+    let chosenOrigin = origin.trim();
+    let coordinates = originCoordinates;
     const query = (queryOverride ?? wish).trim();
 
-    if (!chosenOrigin && !originCoordinates) {
+    if (!chosenOrigin && !coordinates) {
       setMessage("Set a starting point first. Then describe the kind of day you want.");
       originInputRef.current?.focus();
       return;
     }
     if (query.length < 2) {
       setMessage("Describe what sounds good outside. A few words is enough.");
+      wishInputRef.current?.focus();
       return;
+    }
+
+    if (!coordinates) {
+      const resolved = await resolveTypedOrigin(chosenOrigin);
+      if (!resolved) return;
+      chosenOrigin = resolved.name;
+      coordinates = { latitude: resolved.latitude, longitude: resolved.longitude };
     }
 
     discoveryRequestRef.current?.abort();
@@ -313,7 +381,7 @@ export function OutdoorIntentHub() {
         signal: controller.signal,
         body: JSON.stringify({
           origin: chosenOrigin || "My location",
-          ...(originCoordinates ? { originCoordinates } : {}),
+          originCoordinates: coordinates,
           query,
           maxDriveHours: driveOverride,
         }),
@@ -328,7 +396,7 @@ export function OutdoorIntentHub() {
       setDiscovery(result);
       setPlans(null);
       setActiveId("");
-      setActiveDiscoveryId(result.places[0]?.id ?? "");
+      setActiveDiscoveryId("");
       setUserLocation({
         latitude: result.origin.latitude,
         longitude: result.origin.longitude,
@@ -406,6 +474,14 @@ export function OutdoorIntentHub() {
         setOrigin("My location");
         setOriginCoordinates(coordinates);
         setUserLocation(coordinates);
+        setOriginStatus("resolved");
+        setOriginFeedback("Starting from your current location");
+        setFocusPoint({
+          key: `origin-device-${coordinates.latitude}-${coordinates.longitude}-${Date.now()}`,
+          latitude: coordinates.latitude,
+          longitude: coordinates.longitude,
+          zoom: 7.1,
+        });
         setPlanning(false);
         focusWishInput();
       },
@@ -576,10 +652,13 @@ export function OutdoorIntentHub() {
             value={origin}
             onChange={(event) => {
               requestRef.current?.abort();
+              originRequestRef.current?.abort();
               discoveryRequestRef.current?.abort();
               setOrigin(event.target.value);
               setOriginCoordinates(undefined);
               setUserLocation(undefined);
+              setOriginStatus("idle");
+              setOriginFeedback("Press Set start to confirm this Michigan location.");
               setPlans(null);
               setDiscovery(null);
               setActiveId("");
@@ -591,8 +670,13 @@ export function OutdoorIntentHub() {
             aria-label="Starting city or ZIP"
             autoComplete="postal-code"
           />
-          <button type="submit" disabled={planning}>{planning ? "Looking" : "Set start"}</button>
-          <button type="button" onClick={useLocation} disabled={planning} aria-label="Use my current location">◎</button>
+          <button type="submit" disabled={planning || originStatus === "resolving"}>
+            {originStatus === "resolving" ? "Finding" : originStatus === "resolved" ? "Change" : "Set start"}
+          </button>
+          <button type="button" onClick={useLocation} disabled={planning || originStatus === "resolving"} aria-label="Use my current location">◎</button>
+          <span className={`canvas-origin-status canvas-origin-status-${originStatus}`} role="status" aria-live="polite">
+            {originFeedback}
+          </span>
         </form>
 
         <div className="canvas-links">
@@ -668,8 +752,8 @@ export function OutdoorIntentHub() {
               aria-label="Describe the Michigan outdoor experience you want"
               maxLength={180}
             />
-            <button type="submit" disabled={discovering}>
-              {discovering ? "Searching Michigan" : "Find it"}
+            <button type="submit" disabled={discovering || originStatus === "resolving"}>
+              {discovering ? "Searching…" : originStatus === "resolving" ? "Finding start…" : "Find it"}
             </button>
           </div>
           <div className="canvas-wish-examples" aria-label="Example searches">
@@ -691,20 +775,32 @@ export function OutdoorIntentHub() {
             ))}
           </div>
           {discovery && (
-            <div className="canvas-wish-status">
-              <span>
-                {discovery.places.length.toLocaleString()} possibilities · {discovery.intent.summary}
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  setDiscovery(null);
-                  setActiveDiscoveryId("");
-                }}
-              >
-                Clear
-              </button>
-            </div>
+            <>
+              <div className="canvas-wish-status">
+                <span>
+                  {discovery.places.length.toLocaleString()} possibilities · {discovery.intent.summary}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDiscovery(null);
+                    setActiveDiscoveryId("");
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+              {discovery.places.length > 0 && (
+                <div className="canvas-wish-results" aria-label="Top outdoor possibilities">
+                  {discovery.places.slice(0, 3).map((place) => (
+                    <button type="button" key={place.id} onClick={() => setActiveDiscoveryId(place.id)}>
+                      <strong>{place.name}</strong>
+                      <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </form>
       </section>
