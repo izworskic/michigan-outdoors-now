@@ -1,0 +1,17 @@
+{
+  "name": "trail-decision-stack",
+  "version": 1,
+  "baselineScore": 47,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "criteria": [
+    {"key":"routeSpecificTruth","weight":20},
+    {"key":"routeProvenance","weight":10},
+    {"key":"currentGoSignal","weight":15},
+    {"key":"structuredPlannerRouting","weight":15},
+    {"key":"multiStopDayBuilder","weight":15},
+    {"key":"officialTrailSearch","weight":10},
+    {"key":"honestFallbacks","weight":10},
+    {"key":"runtimeCoverage","weight":5}
+  ]
+}
