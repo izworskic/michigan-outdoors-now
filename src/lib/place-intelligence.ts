@@ -927,7 +927,7 @@ async function fetchRouteAscentFeet(
   }
 }
 
-function buildGoSignal(args: {
+export function deriveGoSignal(args: {
   weather: PointWeatherIntelligence | null;
   access: AccessIntelligence;
   trailTruth: TrailRouteTruth | null;
@@ -1109,7 +1109,7 @@ export async function fetchPlaceIntelligence(args: {
     trailSystems: summarizeTrailSystems(trails.features, args.latitude, args.longitude),
     trailMetadata,
     trailTruth,
-    goSignal: buildGoSignal({ weather, access, trailTruth }),
+    goSignal: deriveGoSignal({ weather, access, trailTruth }),
     elevation,
     access,
     confidenceNote:
