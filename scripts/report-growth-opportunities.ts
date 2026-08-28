@@ -43,7 +43,13 @@ const opportunities = (search.rows ?? []).map((row) =>
   scoreSearchOpportunity(row, productByPage.get(row.page.replace(/^\//, ""))),
 );
 
-const families = [...new Set((search.rows ?? []).map((row) => row.family).filter(Boolean))];
+const families = [
+  ...new Set(
+    (search.rows ?? [])
+      .map((row) => row.family)
+      .filter((family): family is string => typeof family === "string" && family.length > 0),
+  ),
+];
 const familyDecisions = families.map((family) =>
   scoreFamilyGrowth(family, search.rows ?? [], product.rows ?? []),
 );
