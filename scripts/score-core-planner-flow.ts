@@ -31,7 +31,7 @@ async function main() {
   const css = files["src/app/atlas.css"];
   const runtime = files["scripts/runtime-check.mjs"];
 
-  const checks = {
+  const checks: Record<string, boolean> = {
     typedOriginResolution:
       originRoute.includes("resolveMichiganOrigin") &&
       originRoute.includes("export async function POST") &&
