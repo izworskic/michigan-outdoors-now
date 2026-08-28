@@ -90,3 +90,25 @@ test("active discovery has continuous previous and next navigation", async () =>
   assert.match(hub, /moveDiscoverySelection\(1\)/);
   assert.match(hub, /scrollIntoView\(\{ behavior: "smooth", block: "nearest", inline: "center" \}\)/);
 });
+
+
+test("users can keep up to three semantic places and compare without losing map continuity", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /const \[comparisonPlaces, setComparisonPlaces\] = useState<DiscoveryPlace\[]>\(\[\]\)/);
+  assert.match(hub, /if \(comparisonPlaces\.length >= 3\)/);
+  assert.match(hub, /Compare \{comparisonPlaces\.length\}/);
+  assert.match(hub, /className="canvas-compare"/);
+  assert.match(hub, /Compare before you commit\./);
+  assert.match(hub, /Full guide/);
+  assert.match(hub, /Mapped lead/);
+  assert.match(hub, /setCompareOpen\(false\);\s*activateDiscovery\(place\.id\)/);
+});
+
+test("semantic cards label rough drive estimates and planning depth", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /~\{driveTimeLabel\(place\.driveHours\)\} drive/);
+  assert.match(hub, /place\.curatedPlaceId \? "Full guide" : "Mapped lead"/);
+  assert.match(hub, /Drive times are rough planning estimates/);
+});
