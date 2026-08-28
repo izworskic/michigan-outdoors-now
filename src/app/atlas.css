@@ -2658,10 +2658,7 @@ body{background:#f8f5ef;color:#243139}
   padding:6px 11px;
 }
 .has-discovery-results .canvas-wish-status{
-  min-height:18px;
-  padding-top:3px;
-  border-top:0;
-  font-size:7px;
+  display:none;
 }
 .has-discovery-results .canvas-links>details>summary,
 .has-discovery-results .canvas-links>a{
