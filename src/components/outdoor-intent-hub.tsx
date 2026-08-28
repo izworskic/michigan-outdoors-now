@@ -5,6 +5,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
+import type { DiscoveryResponse } from "../lib/discovery";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse, SpecialistSignal } from "../lib/types";
@@ -109,6 +110,10 @@ export function OutdoorIntentHub() {
   const [pull, setPull] = useState<Pull>(pulls[0]);
   const [driveHours, setDriveHours] = useState(pulls[0].driveHours);
   const [plans, setPlans] = useState<PlannerResponse | null>(null);
+  const [wish, setWish] = useState("");
+  const [discovery, setDiscovery] = useState<DiscoveryResponse | null>(null);
+  const [discovering, setDiscovering] = useState(false);
+  const [activeDiscoveryId, setActiveDiscoveryId] = useState("");
   const [planning, setPlanning] = useState(false);
   const [message, setMessage] = useState("");
   const [activeId, setActiveId] = useState("");
@@ -122,6 +127,7 @@ export function OutdoorIntentHub() {
   const [boatLaunches, setBoatLaunches] = useState<BoatLaunchResponse>(() => emptyBoatLaunches());
   const [signalSnapshot, setSignalSnapshot] = useState<{ placeId: string; signals: SpecialistSignal[] } | null>(null);
   const requestRef = useRef<AbortController | null>(null);
+  const discoveryRequestRef = useRef<AbortController | null>(null);
   const signalCacheRef = useRef(new Map<string, SpecialistSignal[]>());
   const originInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -231,6 +237,8 @@ export function OutdoorIntentHub() {
 
       const result = payload as PlannerResponse;
       if (requestRef.current !== controller) return;
+      setDiscovery(null);
+      setActiveDiscoveryId("");
       setPlans(result);
       setUserLocation({
         latitude: result.origin.latitude,
@@ -253,6 +261,85 @@ export function OutdoorIntentHub() {
     event.preventDefault();
     void run();
   }
+
+  async function runDiscovery(queryOverride?: string) {
+    const chosenOrigin = origin.trim();
+    const query = (queryOverride ?? wish).trim();
+
+    if (!chosenOrigin && !originCoordinates) {
+      setMessage("Set a starting point first. Then describe the kind of day you want.");
+      originInputRef.current?.focus();
+      return;
+    }
+    if (query.length < 2) {
+      setMessage("Describe what sounds good outside. A few words is enough.");
+      return;
+    }
+
+    discoveryRequestRef.current?.abort();
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    discoveryRequestRef.current = controller;
+    setDiscovering(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/discover", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          origin: chosenOrigin || "My location",
+          ...(originCoordinates ? { originCoordinates } : {}),
+          query,
+          maxDriveHours: driveHours,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !("places" in payload)) {
+        throw new Error(payload.error ?? "Could not search Michigan right now.");
+      }
+
+      const result = payload as DiscoveryResponse;
+      if (discoveryRequestRef.current !== controller) return;
+      setDiscovery(result);
+      setPlans(null);
+      setActiveId("");
+      setActiveDiscoveryId(result.places[0]?.id ?? "");
+      setUserLocation({
+        latitude: result.origin.latitude,
+        longitude: result.origin.longitude,
+      });
+      if (!result.places.length) {
+        setMessage("Nothing strong matched that search inside this travel range. Try loosening the description or going farther.");
+      }
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (discoveryRequestRef.current !== controller) return;
+      setMessage(error instanceof Error ? error.message : "Could not search Michigan right now.");
+    } finally {
+      if (discoveryRequestRef.current === controller) {
+        discoveryRequestRef.current = null;
+        setDiscovering(false);
+      }
+    }
+  }
+
+  function submitDiscovery(event: FormEvent) {
+    event.preventDefault();
+    void runDiscovery();
+  }
+
+  const activateDestination = useCallback((destinationId: string) => {
+    setActiveDiscoveryId("");
+    setActiveId(destinationId);
+  }, []);
+
+  const activateDiscovery = useCallback((placeId: string) => {
+    setActiveId("");
+    setActiveDiscoveryId(placeId);
+  }, []);
+
 
   function requestTrailLayer(nextLayer: UniverseLayerId) {
     setTrailLayer(nextLayer);
@@ -326,6 +413,7 @@ export function OutdoorIntentHub() {
   }
 
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
+  const activeDiscovery = discovery?.places.find((place) => place.id === activeDiscoveryId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
   const leadPlan = plans?.plans[0] ?? null;
   const visibleSignals = signalSnapshot?.placeId === activeId ? signalSnapshot.signals : [];
@@ -433,7 +521,10 @@ export function OutdoorIntentHub() {
         <MichiganDestinationMap
           activeId={activeId}
           destinations={destinations}
-          onActivate={setActiveId}
+          onActivate={activateDestination}
+          discoveryPlaces={discovery?.places ?? []}
+          activeDiscoveryId={activeDiscoveryId}
+          onDiscoveryActivate={activateDiscovery}
           trailGeoJson={universe.geojson}
           trailSystems={universe.systems}
           closuresGeoJson={universe.access.closures}
@@ -464,6 +555,8 @@ export function OutdoorIntentHub() {
               setOrigin(event.target.value);
               setOriginCoordinates(undefined);
               setPlans(null);
+              setDiscovery(null);
+              setActiveDiscoveryId("");
               setMessage("");
             }}
             placeholder="Start from a city or ZIP"
@@ -523,7 +616,62 @@ export function OutdoorIntentHub() {
         </div>
       </section>
 
-      {!activeId && (
+      <section className="canvas-wish" aria-label="Describe the outdoor day you want">
+        <form className="canvas-wish-form" onSubmit={submitDiscovery}>
+          <div className="canvas-wish-copy">
+            <span>Describe the day</span>
+            <strong>What sounds good outside?</strong>
+          </div>
+          <div className="canvas-wish-input">
+            <input
+              value={wish}
+              onChange={(event) => setWish(event.target.value)}
+              placeholder="Quiet waterfall, short hike, not crowded…"
+              aria-label="Describe the Michigan outdoor experience you want"
+              maxLength={180}
+            />
+            <button type="submit" disabled={discovering}>
+              {discovering ? "Searching Michigan" : "Find it"}
+            </button>
+          </div>
+          <div className="canvas-wish-examples" aria-label="Example searches">
+            {[
+              "Wild shoreline and a short walk",
+              "Brook trout water with camping nearby",
+              "Quiet overlook away from crowds",
+            ].map((example) => (
+              <button
+                type="button"
+                key={example}
+                onClick={() => {
+                  setWish(example);
+                  void runDiscovery(example);
+                }}
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+          {discovery && (
+            <div className="canvas-wish-status">
+              <span>
+                {discovery.places.length.toLocaleString()} possibilities · {discovery.intent.summary}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDiscovery(null);
+                  setActiveDiscoveryId("");
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </form>
+      </section>
+
+      {!activeId && !activeDiscoveryId && (
         <>
           <button
             type="button"
@@ -626,11 +774,70 @@ export function OutdoorIntentHub() {
 
       {message && <p className="canvas-message">{message}</p>}
 
-      {(activeDestination || activePlan) && (
+      {(activeDiscovery || activeDestination || activePlan) && (
         <aside className="canvas-sheet" aria-live="polite">
-          <button type="button" className="canvas-sheet-close" onClick={() => setActiveId("")} aria-label="Close place detail">×</button>
+          <button type="button" className="canvas-sheet-close" onClick={() => { setActiveId(""); setActiveDiscoveryId(""); }} aria-label="Close place detail">×</button>
 
-          {activePlan ? (
+          {activeDiscovery ? (
+            <>
+              <p className="canvas-sheet-kicker">Found from your description · {driveTimeLabel(activeDiscovery.driveHours)} away</p>
+              <h1>{activeDiscovery.name}</h1>
+              <p className="canvas-sheet-area">{activeDiscovery.area} · about {activeDiscovery.distanceMiles} rough miles</p>
+              <p className="canvas-sheet-summary">{activeDiscovery.why}</p>
+
+              <div className="canvas-now">
+                <span>{activeDiscovery.categoryLabel}</span>
+                <strong>{discovery?.intent.summary}</strong>
+                <small>{activeDiscovery.source === "OpenStreetMap" ? "Live mapped place from OpenStreetMap contributors." : "Curated Michigan Outdoors Now destination."}</small>
+              </div>
+
+              <div className="canvas-sheet-actions">
+                {activeDiscovery.curatedPlaceId ? (
+                  <Link href={`/places/${activeDiscovery.curatedPlaceId}`}>Open the place</Link>
+                ) : activeDiscovery.website ? (
+                  <a href={activeDiscovery.website} target="_blank" rel="noopener">Place website</a>
+                ) : (
+                  <a href={activeDiscovery.sourceUrl} target="_blank" rel="noopener">Map details</a>
+                )}
+                <a href={activeDiscovery.directionsUrl} target="_blank" rel="noopener">Directions</a>
+              </div>
+
+              <div className="canvas-branch">
+                {driveHours < 8 && <button type="button" onClick={() => changeRange(1)}>Go farther</button>}
+                {driveHours > 1 && <button type="button" onClick={() => changeRange(-1)}>Stay closer</button>}
+                {(discovery?.places.length ?? 0) > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const candidates = discovery?.places ?? [];
+                      const currentIndex = Math.max(0, candidates.findIndex((place) => place.id === activeDiscovery.id));
+                      const next = candidates[(currentIndex + 1) % candidates.length];
+                      if (next) setActiveDiscoveryId(next.id);
+                    }}
+                  >
+                    Show another
+                  </button>
+                )}
+              </div>
+
+              {(discovery?.places.length ?? 0) > 1 && (
+                <div className="canvas-other-picks">
+                  <span>Keep wandering</span>
+                  {discovery?.places
+                    .filter((place) => place.id !== activeDiscovery.id)
+                    .slice(0, 4)
+                    .map((place) => (
+                      <button type="button" key={place.id} onClick={() => setActiveDiscoveryId(place.id)}>
+                        <strong>{place.name}</strong>
+                        <small>{driveTimeLabel(place.driveHours)} · {place.categoryLabel}</small>
+                      </button>
+                    ))}
+                </div>
+              )}
+
+              <p className="canvas-discovery-source">{discovery?.sourceNote}</p>
+            </>
+          ) : activePlan ? (
             <>
               <p className="canvas-sheet-kicker">{pull.label} · {driveTimeLabel(activePlan.driveHours)} away</p>
               <h1>{activePlan.destination.name}</h1>
@@ -744,6 +951,13 @@ export function OutdoorIntentHub() {
           Return to {leadPlan.destination.name}
         </button>
       )}
+
+      {discovery && !activeDiscoveryId && discovery.places[0] && (
+        <button type="button" className="canvas-return-pick" onClick={() => setActiveDiscoveryId(discovery.places[0].id)}>
+          Return to {discovery.places[0].name}
+        </button>
+      )}
+
     </main>
   );
 }
