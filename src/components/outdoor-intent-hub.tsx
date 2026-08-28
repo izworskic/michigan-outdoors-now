@@ -406,6 +406,7 @@ export function OutdoorIntentHub() {
     const controller = new AbortController();
     discoveryRequestRef.current = controller;
     setDiscovering(true);
+    setCompareOpen(false);
     setMessage("");
 
     try {
@@ -759,6 +760,8 @@ export function OutdoorIntentHub() {
               setOriginFeedback("Press Set start to confirm this Michigan location.");
               setPlans(null);
               setDiscovery(null);
+              setComparisonPlaces([]);
+              setCompareOpen(false);
               setActiveId("");
               setActiveDiscoveryId("");
               setAroundOpen(false);
