@@ -29,6 +29,7 @@ async function main() {
     "src/app/growth-manifest.json/route.ts",
     "scripts/report-growth-opportunities.ts",
     "scripts/fetch-search-console.mjs",
+    "scripts/fetch-vercel-product-events.mjs",
     ".github/workflows/growth-intelligence.yml",
     "tests/growth-operating-system.test.ts",
     "docs/growth-operating-system.md",
@@ -48,6 +49,7 @@ async function main() {
   const localOg = files["src/app/from/[origin]/[intent]/opengraph-image.tsx"];
   const report = files["scripts/report-growth-opportunities.ts"];
   const gscFetch = files["scripts/fetch-search-console.mjs"];
+  const vercelFetch = files["scripts/fetch-vercel-product-events.mjs"];
   const growthWorkflow = files[".github/workflows/growth-intelligence.yml"];
   const tests = files["tests/growth-operating-system.test.ts"];
   const doc = files["docs/growth-operating-system.md"];
@@ -94,7 +96,11 @@ async function main() {
       gscFetch.includes('dimensions: ["page", "query"]') &&
       gscFetch.includes('dataState: "final"') &&
       growthWorkflow.includes("Weekly growth intelligence") &&
-      growthWorkflow.includes("GSC_SERVICE_ACCOUNT_JSON"),
+      growthWorkflow.includes("GSC_SERVICE_ACCOUNT_JSON") &&
+      vercelFetch.includes("/v1/query/web-analytics/events/aggregate") &&
+      vercelFetch.includes('by: "eventData/page"') &&
+      growthWorkflow.includes("VERCEL_ANALYTICS_TOKEN") &&
+      growthWorkflow.includes("product-events-latest.json"),
     ctrCreative:
       !/Three practical Michigan plans/i.test(og) &&
       localOg.includes("Worth the drive?") &&
