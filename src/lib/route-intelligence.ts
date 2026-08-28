@@ -38,7 +38,7 @@ export async function fetchRoutedTravel(args: {
     `?sources=0&destinations=${destinations}&annotations=duration,distance`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1_250);
+  const timeout = setTimeout(() => controller.abort(), 900);
 
   try {
     const response = await fetch(url, {
