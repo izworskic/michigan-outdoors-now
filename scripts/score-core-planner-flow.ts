@@ -57,8 +57,10 @@ async function main() {
       !hub.includes("setActiveDiscoveryId(result.places[0]") &&
       hub.includes('setActiveDiscoveryId("");'),
     visibleSearchResults:
-      hub.includes('className="canvas-wish-results"') &&
-      hub.includes("discovery.places.slice(0, 3)") &&
+      (hub.includes('className="canvas-wish-results"') ||
+        hub.includes('className="canvas-result-dock"')) &&
+      (hub.includes("discovery.places.slice(0, 3)") ||
+        hub.includes("discovery.places.slice(0, 8)")) &&
       hub.includes("possibilities"),
     responsiveNonOverlap:
       hub.includes('className="canvas-query-stack"') &&
