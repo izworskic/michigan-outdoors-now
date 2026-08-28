@@ -4,10 +4,11 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
-import type { BoatLaunchResponse } from "../lib/boat-launches";
+import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
+import { haversineMiles } from "../lib/planner";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse } from "../lib/types";
-import { MichiganDestinationMap } from "./michigan-destination-map";
+import { MichiganDestinationMap, type MapFocusPoint, type MapViewport } from "./michigan-destination-map";
 
 type PullId = "best" | "water" | "trail" | "river" | "dark" | "long" | "weekend";
 
@@ -111,6 +112,9 @@ export function OutdoorIntentHub() {
   const [planning, setPlanning] = useState(false);
   const [message, setMessage] = useState("");
   const [activeId, setActiveId] = useState("");
+  const [viewport, setViewport] = useState<MapViewport>({ latitude: 44.7, longitude: -85.45, zoom: 5.25 });
+  const [aroundOpen, setAroundOpen] = useState(false);
+  const [focusPoint, setFocusPoint] = useState<MapFocusPoint | null>(null);
   const [trailLayer, setTrailLayer] = useState<UniverseLayerId>("hiking");
   const [universe, setUniverse] = useState<OutdoorUniverseResponse>(() => emptyUniverse("hiking"));
   const [boatLaunches, setBoatLaunches] = useState<BoatLaunchResponse>(() => emptyBoatLaunches());
@@ -268,6 +272,71 @@ export function OutdoorIntentHub() {
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
   const leadPlan = plans?.plans[0] ?? null;
+
+  const nearbyPlaces = useMemo(
+    () =>
+      destinations
+        .map((destination) => ({
+          destination,
+          distanceMiles: haversineMiles(
+            viewport.latitude,
+            viewport.longitude,
+            destination.latitude,
+            destination.longitude,
+          ),
+        }))
+        .sort((a, b) => a.distanceMiles - b.distanceMiles)
+        .slice(0, 5),
+    [viewport.latitude, viewport.longitude],
+  );
+
+  const nearbyTrailSystems = useMemo(
+    () =>
+      universe.systems
+        .filter(
+          (system) =>
+            typeof system.latitude === "number" &&
+            Number.isFinite(system.latitude) &&
+            typeof system.longitude === "number" &&
+            Number.isFinite(system.longitude),
+        )
+        .map((system) => ({
+          system,
+          distanceMiles: haversineMiles(
+            viewport.latitude,
+            viewport.longitude,
+            system.latitude as number,
+            system.longitude as number,
+          ),
+        }))
+        .sort((a, b) => a.distanceMiles - b.distanceMiles)
+        .slice(0, 4),
+    [universe.systems, viewport.latitude, viewport.longitude],
+  );
+
+  const nearbyLaunches = useMemo(
+    () =>
+      boatLaunches.geojson.features
+        .map((feature) => ({
+          feature,
+          distanceMiles: haversineMiles(
+            viewport.latitude,
+            viewport.longitude,
+            feature.geometry.coordinates[1],
+            feature.geometry.coordinates[0],
+          ),
+        }))
+        .sort((a, b) => a.distanceMiles - b.distanceMiles)
+        .slice(0, 4),
+    [boatLaunches.geojson.features, viewport.latitude, viewport.longitude],
+  );
+
+  function focusNearbyPoint(key: string, latitude: number, longitude: number, zoom = 9) {
+    setActiveId("");
+    setAroundOpen(false);
+    setFocusPoint({ key, latitude, longitude, zoom });
+  }
+
   const mapStatus = useMemo(() => {
     const pieces = [];
     if (universe.status === "live") pieces.push(`${universe.systemCount.toLocaleString()} ${universe.label.toLowerCase()}`);
@@ -292,6 +361,8 @@ export function OutdoorIntentHub() {
           boatLaunchGeoJson={boatLaunches.geojson}
           boatLaunchCount={boatLaunches.count}
           userLocation={userLocation}
+          onViewportChange={setViewport}
+          focusPoint={focusPoint}
         />
       </div>
 
@@ -369,6 +440,107 @@ export function OutdoorIntentHub() {
         </div>
       </section>
 
+      {!activeId && (
+        <>
+          <button
+            type="button"
+            className="canvas-around-toggle"
+            aria-expanded={aroundOpen}
+            onClick={() => setAroundOpen((open) => !open)}
+          >
+            <strong>Around here</strong>
+            <span>Drag the map. Tap anything. Or see what is nearest.</span>
+          </button>
+
+          {aroundOpen && (
+            <aside className="canvas-around-panel" aria-label="Outdoor places around the current map">
+              <div className="canvas-around-head">
+                <div>
+                  <span>Around this map</span>
+                  <strong>What is nearby?</strong>
+                </div>
+                <button type="button" onClick={() => setAroundOpen(false)} aria-label="Close around here">×</button>
+              </div>
+
+              <section>
+                <span className="canvas-around-label">Places with full planning</span>
+                <div className="canvas-around-list">
+                  {nearbyPlaces.map(({ destination, distanceMiles }) => (
+                    <button
+                      type="button"
+                      key={destination.id}
+                      onClick={() => {
+                        setAroundOpen(false);
+                        setActiveId(destination.id);
+                      }}
+                    >
+                      <strong>{destination.name}</strong>
+                      <small>~{Math.round(distanceMiles)} mi from map center · {destination.area}</small>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              {nearbyTrailSystems.length > 0 && (
+                <section>
+                  <span className="canvas-around-label">{universe.label}</span>
+                  <div className="canvas-around-list canvas-around-list-compact">
+                    {nearbyTrailSystems.map(({ system, distanceMiles }) => (
+                      <button
+                        type="button"
+                        key={`${system.name}-${system.latitude}-${system.longitude}`}
+                        onClick={() =>
+                          focusNearbyPoint(
+                            `trail-${system.name}-${system.latitude}-${system.longitude}`,
+                            system.latitude as number,
+                            system.longitude as number,
+                            9,
+                          )
+                        }
+                      >
+                        <strong>{system.name}</strong>
+                        <small>
+                          ~{Math.round(distanceMiles)} mi · {system.miles > 0 ? `${Math.round(system.miles)} mapped mi` : system.type}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {nearbyLaunches.length > 0 && (
+                <section>
+                  <span className="canvas-around-label">Public boat access</span>
+                  <div className="canvas-around-list canvas-around-list-compact">
+                    {nearbyLaunches.map(({ feature, distanceMiles }) => (
+                      <button
+                        type="button"
+                        key={feature.properties.id}
+                        onClick={() =>
+                          focusNearbyPoint(
+                            `launch-${feature.properties.id}`,
+                            feature.geometry.coordinates[1],
+                            feature.geometry.coordinates[0],
+                            10,
+                          )
+                        }
+                      >
+                        <strong>{feature.properties.name}</strong>
+                        <small>
+                          ~{Math.round(distanceMiles)} mi
+                          {feature.properties.waterbody ? ` · ${feature.properties.waterbody}` : ""}
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                  <a className="canvas-around-all" href={BOAT_LAUNCH_FINDER}>Open all Michigan boat launches →</a>
+                </section>
+              )}
+            </aside>
+          )}
+        </>
+      )}
+
       {message && <p className="canvas-message">{message}</p>}
 
       {(activeDestination || activePlan) && (
@@ -424,13 +596,6 @@ export function OutdoorIntentHub() {
             </>
           ) : null}
         </aside>
-      )}
-
-      {!activeId && !plans && (
-        <div className="canvas-first-use">
-          <strong>Drag the map. Tap anything.</strong>
-          <span>Or set a start and let current conditions narrow the state.</span>
-        </div>
       )}
 
       {plans && !activeId && leadPlan && (
