@@ -176,10 +176,16 @@ async function fetchPointWeather(
     latitude: latitude.toFixed(5),
     longitude: longitude.toFixed(5),
     timezone: "America/Detroit",
+    timeformat: "unixtime",
     temperature_unit: "fahrenheit",
     wind_speed_unit: "mph",
+    precipitation_unit: "inch",
     current: "temperature_2m,wind_gusts_10m,weather_code",
-    daily: "temperature_2m_max,temperature_2m_min,precipitation_probability_max",
+    hourly:
+      "temperature_2m,precipitation_probability,rain,snowfall,wind_gusts_10m",
+    daily:
+      "temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset",
+    past_days: "1",
     forecast_days: "2",
   });
   const airParams = new URLSearchParams({
@@ -224,6 +230,49 @@ async function fetchPointWeather(
     if (matching.length) aqi = Math.max(...matching);
   }
 
+  const nowSeconds = Date.now() / 1000;
+  const hourlyTimes = forecast.hourly?.time ?? [];
+  const rain = forecast.hourly?.rain ?? [];
+  const snowfall = forecast.hourly?.snowfall ?? [];
+  const recentIndexes = hourlyTimes
+    .map((time, index) => ({ time, index }))
+    .filter(({ time }) => time >= nowSeconds - 86_400 && time <= nowSeconds);
+  const futureIndexes = hourlyTimes
+    .map((time, index) => ({ time, index }))
+    .filter(({ time }) => time >= nowSeconds && time <= nowSeconds + 21_600);
+
+  const recentRain = recentIndexes
+    .map(({ index }) => rain[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .reduce((sum, value) => sum + value, 0);
+  // Open-Meteo reports snowfall depth in centimeters even when liquid precipitation uses inches.
+  const recentSnowCm = recentIndexes
+    .map(({ index }) => snowfall[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value))
+    .reduce((sum, value) => sum + value, 0);
+
+  const precipitationValues = futureIndexes
+    .map(({ index }) => forecast.hourly?.precipitation_probability?.[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const gustValues = futureIndexes
+    .map(({ index }) => forecast.hourly?.wind_gusts_10m?.[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+  const temperatureValues = futureIndexes
+    .map(({ index }) => forecast.hourly?.temperature_2m?.[index])
+    .filter((value): value is number => typeof value === "number" && Number.isFinite(value));
+
+  const timeLabel = (seconds: number) =>
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Detroit",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(seconds * 1000));
+
+  const sunset =
+    (forecast.daily?.sunset ?? []).find(
+      (value) => typeof value === "number" && Number.isFinite(value) && value > nowSeconds,
+    ) ?? null;
+
   return {
     temperature: numberOrNull(forecast.current?.temperature_2m),
     high: numberOrNull(forecast.daily?.temperature_2m_max?.[0]),
@@ -232,6 +281,23 @@ async function fetchPointWeather(
     windGust: numberOrNull(forecast.current?.wind_gusts_10m),
     aqi,
     weatherCode: numberOrNull(forecast.current?.weather_code),
+    recentRainInches: recentIndexes.length ? Number(recentRain.toFixed(2)) : null,
+    recentSnowInches: recentIndexes.length ? Number((recentSnowCm / 2.54).toFixed(1)) : null,
+    daylightHoursRemaining:
+      sunset === null ? null : Number(Math.max(0, (sunset - nowSeconds) / 3600).toFixed(1)),
+    outingWindow:
+      futureIndexes.length > 0
+        ? {
+            start: timeLabel(futureIndexes[0].time),
+            end: timeLabel(futureIndexes[futureIndexes.length - 1].time),
+            maxPrecipitationProbability: precipitationValues.length
+              ? Math.max(...precipitationValues)
+              : null,
+            maxWindGust: gustValues.length ? Math.max(...gustValues) : null,
+            minTemperature: temperatureValues.length ? Math.min(...temperatureValues) : null,
+            maxTemperature: temperatureValues.length ? Math.max(...temperatureValues) : null,
+          }
+        : null,
   };
 }
 
