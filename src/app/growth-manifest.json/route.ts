@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { growthEventNames } from "../../lib/growth-analytics";
+import { growthEventNames } from "../../lib/growth-contract";
 import { landingQualitySummary, searchLandingIntents } from "../../lib/search-landings";
 import { siteUrl } from "../../lib/site";
 
