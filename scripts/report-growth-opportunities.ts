@@ -6,23 +6,39 @@ import process from "node:process";
 import {
   scoreFamilyGrowth,
   scoreSearchOpportunity,
+  type ProductFunnelRow,
+  type SearchConsoleRow,
 } from "../src/lib/growth-opportunities";
 
+type SearchSnapshot = {
+  window?: { label?: string };
+  rows?: SearchConsoleRow[];
+};
+
+type ProductSnapshot = {
+  window?: { label?: string };
+  rows?: ProductFunnelRow[];
+};
+
 const root = path.resolve(import.meta.dirname, "..");
-function arg(name, fallback) {
+
+function arg(name: string, fallback: string) {
   const index = process.argv.indexOf(name);
   return index >= 0 && process.argv[index + 1] ? process.argv[index + 1] : fallback;
 }
-async function readJson(file) {
-  return JSON.parse(await readFile(path.resolve(root, file), "utf8"));
+
+async function readJson<T>(file: string): Promise<T> {
+  return JSON.parse(await readFile(path.resolve(root, file), "utf8")) as T;
 }
 
 const searchFile = arg("--search", "data/growth/search-console-baseline.json");
 const productFile = arg("--product", "data/growth/product-events-baseline.json");
-const search = await readJson(searchFile);
-const product = await readJson(productFile);
+const search = await readJson<SearchSnapshot>(searchFile);
+const product = await readJson<ProductSnapshot>(productFile);
 
-const productByPage = new Map((product.rows ?? []).map((row) => [row.pageKey, row]));
+const productByPage = new Map<string, ProductFunnelRow>(
+  (product.rows ?? []).map((row) => [row.pageKey, row]),
+);
 const opportunities = (search.rows ?? []).map((row) =>
   scoreSearchOpportunity(row, productByPage.get(row.page.replace(/^\//, ""))),
 );
