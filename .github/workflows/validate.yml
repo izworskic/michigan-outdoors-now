@@ -49,6 +49,9 @@ jobs:
       - name: Score persona-led taste
         run: npm run score:persona-taste
 
+      - name: Score decision depth
+        run: npm run score:decision-depth
+
       - name: Build production output
         run: npm run build
 
