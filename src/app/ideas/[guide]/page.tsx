@@ -5,6 +5,7 @@ import { Planner } from "../../../components/planner";
 import { destinations } from "../../../data/destinations";
 import { guides, guidesBySlug } from "../../../data/guides";
 import { activityLabels } from "../../../lib/planner";
+import { searchLandingsForGuide } from "../../../lib/search-landings";
 import { jsonLd, personSchema, siteUrl } from "../../../lib/site";
 
 export const dynamicParams = false;
@@ -42,6 +43,7 @@ export default async function GuidePage({ params }: { params: Promise<{ guide: s
         candidate.planner.activities.some((activity) => selectedActivities.has(activity)),
     )
     .slice(0, 3);
+  const cityDecisionPages = searchLandingsForGuide(guide.slug).slice(0, 8);
   const pageUrl = `${siteUrl}/ideas/${guide.slug}`;
   const structuredData = {
     "@context": "https://schema.org",
@@ -194,6 +196,32 @@ export default async function GuidePage({ params }: { params: Promise<{ guide: s
             ))}
           </div>
         </section>
+
+        {cityDecisionPages.length > 0 && (
+          <section className="search-landing-network content-wrap" aria-labelledby="guide-city-decisions">
+            <div>
+              <p className="eyebrow">Start with where you live</p>
+              <h2 id="guide-city-decisions">{guide.shortTitle} from Michigan cities</h2>
+              <div className="search-landing-link-list">
+                {cityDecisionPages.slice(0, 5).map((landing) => (
+                  <Link
+                    href={`/from/${landing.origin.slug}/${landing.intent.slug}`}
+                    key={landing.origin.slug}
+                  >
+                    From {landing.origin.name}<span>→</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="eyebrow">Why these pages exist</p>
+              <h2>Local answers only when the result set is meaningfully different.</h2>
+              <p>
+                Michigan Outdoors Now does not publish every city and keyword combination. These local pages are generated only when the curated destination set is deep enough to give the starting city a useful, distinct answer.
+              </p>
+            </div>
+          </section>
+        )}
 
         <nav className="related-guides content-wrap" aria-label="Related Michigan outdoor guides">
           <p className="eyebrow">Keep exploring</p>

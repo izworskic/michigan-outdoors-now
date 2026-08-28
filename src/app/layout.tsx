@@ -10,13 +10,13 @@ import "./atlas.css";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Michigan Outdoors Now, Day Trip Planner by Chris Izworski",
+    default: "Michigan Outdoor Day Trip Planner | Chris Izworski",
     template: "%s | Michigan Outdoors Now",
   },
   description:
-    "Choose a Michigan city, day, drive time, and outdoor interests. Get three practical Michigan outing ideas ranked with current weather and air quality when available.",
+    "Find Michigan outdoor trips by starting city, drive time and activity. Compare routed travel, weather, trail access, DNR data and less-obvious options.",
   applicationName: "Michigan Outdoors Now",
-  authors: [{ name: "Chris Izworski", url: "https://chrisizworski.com/" }],
+  authors: [{ name: "Chris Izworski", url: "https://chrisizworski.com/chris-izworski/" }],
   creator: "Chris Izworski",
   publisher: "Chris Izworski",
   alternates: { canonical: "/" },
@@ -25,14 +25,14 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "/",
     siteName: "Michigan Outdoors Now",
-    title: "Michigan Outdoors Now, by Chris Izworski",
+    title: "Michigan Outdoor Day Trip Planner | Chris Izworski",
     description:
-      "A live-condition-aware Michigan day and weekend planner built around your drive time and interests.",
+      "Find Michigan outdoor trips by city, drive time and activity, then compare routing, weather, trail access, DNR data and current trip confidence.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Michigan Outdoors Now, by Chris Izworski",
-    description: "Three practical Michigan outdoor plans, matched to your day, drive, and current conditions.",
+    title: "Michigan Outdoor Day Trip Planner | Chris Izworski",
+    description: "Find and compare Michigan outdoor trips with drive time, current conditions, trail access and source-backed confidence.",
   },
   robots: allowIndexing
     ? { index: true, follow: true }
@@ -58,8 +58,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         url: siteUrl,
         name: "Michigan Outdoors Now",
         description: "A Michigan outdoor day and weekend planner by Chris Izworski.",
-        creator: { "@id": "https://chrisizworski.com/#chris-izworski" },
-        publisher: { "@id": "https://chrisizworski.com/#chris-izworski" },
+        creator: { "@id": "https://chrisizworski.com/#person" },
+        publisher: { "@id": "https://chrisizworski.com/#person" },
         inLanguage: "en-US",
       },
     ],
@@ -89,13 +89,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="footer-grid">
             <div>
               <p className="footer-brand">Michigan Outdoors Now</p>
-              <p>A focused Michigan planning tool built by <a href="https://chrisizworski.com/">Chris Izworski</a>.</p>
+              <p>A Michigan decision tool built by <a href="https://chrisizworski.com/chris-izworski/">Chris Izworski</a>.</p>
             </div>
             <div className="footer-links">
               <Link href="/ideas">Trip guides</Link>
               <Link href="/explore">Destination map</Link>
               <Link href="/how-it-works">Method & privacy</Link>
               <a href="https://chrisizworski.com/tools">All tools</a>
+              <a href="https://chrisizworski.com/chris-izworski/">About Chris Izworski</a>
               <a href="https://github.com/izworskic/michigan-outdoors-now">Source</a>
             </div>
           </div>

@@ -3740,3 +3740,189 @@ label {
   .persona-drive-field button:last-child{grid-column:1/-1}
   .persona-build-button{width:100%}
 }
+
+
+/* Search growth landings: crawlable answers first, planner second. */
+.search-landing-hero{
+  padding:56px 0 48px;
+  background:linear-gradient(135deg,#153a3f 0%,#244f4d 55%,#82654d 150%);
+  color:#f6f5ef;
+}
+.search-landing-hero-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.5fr) minmax(250px,.6fr);
+  gap:34px;
+  align-items:end;
+}
+.search-landing-hero h1{
+  max-width:780px;
+  margin:8px 0 14px;
+  font:500 clamp(38px,6vw,64px)/.96 Georgia,serif;
+  letter-spacing:-.045em;
+}
+.search-landing-deck{
+  max-width:720px;
+  margin:0;
+  color:rgba(246,245,239,.88);
+  font-size:17px;
+  line-height:1.55;
+}
+.search-landing-glance{
+  padding:18px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:14px;
+  background:rgba(255,255,255,.08);
+}
+.search-landing-glance>p{
+  margin:0 0 11px;
+  color:#e2b98f;
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.12em;
+}
+.search-landing-glance dl{
+  display:grid;
+  gap:11px;
+  margin:0;
+}
+.search-landing-glance dl>div{
+  display:grid;
+  gap:2px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.12);
+}
+.search-landing-glance dt{
+  color:rgba(246,245,239,.62);
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.search-landing-glance dd{
+  margin:0;
+  color:#fff;
+  font-size:14px;
+  font-weight:750;
+}
+.search-landing-method{
+  margin-top:14px !important;
+  padding:12px 14px;
+  border-left:3px solid #8f6b50;
+  background:#f5f1e8;
+  color:#5f6969 !important;
+  font-size:13px !important;
+}
+.search-landing-results{
+  padding-top:54px;
+  padding-bottom:58px;
+}
+.search-landing-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.search-landing-grid article{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  padding:18px;
+  border:1px solid rgba(31,61,69,.11);
+  border-radius:12px;
+  background:#fff;
+}
+.search-landing-grid article>span{
+  color:#8f6b50;
+  font-size:9px;
+  font-weight:830;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.search-landing-grid h3{
+  margin:0;
+  color:#17343c;
+  font:500 22px/1.04 Georgia,serif;
+  letter-spacing:-.025em;
+}
+.search-landing-grid article>strong{
+  color:#315f55;
+  font-size:10px;
+}
+.search-landing-grid article>p{
+  margin:0;
+  color:#4e6469;
+  font-size:13px;
+  line-height:1.48;
+}
+.search-landing-grid article>small{
+  margin-top:auto;
+  padding-top:5px;
+  color:#75868a;
+  font-size:10px;
+  line-height:1.4;
+}
+.search-landing-network{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+  padding-top:54px;
+  padding-bottom:54px;
+}
+.search-landing-network>div{
+  padding:22px;
+  border:1px solid rgba(31,61,69,.10);
+  border-radius:12px;
+  background:#f8f8f3;
+}
+.search-landing-network h2{
+  margin:4px 0 14px;
+  color:#1f3c43;
+  font:500 24px/1.08 Georgia,serif;
+}
+.search-landing-link-list{
+  display:grid;
+  gap:1px;
+}
+.search-landing-link-list a{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:14px;
+  padding:9px 0;
+  border-top:1px solid rgba(31,61,69,.09);
+  color:#31535b;
+  font-size:12px;
+  font-weight:760;
+  text-decoration:none;
+}
+.search-landing-link-list a span{color:#8f6b50}
+.search-landing-author{
+  padding:48px 0;
+  background:#17373e;
+  color:#f7f4ec;
+}
+.search-landing-author h2{
+  max-width:700px;
+  margin:5px 0 10px;
+  font:500 30px/1.04 Georgia,serif;
+}
+.search-landing-author p:not(.eyebrow){
+  max-width:760px;
+  color:rgba(247,244,236,.82);
+  line-height:1.55;
+}
+.search-landing-author a{color:#f1c59b}
+
+@media(max-width:900px){
+  .search-landing-hero-grid{grid-template-columns:1fr}
+  .search-landing-glance{max-width:520px}
+  .search-landing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:700px){
+  .search-landing-hero{padding:38px 0 34px}
+  .search-landing-hero h1{font-size:39px}
+  .search-landing-deck{font-size:15px}
+  .search-landing-grid{grid-template-columns:1fr}
+  .search-landing-results{padding-top:40px;padding-bottom:44px}
+  .search-landing-network{grid-template-columns:1fr;padding-top:40px;padding-bottom:40px}
+  .search-landing-network>div{padding:17px}
+}

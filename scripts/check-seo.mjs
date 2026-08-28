@@ -166,10 +166,15 @@ for (const slug of placeSlugs) {
   assert.match(schemaText, /"Place"/);
 }
 
+const searchLandingPageCount = htmlFiles.filter((file) =>
+  /\/from\/[^/]+\/[^/]+\.html$/.test(file),
+).length;
+
 const sitemapPath = files.find((file) => file.endsWith("sitemap.xml.body"));
 assert.ok(sitemapPath, "built sitemap body was not found");
 const sitemap = await readFile(sitemapPath, "utf8");
-const expectedSitemapUrls = placeSlugs.length + originSlugs.length + guideSlugs.length + 4;
+const expectedSitemapUrls =
+  placeSlugs.length + originSlugs.length + guideSlugs.length + searchLandingPageCount + 4;
 assert.equal((sitemap.match(/<url>/g) ?? []).length, expectedSitemapUrls);
 assert.doesNotMatch(sitemap, /<priority>|<changefreq>|<lastmod>/);
 
@@ -178,4 +183,4 @@ assert.ok(robotsPath, "built robots body was not found");
 const robots = await readFile(robotsPath, "utf8");
 assert.match(robots, /Disallow: \//);
 
-console.log(`SEO check passed: ${originSlugs.length} local pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, a persona-first planning homepage plus statewide DNR discovery surface with access changes, ${expectedSitemapUrls} sitemap URLs, and preview noindex.`);
+console.log(`SEO check passed: ${originSlugs.length} origin hubs, ${searchLandingPageCount} qualified location-intent pages, ${guideSlugs.length} substantial guides, ${placeSlugs.length} destination decision pages, ${expectedSitemapUrls} sitemap URLs, and preview noindex.`);
