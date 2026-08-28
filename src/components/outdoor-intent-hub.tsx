@@ -7,7 +7,7 @@ import { specialistTools } from "../data/specialist-tools";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
-import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse } from "../lib/types";
+import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse, SpecialistSignal } from "../lib/types";
 import { MichiganDestinationMap, type MapFocusPoint, type MapViewport } from "./michigan-destination-map";
 
 type PullId = "best" | "water" | "trail" | "river" | "dark" | "long" | "weekend";
@@ -118,6 +118,7 @@ export function OutdoorIntentHub() {
   const [trailLayer, setTrailLayer] = useState<UniverseLayerId>("hiking");
   const [universe, setUniverse] = useState<OutdoorUniverseResponse>(() => emptyUniverse("hiking"));
   const [boatLaunches, setBoatLaunches] = useState<BoatLaunchResponse>(() => emptyBoatLaunches());
+  const [signalSnapshot, setSignalSnapshot] = useState<{ placeId: string; signals: SpecialistSignal[] } | null>(null);
   const requestRef = useRef<AbortController | null>(null);
   const originInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -148,6 +149,26 @@ export function OutdoorIntentHub() {
 
     return () => launchesController.abort();
   }, []);
+
+  useEffect(() => {
+    if (!activeId) return;
+    const controller = new AbortController();
+
+    fetch(`/api/conditions/${encodeURIComponent(activeId)}`, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error("Place intelligence unavailable");
+        return response.json() as Promise<{ specialistSignals?: SpecialistSignal[] }>;
+      })
+      .then((payload) => {
+        setSignalSnapshot({
+          placeId: activeId,
+          signals: Array.isArray(payload.specialistSignals) ? payload.specialistSignals : [],
+        });
+      })
+      .catch(() => undefined);
+
+    return () => controller.abort();
+  }, [activeId]);
 
   const run = useCallback(async (
     nextPull: Pull = pull,
@@ -272,6 +293,8 @@ export function OutdoorIntentHub() {
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
   const leadPlan = plans?.plans[0] ?? null;
+  const visibleSignals = signalSnapshot?.placeId === activeId ? signalSnapshot.signals : [];
+
 
   const fromHerePlaces = useMemo(() => {
     if (!activeDestination) return [];
@@ -613,6 +636,32 @@ export function OutdoorIntentHub() {
               </div>
             </>
           ) : null}
+
+          {visibleSignals.length > 0 && (
+            <div className="canvas-live-intelligence">
+              <div className="canvas-live-intelligence-head">
+                <span>Live intelligence</span>
+                <strong>Other Michigan tools are adding context here.</strong>
+              </div>
+
+              <div className="canvas-live-intelligence-list">
+                {visibleSignals.map((signal) => (
+                  <article key={signal.id}>
+                    <div className="canvas-signal-meta">
+                      <span>{signal.label}</span>
+                      {signal.kind === "live" && <small>Live</small>}
+                    </div>
+                    <strong>{signal.headline}</strong>
+                    <p>{signal.detail}</p>
+                    <div className="canvas-signal-links">
+                      <a href={signal.toolUrl} target="_blank" rel="noopener">{signal.toolLabel} →</a>
+                      <a href={signal.sourceUrl} target="_blank" rel="noopener">Source: {signal.sourceLabel}</a>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
 
           {activeDestination && fromHerePlaces.length > 0 && (
             <div className="canvas-from-here">
