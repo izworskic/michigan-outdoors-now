@@ -1667,7 +1667,6 @@ body{background:#f8f5ef;color:#243139}
   border-radius:50%;
   background:transparent;
   box-shadow:none;
-  transform:none;
 }
 .michigan-canvas .destination-pin-decision::before{
   content:"";
@@ -1682,7 +1681,6 @@ body{background:#f8f5ef;color:#243139}
 .michigan-canvas .destination-pin-decision:hover,
 .michigan-canvas .destination-pin-decision[data-active="true"]{
   background:transparent;
-  transform:none;
 }
 .michigan-canvas .destination-pin-decision:hover::before,
 .michigan-canvas .destination-pin-decision[data-active="true"]::before{
@@ -1808,9 +1806,11 @@ body{background:#f8f5ef;color:#243139}
 }
 
 
-/* Map wandering should reveal meaning without forcing precise taps. */
+/* Map wandering should reveal meaning without forcing precise taps.
+   MapLibre owns marker positioning and transform. Keep this element absolutely
+   positioned so the visual dot remains anchored to its geographic coordinate. */
 .michigan-canvas .destination-pin-decision{
-  position:relative;
+  position:absolute;
   overflow:visible;
 }
 .destination-pin-label{
