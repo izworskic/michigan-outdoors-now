@@ -1186,10 +1186,16 @@ body{background:#f8f5ef;color:#243139}
   left:18px;
   right:18px;
   display:grid;
-  grid-template-columns:auto minmax(340px,620px) auto;
+  grid-template-columns:auto minmax(380px,720px) auto;
   gap:12px;
-  align-items:center;
+  align-items:start;
   pointer-events:none;
+}
+.canvas-query-stack{
+  min-width:0;
+  display:grid;
+  gap:8px;
+  pointer-events:auto;
 }
 .canvas-topbar>*{pointer-events:auto}
 .canvas-brand{
@@ -1245,10 +1251,32 @@ body{background:#f8f5ef;color:#243139}
   font-weight:820;
   cursor:pointer;
 }
-.canvas-origin button:last-child{
+.canvas-origin>button[type="button"]{
   width:44px;
   padding:0;
   font-size:17px;
+}
+.canvas-origin-status{
+  grid-column:1/-1;
+  min-height:25px;
+  display:flex;
+  align-items:center;
+  padding:5px 12px 6px;
+  border-top:1px solid rgba(31,61,69,.09);
+  background:rgba(246,248,247,.92);
+  color:#60757a;
+  font-size:8px;
+  font-weight:700;
+  line-height:1.35;
+}
+.canvas-origin-status-resolved{
+  color:#254f40;
+}
+.canvas-origin-status-error{
+  color:#8a4133;
+}
+.canvas-origin-status-resolving{
+  color:#5b6670;
 }
 .canvas-origin button:hover:not(:disabled){background:rgba(24,59,75,.06)}
 .canvas-links{
@@ -1560,7 +1588,7 @@ body{background:#f8f5ef;color:#243139}
   .canvas-topbar{
     grid-template-columns:auto 1fr;
   }
-  .canvas-origin{
+  .canvas-query-stack{
     grid-column:1/-1;
     grid-row:2;
   }
@@ -1778,7 +1806,7 @@ body{background:#f8f5ef;color:#243139}
     min-width:46px;
     min-height:46px;
   }
-  .canvas-origin button:last-child{
+  .canvas-origin>button[type="button"]{
     width:48px;
   }
   .canvas-links>details>summary{
@@ -2192,13 +2220,11 @@ body{background:#f8f5ef;color:#243139}
 
 /* Free-form Michigan discovery */
 .canvas-wish{
-  position:absolute;
-  z-index:18;
-  top:78px;
-  left:50%;
-  width:min(720px,calc(100% - 36px));
-  transform:translateX(-50%);
-  pointer-events:none;
+  position:static;
+  z-index:auto;
+  width:100%;
+  transform:none;
+  pointer-events:auto;
 }
 .canvas-wish-form{
   display:grid;
@@ -2298,6 +2324,50 @@ body{background:#f8f5ef;color:#243139}
   font-weight:800;
   cursor:pointer;
 }
+.canvas-wish-results{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+  padding-top:2px;
+}
+.canvas-wish-results>button{
+  min-width:0;
+  min-height:48px;
+  display:grid;
+  gap:3px;
+  padding:8px 9px;
+  border:1px solid rgba(31,61,69,.11);
+  border-radius:8px;
+  background:#fff;
+  color:#1c343a;
+  text-align:left;
+  cursor:pointer;
+}
+.canvas-wish-results strong{
+  overflow:hidden;
+  color:#1b363d;
+  font:500 13px/1.08 Georgia,serif;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.canvas-wish-results small{
+  color:#728186;
+  font-size:7px;
+  line-height:1.3;
+}
+.canvas-wish-results>button:hover{
+  border-color:rgba(38,79,64,.35);
+  background:#f3f7f5;
+}
+.canvas-message-inline{
+  position:static;
+  left:auto;
+  top:auto;
+  transform:none;
+  width:100%;
+  max-width:none;
+  margin:0;
+}
 .canvas-discovery-source{
   margin:18px 0 0;
   padding-top:14px;
@@ -2307,7 +2377,7 @@ body{background:#f8f5ef;color:#243139}
   line-height:1.5;
 }
 .canvas-sheet{
-  top:220px;
+  top:310px;
 }
 .map-legend-discovery{
   width:9px;
@@ -2319,24 +2389,28 @@ body{background:#f8f5ef;color:#243139}
 }
 
 @media(max-width:900px){
-  .canvas-wish{top:132px;width:min(680px,calc(100% - 36px))}
-  .canvas-sheet{top:278px}
+  .canvas-sheet{top:355px}
 }
 @media(max-width:700px){
-  .canvas-wish{
-    top:132px;
-    width:calc(100% - 24px);
-  }
   .canvas-wish-form{padding:9px;gap:6px}
   .canvas-wish-copy strong{font-size:14px}
   .canvas-wish-input{grid-template-columns:1fr auto}
   .canvas-wish-input input{font-size:12px}
   .canvas-wish-input button{padding-inline:11px}
   .canvas-wish-examples{display:none}
+  .canvas-wish-results{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .canvas-wish-results::-webkit-scrollbar{display:none}
+  .canvas-wish-results>button{
+    flex:0 0 68%;
+  }
   .canvas-sheet{
     top:auto;
     bottom:56px;
-    max-height:48svh;
+    max-height:46svh;
   }
-  .canvas-message{top:210px}
 }
