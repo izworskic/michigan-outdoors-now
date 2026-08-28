@@ -11,6 +11,15 @@ type LocationPoint = {
   longitude: number;
 };
 
+export type MapViewport = LocationPoint & {
+  zoom: number;
+};
+
+export type MapFocusPoint = LocationPoint & {
+  key: string;
+  zoom?: number;
+};
+
 type MichiganDestinationMapProps = {
   activeId: string;
   destinations: Destination[];
@@ -25,6 +34,8 @@ type MichiganDestinationMapProps = {
   boatLaunchGeoJson?: BoatLaunchGeoJson | null;
   boatLaunchCount?: number;
   userLocation?: LocationPoint;
+  onViewportChange?: (viewport: MapViewport) => void;
+  focusPoint?: MapFocusPoint | null;
 };
 
 const mapStyle = "https://tiles.openfreemap.org/styles/positron";
@@ -80,6 +91,8 @@ export function MichiganDestinationMap({
   boatLaunchGeoJson,
   boatLaunchCount = 0,
   userLocation,
+  onViewportChange,
+  focusPoint,
 }: MichiganDestinationMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -494,6 +507,12 @@ export function MichiganDestinationMap({
       element.className = "destination-pin destination-pin-decision";
       element.setAttribute("aria-label", `${destination.name}, ${destination.area}. Full trip-planning place.`);
       element.title = `${destination.name} · full trip planning`;
+
+      const label = document.createElement("span");
+      label.className = "destination-pin-label";
+      label.textContent = destination.name;
+      element.append(label);
+
       element.addEventListener("click", () => onActivate(destination.id));
 
       const marker = new mapApi.Marker({ element, anchor: "center" })
@@ -505,6 +524,40 @@ export function MichiganDestinationMap({
 
     if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 54, maxZoom: 7, duration: 450 });
   }, [destinations, mapReady, onActivate]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const container = containerRef.current;
+    if (!mapReady || !map || !container) return;
+
+    const publishViewport = () => {
+      const center = map.getCenter();
+      const zoom = map.getZoom();
+      container.dataset.labels = zoom >= 6.35 ? "true" : "false";
+      onViewportChange?.({
+        latitude: Number(center.lat.toFixed(5)),
+        longitude: Number(center.lng.toFixed(5)),
+        zoom: Number(zoom.toFixed(2)),
+      });
+    };
+
+    publishViewport();
+    map.on("moveend", publishViewport);
+    return () => {
+      map.off("moveend", publishViewport);
+    };
+  }, [mapReady, onViewportChange]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!mapReady || !map || !focusPoint) return;
+
+    map.flyTo({
+      center: [focusPoint.longitude, focusPoint.latitude],
+      zoom: Math.max(map.getZoom(), focusPoint.zoom ?? 9),
+      duration: 420,
+    });
+  }, [focusPoint, mapReady]);
 
   useEffect(() => {
     markerByIdRef.current.forEach(({ element }, destinationId) => {
