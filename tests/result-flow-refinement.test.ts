@@ -22,7 +22,8 @@ test("opening and closing detail preserves the result dock", async () => {
   assert.match(hub, /activateDiscovery\(place\.id\)/);
   assert.match(hub, /setFocusPoint\(\{[\s\S]*?latitude: place\.latitude,[\s\S]*?longitude: place\.longitude/);
   assert.match(hub, /canvas-sheet-discovery/);
-  assert.match(hub, /aria-label="Close place detail">×<\/button>/);
+  assert.match(hub, /aria-label="Close place detail"/);
+  assert.match(hub, /placeIntelligenceRequestRef\.current\?\.abort\(\)/);
 });
 
 test("Go farther requests only the newly unlocked distance band", async () => {
