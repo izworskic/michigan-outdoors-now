@@ -477,7 +477,7 @@ export function MichiganDestinationMap({
       activeMap.off("mouseleave", closureLayerId, pointerOff);
       activeMap.off("mouseleave", rerouteLayerId, pointerOff);
     };
-  }, [mapReady, trailGeoJson, trailSystems, closuresGeoJson, reroutesGeoJson, boatLaunchGeoJson]);
+  }, [mapReady, trailGeoJson, trailSystems, closuresGeoJson, reroutesGeoJson, boatLaunchGeoJson, trailLayerLabel]);
 
   useEffect(() => {
     const map = mapRef.current;
