@@ -1,7 +1,7 @@
 export type TrailProfile = {
   id: string;
   name: string;
-  destinationId: string;
+  destinationId?: string;
   area: string;
   distanceMiles: number;
   routeKind: "loop" | "out-and-back" | "point-to-point" | "network";
