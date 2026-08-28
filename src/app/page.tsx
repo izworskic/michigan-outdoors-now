@@ -5,7 +5,7 @@ import { jsonLd, personSchema, siteUrl } from "../lib/site";
 export const metadata: Metadata = {
   title: "What Should I Do Outside in Michigan Today? | Michigan Outdoors Now",
   description:
-    "Tell us where you are starting and how far you will travel. Find a Michigan outdoor plan for today or this weekend, check a place, or start with an activity.",
+    "Tell us where you are starting and how far you will travel, or describe the kind of outdoor day you want in plain English. Discover Michigan places, live conditions, trails, water access, and practical trip ideas.",
   alternates: { canonical: "/" },
   openGraph: {
     title: "Michigan Outdoors Now — Find the right outdoor plan",
@@ -35,7 +35,8 @@ export default function Home() {
         description: metadata.description,
         author: { "@id": personSchema["@id"] },
         featureList: [
-          "Recommendations based on a Michigan starting point and maximum drive radius",
+          "Natural-language outdoor discovery from a Michigan starting point and inclusive maximum drive time",
+          "Live mapped place discovery blended with curated Michigan destinations",
           "Best Michigan outdoor options for today and this weekend",
           "Best time window and practical watch-outs",
           "Specific-place condition checks",
