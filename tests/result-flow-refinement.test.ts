@@ -142,3 +142,49 @@ test("selected semantic places load current trip confidence intelligence", async
   assert.match(hub, /DNR closure item/);
   assert.match(css, /\.canvas-field-intelligence\{/);
 });
+
+
+test("skeptic flow exposes surprise discovery and session-only dismissal", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /Surprise me · something I probably don’t know/);
+  assert.match(hub, /surpriseMode: true, excludePlaceIds: dismissedDiscoveryIds/);
+  assert.match(hub, /function dismissDiscoveryPlace\(place: DiscoveryPlace\)/);
+  assert.match(hub, /Not for me/);
+  assert.match(hub, /keep that one out of this session’s surprise picks/);
+});
+
+test("selected results explain why this choice beats a serious alternative", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /function buildDecisionArgument/);
+  assert.match(hub, /Why this one over the others\?/);
+  assert.match(hub, /driveDeltaMinutes/);
+  assert.match(hub, /Choose .* if minimizing windshield time matters more/);
+  assert.match(hub, /Show \{decisionArgument\.alternative\.name\} instead/);
+});
+
+test("provenance ledger exposes sources freshness and unknowns", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+
+  assert.match(hub, /Why should I trust this\?/);
+  assert.match(hub, /OSRM road route/);
+  assert.match(hub, /Open-Meteo point forecast \+ AQI/);
+  assert.match(hub, /Michigan DNR nearby trail, closure and reroute layers/);
+  assert.match(hub, /OpenStreetMap contributors/);
+  assert.match(hub, /Still unknown/);
+});
+
+test("Get me out of here becomes a sparse departure mode", async () => {
+  const hub = await readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
+
+  assert.match(hub, /Get me out of here/);
+  assert.match(hub, /className="canvas-departure"/);
+  assert.match(hub, /arrive around \{arrivalTimeLabel\(activeDiscovery\)\} if you leave now/);
+  assert.match(hub, /Start directions/);
+  assert.match(hub, /Source truth/);
+  assert.match(css, /\.has-departure \.canvas-topbar,[\s\S]*?visibility:hidden;/);
+  assert.match(css, /\.has-departure \.canvas-result-dock/);
+  assert.doesNotMatch(hub, /canvas-departure[\s\S]*?you may also like/i);
+});
