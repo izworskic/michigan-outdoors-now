@@ -164,8 +164,8 @@ export function MichiganDestinationMap({
         source: trailSourceId,
         paint: {
           "line-color": "#477f91",
-          "line-opacity": 0.7,
-          "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 1.1, 8, 2, 12, 3.6],
+          "line-opacity": 0.62,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 4.5, 2.4, 8, 4.2, 12, 6.2],
         },
       });
     }
@@ -206,10 +206,10 @@ export function MichiganDestinationMap({
         source: trailSystemSourceId,
         paint: {
           "circle-color": "#315f7a",
-          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 4.5, 0.55, 8, 0.8],
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4.5, 2.4, 8, 4, 12, 5.5],
-          "circle-stroke-color": "rgba(255,255,255,.9)",
-          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 4.5, 0.7, 9, 1.2],
+          "circle-opacity": ["interpolate", ["linear"], ["zoom"], 4.5, 0.72, 8, 0.88],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4.5, 6, 8, 8, 12, 10],
+          "circle-stroke-color": "rgba(255,255,255,.95)",
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 4.5, 1.2, 9, 1.8],
         },
       });
     }
@@ -263,9 +263,9 @@ export function MichiganDestinationMap({
         filter: ["!", ["has", "point_count"]],
         paint: {
           "circle-color": "#b96d45",
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 2.8, 10, 4.4, 13, 5.5],
-          "circle-stroke-color": "rgba(255,255,255,.95)",
-          "circle-stroke-width": 1.1,
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 6, 6, 10, 8, 13, 10],
+          "circle-stroke-color": "rgba(255,255,255,.98)",
+          "circle-stroke-width": 1.5,
         },
       });
     }
@@ -298,6 +298,36 @@ export function MichiganDestinationMap({
 
     const api = mapApi;
     const activeMap = map;
+
+    const trailClick = (event: MapLayerMouseEvent) => {
+      const feature = event.features?.[0];
+      const properties = (feature?.properties ?? {}) as UniverseTrailProperties;
+      const node = document.createElement("div");
+      node.className = "trail-system-popup";
+
+      const eyebrow = document.createElement("span");
+      eyebrow.textContent = trailLayerLabel || "Michigan DNR trail";
+
+      const title = document.createElement("strong");
+      title.textContent = properties.Name || properties.TrailNamePrimary || "Mapped DNR trail";
+
+      const detail = document.createElement("p");
+      const miles = Number(properties.SegmentLengthMiles ?? 0);
+      detail.textContent = [
+        properties.TrailType || "",
+        properties.PRDTrailUnit || "",
+        miles > 0 ? `${miles.toFixed(miles >= 10 ? 0 : 1)} mi mapped segment` : "",
+      ].filter(Boolean).join(" · ");
+
+      const note = document.createElement("small");
+      note.textContent = "Tap other segments or switch Layers to explore another official DNR trail network.";
+
+      node.append(eyebrow, title, detail, note);
+      new api.Popup({ closeButton: true, maxWidth: "340px" })
+        .setLngLat(event.lngLat)
+        .setDOMContent(node)
+        .addTo(activeMap);
+    };
 
     const trailSystemClick = (event: MapLayerMouseEvent) => {
       const feature = event.features?.[0];
@@ -408,16 +438,19 @@ export function MichiganDestinationMap({
     const pointerOn = () => { activeMap.getCanvas().style.cursor = "pointer"; };
     const pointerOff = () => { activeMap.getCanvas().style.cursor = ""; };
 
+    activeMap.on("click", trailLayerId, trailClick);
     activeMap.on("click", trailSystemLayerId, trailSystemClick);
     activeMap.on("click", boatLaunchClusterLayerId, boatClusterClick);
     activeMap.on("click", boatLaunchPointLayerId, boatLaunchClick);
     activeMap.on("click", closureLayerId, closureClick);
     activeMap.on("click", rerouteLayerId, rerouteClick);
+    activeMap.on("mouseenter", trailLayerId, pointerOn);
     activeMap.on("mouseenter", trailSystemLayerId, pointerOn);
     activeMap.on("mouseenter", boatLaunchClusterLayerId, pointerOn);
     activeMap.on("mouseenter", boatLaunchPointLayerId, pointerOn);
     activeMap.on("mouseenter", closureLayerId, pointerOn);
     activeMap.on("mouseenter", rerouteLayerId, pointerOn);
+    activeMap.on("mouseleave", trailLayerId, pointerOff);
     activeMap.on("mouseleave", trailSystemLayerId, pointerOff);
     activeMap.on("mouseleave", boatLaunchClusterLayerId, pointerOff);
     activeMap.on("mouseleave", boatLaunchPointLayerId, pointerOff);
@@ -425,16 +458,19 @@ export function MichiganDestinationMap({
     activeMap.on("mouseleave", rerouteLayerId, pointerOff);
 
     return () => {
+      activeMap.off("click", trailLayerId, trailClick);
       activeMap.off("click", trailSystemLayerId, trailSystemClick);
       activeMap.off("click", boatLaunchClusterLayerId, boatClusterClick);
       activeMap.off("click", boatLaunchPointLayerId, boatLaunchClick);
       activeMap.off("click", closureLayerId, closureClick);
       activeMap.off("click", rerouteLayerId, rerouteClick);
+      activeMap.off("mouseenter", trailLayerId, pointerOn);
       activeMap.off("mouseenter", trailSystemLayerId, pointerOn);
       activeMap.off("mouseenter", boatLaunchClusterLayerId, pointerOn);
       activeMap.off("mouseenter", boatLaunchPointLayerId, pointerOn);
       activeMap.off("mouseenter", closureLayerId, pointerOn);
       activeMap.off("mouseenter", rerouteLayerId, pointerOn);
+      activeMap.off("mouseleave", trailLayerId, pointerOff);
       activeMap.off("mouseleave", trailSystemLayerId, pointerOff);
       activeMap.off("mouseleave", boatLaunchClusterLayerId, pointerOff);
       activeMap.off("mouseleave", boatLaunchPointLayerId, pointerOff);
