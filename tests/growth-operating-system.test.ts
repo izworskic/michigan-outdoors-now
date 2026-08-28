@@ -158,8 +158,8 @@ test("CTR creative no longer advertises the obsolete three-plan product", async 
   assert.doesNotMatch(globalOg, /Three practical Michigan plans/i);
   assert.match(globalOg, /Compare Michigan places by drive, weather, trail access/);
   assert.match(landingOg, /Worth the drive\?/);
-  assert.match(landingOg, /landing\.intent\.label/);
-  assert.match(landingOg, /landing\.origin\.name/);
+  assert.match(landingOg, /const label = landing\?\.intent\.label/);
+  assert.match(landingOg, /const city = landing\?\.origin\.name/);
 });
 
 
