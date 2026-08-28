@@ -2306,6 +2306,9 @@ body{background:#f8f5ef;color:#243139}
   font-size:8px;
   line-height:1.5;
 }
+.canvas-sheet{
+  top:220px;
+}
 .map-legend-discovery{
   width:9px;
   height:9px;
@@ -2317,7 +2320,7 @@ body{background:#f8f5ef;color:#243139}
 
 @media(max-width:900px){
   .canvas-wish{top:132px;width:min(680px,calc(100% - 36px))}
-  .canvas-sheet{top:194px}
+  .canvas-sheet{top:278px}
 }
 @media(max-width:700px){
   .canvas-wish{
@@ -2331,8 +2334,9 @@ body{background:#f8f5ef;color:#243139}
   .canvas-wish-input button{padding-inline:11px}
   .canvas-wish-examples{display:none}
   .canvas-sheet{
-    top:198px;
-    bottom:78px;
+    top:auto;
+    bottom:56px;
+    max-height:48svh;
   }
-  .canvas-message{top:198px}
+  .canvas-message{top:210px}
 }
