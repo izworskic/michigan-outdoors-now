@@ -100,6 +100,52 @@ try {
     assert.match(discoveryPayload.sourceNote, /routed driving times|routed/i);
   }
 
+  const surpriseDiscovery = await fetch(`${origin}/api/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: typedOriginPayload.origin.name,
+      originCoordinates: {
+        latitude: typedOriginPayload.origin.latitude,
+        longitude: typedOriginPayload.origin.longitude,
+      },
+      query: "wild quiet overlooked outdoor place worth discovering",
+      maxDriveHours: 4,
+      surpriseMode: true,
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(surpriseDiscovery.status, 200);
+  const surprisePayload = await surpriseDiscovery.json();
+  assert.equal(surprisePayload.mode, "surprise");
+  assert.ok(Array.isArray(surprisePayload.places));
+  assert.ok(surprisePayload.places.length > 0, "Surprise me returned no Michigan possibilities");
+
+  const firstSurpriseId = surprisePayload.places[0].id;
+  const surpriseAfterDismiss = await fetch(`${origin}/api/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: typedOriginPayload.origin.name,
+      originCoordinates: {
+        latitude: typedOriginPayload.origin.latitude,
+        longitude: typedOriginPayload.origin.longitude,
+      },
+      query: "wild quiet overlooked outdoor place worth discovering",
+      maxDriveHours: 4,
+      surpriseMode: true,
+      excludePlaceIds: [firstSurpriseId],
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(surpriseAfterDismiss.status, 200);
+  const surpriseAfterDismissPayload = await surpriseAfterDismiss.json();
+  assert.equal(surpriseAfterDismissPayload.mode, "surprise");
+  assert.ok(
+    surpriseAfterDismissPayload.places.every((place) => place.id !== firstSurpriseId),
+    "dismissed surprise place returned again",
+  );
+
   const longHikeDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
