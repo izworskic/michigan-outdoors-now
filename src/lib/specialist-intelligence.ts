@@ -141,7 +141,7 @@ async function fetchAuroraSignal(
 }
 
 type UsgsValue = {
-  value?: Array<{ value?: string; dateTime?: string }>;
+  values?: Array<{ value?: Array<{ value?: string; dateTime?: string }> }>;
   variable?: {
     variableCode?: Array<{ value?: string }>;
     variableDescription?: string;
@@ -155,7 +155,7 @@ type UsgsPayload = {
 };
 
 function latestUsgsValue(series: UsgsValue | undefined) {
-  const item = series?.value?.[0]?.value?.at(-1);
+  const item = series?.values?.[0]?.value?.at(-1);
   const value = numberValue(item?.value);
   if (value === null) return null;
   return { value, dateTime: typeof item?.dateTime === "string" ? item.dateTime : null };
