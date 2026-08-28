@@ -8,11 +8,10 @@ The first location-intent cluster is intentionally limited to:
 - family day trips
 - hiking
 - paddling
-- birding
 - dog-friendly outdoors
 - lower-barrier outdoors
 
-Beach and freighter city variants are deliberately excluded because ChrisIzworski.com already has stronger canonical owners for those topic families.
+Beach and freighter city variants are deliberately excluded because ChrisIzworski.com already has stronger canonical owners for those topic families. City-specific birding is also excluded because Michigan Birding Report is the independent owned authority for live Michigan birding discovery.
 
 ## New-canonical gate
 
