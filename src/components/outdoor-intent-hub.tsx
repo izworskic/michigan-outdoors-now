@@ -163,6 +163,7 @@ export function OutdoorIntentHub() {
   const discoveryRequestRef = useRef<AbortController | null>(null);
   const signalCacheRef = useRef(new Map<string, SpecialistSignal[]>());
   const placeIntelligenceCacheRef = useRef(new Map<string, PlaceIntelligence>());
+  const placeIntelligenceRequestRef = useRef<AbortController | null>(null);
   const originInputRef = useRef<HTMLInputElement | null>(null);
   const wishInputRef = useRef<HTMLInputElement | null>(null);
   const resultDockRef = useRef<HTMLElement | null>(null);
@@ -221,54 +222,6 @@ export function OutdoorIntentHub() {
     if (!card) return;
     card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [activeDiscoveryId]);
-
-  useEffect(() => {
-    if (!activeDiscoveryId || !discovery?.places.length) {
-      setPlaceIntelligence(null);
-      setPlaceIntelligenceLoading(false);
-      return;
-    }
-
-    const place = discovery.places.find((candidate) => candidate.id === activeDiscoveryId);
-    if (!place) return;
-
-    const cached = placeIntelligenceCacheRef.current.get(place.id);
-    const cacheAgeMs = cached ? Date.now() - Date.parse(cached.generatedAt) : Number.POSITIVE_INFINITY;
-    if (cached && Number.isFinite(cacheAgeMs) && cacheAgeMs < 15 * 60 * 1000) {
-      setPlaceIntelligence(cached);
-      setPlaceIntelligenceLoading(false);
-      return;
-    }
-    if (cached) placeIntelligenceCacheRef.current.delete(place.id);
-
-    const controller = new AbortController();
-    setPlaceIntelligence(null);
-    setPlaceIntelligenceLoading(true);
-
-    fetch("/api/place-intelligence", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        latitude: place.latitude,
-        longitude: place.longitude,
-      }),
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Field intelligence unavailable");
-        return (await response.json()) as PlaceIntelligence;
-      })
-      .then((payload) => {
-        placeIntelligenceCacheRef.current.set(place.id, payload);
-        setPlaceIntelligence(payload);
-      })
-      .catch(() => undefined)
-      .finally(() => {
-        if (!controller.signal.aborted) setPlaceIntelligenceLoading(false);
-      });
-
-    return () => controller.abort();
-  }, [activeDiscoveryId, discovery?.places]);
 
   useEffect(() => {
     if (!activeId) return;
@@ -371,6 +324,9 @@ export function OutdoorIntentHub() {
   function clearOpenResults() {
     requestRef.current?.abort();
     discoveryRequestRef.current?.abort();
+    placeIntelligenceRequestRef.current?.abort();
+    setPlaceIntelligence(null);
+    setPlaceIntelligenceLoading(false);
     setPlans(null);
     setDiscovery(null);
     setDiscoveryRange(null);
@@ -542,11 +498,56 @@ export function OutdoorIntentHub() {
     void runDiscovery();
   }
 
+  const loadPlaceIntelligence = useCallback((place: DiscoveryPlace) => {
+    placeIntelligenceRequestRef.current?.abort();
+
+    const cached = placeIntelligenceCacheRef.current.get(place.id);
+    const cacheAgeMs = cached ? Date.now() - Date.parse(cached.generatedAt) : Number.POSITIVE_INFINITY;
+    if (cached && Number.isFinite(cacheAgeMs) && cacheAgeMs < 15 * 60 * 1000) {
+      setPlaceIntelligence(cached);
+      setPlaceIntelligenceLoading(false);
+      return;
+    }
+    if (cached) placeIntelligenceCacheRef.current.delete(place.id);
+
+    const controller = new AbortController();
+    placeIntelligenceRequestRef.current = controller;
+    setPlaceIntelligence(null);
+    setPlaceIntelligenceLoading(true);
+
+    fetch("/api/place-intelligence", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
+      body: JSON.stringify({
+        latitude: place.latitude,
+        longitude: place.longitude,
+      }),
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Field intelligence unavailable");
+        return (await response.json()) as PlaceIntelligence;
+      })
+      .then((payload) => {
+        if (placeIntelligenceRequestRef.current !== controller) return;
+        placeIntelligenceCacheRef.current.set(place.id, payload);
+        setPlaceIntelligence(payload);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (placeIntelligenceRequestRef.current === controller) {
+          placeIntelligenceRequestRef.current = null;
+          setPlaceIntelligenceLoading(false);
+        }
+      });
+  }, []);
+
   const activateDiscovery = useCallback((placeId: string) => {
     const place = discovery?.places.find((candidate) => candidate.id === placeId);
     setActiveId("");
     setActiveDiscoveryId(placeId);
     if (place) {
+      loadPlaceIntelligence(place);
       setFocusPoint({
         key: `discovery-${place.id}-${Date.now()}`,
         latitude: place.latitude,
@@ -554,7 +555,7 @@ export function OutdoorIntentHub() {
         zoom: 8.2,
       });
     }
-  }, [discovery?.places]);
+  }, [discovery?.places, loadPlaceIntelligence]);
 
 
   function moveDiscoverySelection(delta: number) {
@@ -1226,7 +1227,20 @@ export function OutdoorIntentHub() {
 
       {(activeDiscovery || activeDestination || activePlan) && (
         <aside className={`canvas-sheet ${activeDiscovery ? "canvas-sheet-discovery" : ""}`} aria-live="polite">
-          <button type="button" className="canvas-sheet-close" onClick={() => { setActiveId(""); setActiveDiscoveryId(""); }} aria-label="Close place detail">×</button>
+          <button
+            type="button"
+            className="canvas-sheet-close"
+            onClick={() => {
+              placeIntelligenceRequestRef.current?.abort();
+              setPlaceIntelligence(null);
+              setPlaceIntelligenceLoading(false);
+              setActiveId("");
+              setActiveDiscoveryId("");
+            }}
+            aria-label="Close place detail"
+          >
+            ×
+          </button>
 
           {activeDiscovery ? (
             <>
