@@ -1049,6 +1049,14 @@ export function OutdoorIntentHub() {
                   {example}
                 </button>
               ))}
+              <button
+                type="button"
+                className="canvas-surprise-trigger"
+                onClick={surpriseMe}
+                disabled={discovering || originStatus === "resolving"}
+              >
+                Surprise me · something I probably don’t know
+              </button>
             </div>
             {discovery && (
               <>
@@ -1125,11 +1133,19 @@ export function OutdoorIntentHub() {
         >
           <div className="canvas-result-dock-head">
             <div>
-              <span>{discoveryRange ? "Farther-out results" : `${discovery.places.length} matches`}</span>
+              <span>
+                {discovery.mode === "surprise"
+                  ? "Less-obvious Michigan"
+                  : discoveryRange
+                    ? "Farther-out results"
+                    : `${discovery.places.length} matches`}
+              </span>
               <strong>
-                {discoveryRange
-                  ? `${discoveryRange.minDriveHours}–${discoveryRange.maxDriveHours} hr · ${discovery.query}`
-                  : `Up to ${driveHours} hr · ${discovery.query}`}
+                {discovery.mode === "surprise"
+                  ? `Within ${driveHours} hr · picked for fit + novelty, not fame`
+                  : discoveryRange
+                    ? `${discoveryRange.minDriveHours}–${discoveryRange.maxDriveHours} hr · ${discovery.query}`
+                    : `Up to ${driveHours} hr · ${discovery.query}`}
               </strong>
             </div>
             <div className="canvas-result-dock-actions">
@@ -1189,14 +1205,25 @@ export function OutdoorIntentHub() {
                     <span className={place.curatedPlaceId ? "is-deep" : "is-lead"}>
                       {place.curatedPlaceId ? "Full guide" : "Mapped lead"}
                     </span>
-                    <button
-                      type="button"
-                      className="canvas-result-keep"
-                      aria-pressed={kept}
-                      onClick={() => toggleComparison(place)}
-                    >
-                      {kept ? "Kept" : "Keep to compare"}
-                    </button>
+                    <div className="canvas-result-card-footer-actions">
+                      {discovery.mode === "surprise" && (
+                        <button
+                          type="button"
+                          className="canvas-result-dismiss"
+                          onClick={() => dismissDiscoveryPlace(place)}
+                        >
+                          Not for me
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="canvas-result-keep"
+                        aria-pressed={kept}
+                        onClick={() => toggleComparison(place)}
+                      >
+                        {kept ? "Kept" : "Keep to compare"}
+                      </button>
+                    </div>
                   </div>
                 </article>
               );
