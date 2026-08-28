@@ -34,6 +34,7 @@ export type TrailSystemIntelligence = {
 export type TrailMetadataIntelligence = {
   routeName: string | null;
   taggedDistanceMiles: number | null;
+  taggedAscentFeet: number | null;
   difficulty: string | null;
   trailVisibility: string | null;
   surface: string | null;
@@ -398,16 +399,38 @@ async function fetchOsmTrailElements(latitude: number, longitude: number): Promi
   }
 }
 
-function parseDistanceMiles(raw: string | undefined) {
+function numericValue(raw: string | undefined) {
   if (!raw) return null;
   const text = raw.trim().toLowerCase().replace(",", ".");
   const match = text.match(/([0-9]+(?:\.[0-9]+)?)/);
   if (!match) return null;
   const value = Number(match[1]);
-  if (!Number.isFinite(value)) return null;
+  return Number.isFinite(value) ? { value, text } : null;
+}
+
+function parseDistanceMiles(
+  raw: string | undefined,
+  defaultUnit: "km" | "m" | "mi",
+) {
+  const parsed = numericValue(raw);
+  if (!parsed) return null;
+  const { value, text } = parsed;
+
+  if (/\bmi\b|mile/.test(text)) return Number(value.toFixed(1));
   if (/\bkm\b|kilomet/.test(text)) return Number((value * 0.621371).toFixed(1));
-  if (/\bm\b|meter/.test(text) && !/mi/.test(text)) return Number((value / 1609.344).toFixed(1));
+  if (/\bm\b|meter/.test(text)) return Number((value / 1609.344).toFixed(1));
+
+  if (defaultUnit === "km") return Number((value * 0.621371).toFixed(1));
+  if (defaultUnit === "m") return Number((value / 1609.344).toFixed(1));
   return Number(value.toFixed(1));
+}
+
+function parseElevationFeet(raw: string | undefined) {
+  const parsed = numericValue(raw);
+  if (!parsed) return null;
+  const { value, text } = parsed;
+  if (/\bft\b|feet|foot/.test(text)) return Math.round(value);
+  return Math.round(value * 3.28084);
 }
 
 function difficultyRank(value: string | undefined) {
@@ -456,15 +479,17 @@ function summarizeOsmTrailMetadata(
 
   const routeTags = route?.element.tags ?? {};
   const taggedDistance =
-    parseDistanceMiles(routeTags.distance) ??
-    parseDistanceMiles(routeTags.length) ??
-    parseDistanceMiles(routeTags["distance:mi"]);
+    parseDistanceMiles(routeTags.distance, "km") ??
+    parseDistanceMiles(routeTags.length, "m") ??
+    parseDistanceMiles(routeTags["distance:mi"], "mi");
+  const taggedAscentFeet = parseElevationFeet(routeTags.ascent);
 
   if (!route && !hardest && !visibility && !surface && !footAccess) return null;
 
   return {
     routeName: routeTags.name || routeTags.ref || null,
     taggedDistanceMiles: taggedDistance,
+    taggedAscentFeet,
     difficulty: hardest,
     trailVisibility: visibility,
     surface,
