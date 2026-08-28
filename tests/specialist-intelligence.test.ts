@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { auroraThresholdForLatitude, parseKpForecast } from "../src/lib/specialist-intelligence.ts";
+import { auroraThresholdForLatitude, parseKpForecast, specialistSignalsNeedWeather } from "../src/lib/specialist-intelligence.ts";
+import type { Destination } from "../src/lib/types.ts";
 
 test("aurora planning thresholds get more conservative farther south", () => {
   assert.equal(auroraThresholdForLatitude(47.4), 4);
@@ -21,4 +22,25 @@ test("NOAA Kp forecast rows parse without depending on column order", () => {
   assert.equal(points[1].kp, 5);
   assert.equal(points[1].observed, "predicted");
   assert.equal(points[1].time.toISOString(), "2026-08-28T00:00:00.000Z");
+});
+
+
+test("only dark-sky specialist signals require an extra weather lookup", () => {
+  const base = {
+    id: "test",
+    name: "Test",
+    area: "Michigan",
+    latitude: 45,
+    longitude: -85,
+    summary: "",
+    setting: "",
+    kidsFriendly: true,
+    dogsAllowed: true,
+    accessibleFriendly: true,
+    accessNote: "",
+    officialUrl: "https://example.com",
+  } satisfies Omit<Destination, "activities">;
+
+  assert.equal(specialistSignalsNeedWeather({ ...base, activities: ["fishing"] }), false);
+  assert.equal(specialistSignalsNeedWeather({ ...base, activities: ["dark-sky"] }), true);
 });
