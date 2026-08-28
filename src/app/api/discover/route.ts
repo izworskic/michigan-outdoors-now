@@ -340,7 +340,11 @@ export async function POST(request: Request) {
     maxPlaces: 20,
   });
   const places = applyRoutedTravel(mergedPlaces, routedTravel)
-    .filter((place) => place.driveHours <= body.maxDriveHours + 0.08)
+    .filter(
+      (place) =>
+        place.driveHours <= body.maxDriveHours + 0.08 &&
+        place.driveHours + 0.05 >= minDriveHours,
+    )
     .sort(
       (a, b) =>
         b.score - a.score ||
