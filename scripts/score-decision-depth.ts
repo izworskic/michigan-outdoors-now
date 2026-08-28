@@ -35,6 +35,9 @@ async function main() {
   const discoveryTests = files["tests/discovery.test.ts"];
   const resultTests = files["tests/result-flow-refinement.test.ts"];
   const doc = files["docs/decision-depth.md"];
+  const rangeStart = hub.indexOf("function changeRange");
+  const rangeEnd = hub.indexOf("function restoreInclusiveDiscovery", rangeStart);
+  const rangeBody = rangeStart >= 0 && rangeEnd > rangeStart ? hub.slice(rangeStart, rangeEnd) : "";
 
   const checks: Record<string, boolean> = {
     effortIntent:
@@ -54,8 +57,9 @@ async function main() {
       css.includes(".canvas-compare{") &&
       css.includes(".canvas-compare-grid{"),
     shortlistSurvivesFartherSearch:
-      hub.includes("runDiscovery(discovery.query, next, delta > 0 ? previousMax : 0)") &&
-      !/function changeRange[\s\S]*?setComparisonPlaces\(\[\]\)/.test(hub) &&
+      rangeBody.includes("runDiscovery(discovery.query, next, delta > 0 ? previousMax : 0)") &&
+      !rangeBody.includes("setComparisonPlaces") &&
+      !rangeBody.includes("setCompareOpen(false)") &&
       doc.includes("Keep those places while expanding the search farther"),
     planningDepthVisible:
       hub.includes('place.curatedPlaceId ? "Full guide" : "Mapped lead"') &&
