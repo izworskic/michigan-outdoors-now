@@ -1,9 +1,20 @@
 import { readFile } from "node:fs/promises";
 import process from "node:process";
 
+type Criterion = { key: string; weight: number };
+type Benchmark = {
+  name: string;
+  baselineScore: number;
+  releaseTarget: number;
+  flagshipTarget: number;
+  criteria: Criterion[];
+};
+
 async function main() {
   const root = new URL("../", import.meta.url);
-  const benchmark = JSON.parse(await readFile(new URL("benchmarks/core-planner-flow.json", root), "utf8"));
+  const benchmark = JSON.parse(
+    await readFile(new URL("benchmarks/core-planner-flow.json", root), "utf8"),
+  ) as Benchmark;
   const files = Object.fromEntries(
     await Promise.all([
       "src/components/outdoor-intent-hub.tsx",
