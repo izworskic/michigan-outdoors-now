@@ -1496,6 +1496,16 @@ export function OutdoorIntentHub() {
             </div>
           ) : null}
 
+          {placeIntelligence?.goSignal && (
+            <div className={`canvas-go-signal is-${placeIntelligence.goSignal.status}`}>
+              <span>Current case</span>
+              <strong>{placeIntelligence.goSignal.headline}</strong>
+              {placeIntelligence.goSignal.cautions.length > 0 && (
+                <small>{placeIntelligence.goSignal.cautions.join(" ")}</small>
+              )}
+            </div>
+          )}
+
           <div className="canvas-departure-grid">
             <article>
               <span>Weather</span>
@@ -1504,13 +1514,13 @@ export function OutdoorIntentHub() {
             <article>
               <span>Trail</span>
               <strong>
-                {placeIntelligence?.trailSystems[0]?.name ??
-                  placeIntelligence?.trailMetadata?.routeName ??
+                {placeIntelligence?.trailTruth?.routeName ??
+                  placeIntelligence?.trailSystems[0]?.name ??
                   "Exact route still needs choosing"}
               </strong>
               <small>
-                {placeIntelligence?.trailMetadata?.taggedDistanceMiles
-                  ? `${placeIntelligence.trailMetadata.taggedDistanceMiles} mi tagged route`
+                {placeIntelligence?.trailTruth?.distanceMiles
+                  ? `${placeIntelligence.trailTruth.distanceMiles} mi ${placeIntelligence.trailTruth.distanceSource === "osm-tag" ? "tagged route" : "mapped relation"}`
                   : placeIntelligence?.trailSystems[0]?.nearbyMappedMiles
                     ? `${placeIntelligence.trailSystems[0].nearbyMappedMiles} DNR mapped mi nearby`
                     : "Mileage not verified"}
@@ -1519,8 +1529,8 @@ export function OutdoorIntentHub() {
             <article>
               <span>Terrain</span>
               <strong>
-                {placeIntelligence?.trailMetadata?.taggedAscentFeet
-                  ? `${placeIntelligence.trailMetadata.taggedAscentFeet} ft tagged ascent`
+                {placeIntelligence?.trailTruth?.ascentFeet
+                  ? `${placeIntelligence.trailTruth.ascentFeet} ft ${placeIntelligence.trailTruth.ascentSource === "osm-tag" ? "tagged" : "sampled"} ascent`
                   : placeIntelligence?.elevation
                     ? `~${placeIntelligence.elevation.rangeFeet} ft nearby elevation span`
                     : "Profile not verified"}
@@ -1562,7 +1572,7 @@ export function OutdoorIntentHub() {
             <summary>Source truth</summary>
             <p>
               {activeDiscovery.travelSource === "routed" ? "Road travel is routed through OSRM. " : "Drive time is still a planning estimate. "}
-              Weather uses Open-Meteo. Trail/access checks use Michigan DNR and mapped trail metadata uses OpenStreetMap when present.
+              Weather, recent rain, daylight and AQI use Open-Meteo. Trail/access changes use Michigan DNR. Trail Truth uses an OpenStreetMap hiking relation when one resolves; geometry-derived mileage and sampled ascent remain explicitly estimated.
               {activeUnknowns.length ? ` Still unknown: ${activeUnknowns.join(", ")}.` : ""}
             </p>
           </details>
@@ -1948,9 +1958,9 @@ export function OutdoorIntentHub() {
             </>
           ) : activePlan ? (
             <>
-              <p className="canvas-sheet-kicker">{pull.label} · {driveTimeLabel(activePlan.driveHours)} away</p>
+              <p className="canvas-sheet-kicker">{pull.label} · {activePlan.travelSource === "routed" ? "" : "~"}{driveTimeLabel(activePlan.driveHours)} away</p>
               <h1>{activePlan.destination.name}</h1>
-              <p className="canvas-sheet-area">{activePlan.destination.area} · about {activePlan.distanceMiles} rough miles</p>
+              <p className="canvas-sheet-area">{activePlan.destination.area} · {activePlan.travelSource === "routed" ? "" : "about "}{activePlan.distanceMiles} {activePlan.travelSource === "routed" ? "road" : "rough"} miles</p>
               <p className="canvas-sheet-summary">{activePlan.destination.summary}</p>
 
               <div className="canvas-now">
