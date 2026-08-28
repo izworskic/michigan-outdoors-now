@@ -883,6 +883,165 @@ async function fetchElevationRange(
   }
 }
 
+async function fetchRouteAscentFeet(
+  routePoints: Array<{ lat: number; lon: number }>,
+) {
+  const selected =
+    routePoints.length <= 96
+      ? routePoints
+      : Array.from({ length: 96 }, (_, index) => {
+          const step = (routePoints.length - 1) / 95;
+          return routePoints[Math.round(index * step)];
+        });
+
+  const params = new URLSearchParams({
+    latitude: selected.map((point) => point.lat.toFixed(5)).join(","),
+    longitude: selected.map((point) => point.lon.toFixed(5)).join(","),
+  });
+
+  try {
+    const response = await fetch(`https://api.open-meteo.com/v1/elevation?${params}`, {
+      signal: AbortSignal.timeout(1_800),
+      next: { revalidate: 86_400 },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as { elevation?: Array<number | null> };
+    const feet = (payload.elevation ?? [])
+      .map((value) =>
+        typeof value === "number" && Number.isFinite(value) ? value * 3.28084 : null,
+      )
+      .filter((value): value is number => value !== null);
+    if (feet.length < 8) return null;
+
+    let gain = 0;
+    for (let index = 1; index < feet.length; index += 1) {
+      const delta = feet[index] - feet[index - 1];
+      // Ignore tiny DEM jitter so sampled terrain does not manufacture climb.
+      if (delta > 6) gain += delta;
+    }
+
+    if (!Number.isFinite(gain) || gain <= 0 || gain > 15_000) return null;
+    return Math.round(gain);
+  } catch {
+    return null;
+  }
+}
+
+function buildGoSignal(args: {
+  weather: PointWeatherIntelligence | null;
+  access: AccessIntelligence;
+  trailTruth: TrailRouteTruth | null;
+}): GoSignal {
+  const { weather, access, trailTruth } = args;
+  const reasons: string[] = [];
+  const cautions: string[] = [];
+
+  if (access.closureCount > 0) {
+    cautions.push(
+      `Michigan DNR returned ${access.closureCount} nearby closure item${access.closureCount === 1 ? "" : "s"}.`,
+    );
+  }
+  if (access.rerouteCount > 0) {
+    cautions.push(
+      `Michigan DNR returned ${access.rerouteCount} nearby reroute item${access.rerouteCount === 1 ? "" : "s"}.`,
+    );
+  }
+
+  if (!weather) {
+    return {
+      status: access.closureCount > 0 ? "poor" : access.rerouteCount > 0 ? "mixed" : "unknown",
+      headline:
+        access.closureCount > 0
+          ? "Access deserves a check before committing."
+          : "Current weather did not return, so the day cannot be ranked confidently.",
+      reasons,
+      cautions,
+    };
+  }
+
+  const window = weather.outingWindow;
+  const naturalSurface =
+    !trailTruth?.surface ||
+    !["paved", "asphalt", "concrete", "paving_stones"].includes(trailTruth.surface);
+
+  if (
+    window?.maxPrecipitationProbability !== null &&
+    window?.maxPrecipitationProbability !== undefined
+  ) {
+    if (window.maxPrecipitationProbability >= 70) {
+      cautions.push(
+        `Rain chance reaches ${Math.round(window.maxPrecipitationProbability)}% in the next several hours.`,
+      );
+    } else if (window.maxPrecipitationProbability <= 30) {
+      reasons.push("The next several hours have a relatively low rain signal.");
+    }
+  }
+
+  if (window?.maxWindGust !== null && window?.maxWindGust !== undefined) {
+    if (window.maxWindGust >= 30) {
+      cautions.push(`Gusts may reach about ${Math.round(window.maxWindGust)} mph.`);
+    } else if (window.maxWindGust < 20) {
+      reasons.push("Wind looks relatively modest in the near-term window.");
+    }
+  }
+
+  if (weather.aqi !== null) {
+    if (weather.aqi >= 101) {
+      cautions.push(`Air quality reaches AQI ${Math.round(weather.aqi)}.`);
+    } else if (weather.aqi <= 80) {
+      reasons.push("Air quality is not currently a major negative signal.");
+    }
+  }
+
+  if (naturalSurface && weather.recentRainInches !== null && weather.recentRainInches >= 0.35) {
+    cautions.push(
+      `About ${weather.recentRainInches.toFixed(2)} in of rain was reported in the prior 24 hours; natural surfaces may be wet or muddy.`,
+    );
+  }
+
+  if (weather.recentSnowInches !== null && weather.recentSnowInches >= 0.5) {
+    cautions.push(
+      `Recent snowfall is about ${weather.recentSnowInches.toFixed(1)} in; route footing may differ from normal conditions.`,
+    );
+  }
+
+  if (weather.daylightHoursRemaining !== null) {
+    if (weather.daylightHoursRemaining < 2) {
+      cautions.push(
+        `Only about ${weather.daylightHoursRemaining.toFixed(1)} hours of daylight remain.`,
+      );
+    } else if (weather.daylightHoursRemaining >= 4) {
+      reasons.push(
+        `About ${weather.daylightHoursRemaining.toFixed(1)} hours of daylight remain.`,
+      );
+    }
+  }
+
+  const severeWeatherSignal =
+    (window?.maxPrecipitationProbability ?? 0) >= 85 ||
+    (window?.maxWindGust ?? 0) >= 40 ||
+    (weather.aqi ?? 0) >= 151;
+  const status: GoSignal["status"] =
+    access.closureCount > 0 || severeWeatherSignal
+      ? "poor"
+      : cautions.length > 0
+        ? "mixed"
+        : reasons.length >= 2
+          ? "good"
+          : "unknown";
+
+  const headline =
+    status === "good"
+      ? "This place is making a relatively strong case for the next several hours."
+      : status === "mixed"
+        ? "The day is workable on paper, but one or more conditions deserve a second look."
+        : status === "poor"
+          ? "A current condition or access signal argues for checking an alternative."
+          : "There is not enough current evidence to make a strong go-or-skip call.";
+
+  return { status, headline, reasons: reasons.slice(0, 4), cautions: cautions.slice(0, 5) };
+}
+
 export async function fetchPlaceIntelligence(args: {
   latitude: number;
   longitude: number;
