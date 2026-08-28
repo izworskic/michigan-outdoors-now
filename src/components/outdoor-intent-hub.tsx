@@ -197,12 +197,10 @@ function checkedAgeLabel(generatedAt: string | undefined) {
 
 function confidenceUnknowns(place: DiscoveryPlace, intelligence: PlaceIntelligence | null) {
   const unknowns: string[] = [];
+  const nearbyMappedMiles = intelligence?.trailSystems[0]?.nearbyMappedMiles ?? 0;
   if (place.travelSource !== "routed") unknowns.push("road-routed drive time");
   if (!intelligence?.weather) unknowns.push("fresh point weather");
-  if (
-    !intelligence?.trailMetadata?.taggedDistanceMiles &&
-    !(intelligence?.trailSystems[0]?.nearbyMappedMiles > 0)
-  ) {
+  if (!intelligence?.trailMetadata?.taggedDistanceMiles && nearbyMappedMiles <= 0) {
     unknowns.push("exact hike mileage");
   }
   if (!intelligence?.trailMetadata?.difficulty) unknowns.push("verified trail difficulty");
