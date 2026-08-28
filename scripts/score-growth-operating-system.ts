@@ -28,6 +28,8 @@ async function main() {
     "src/app/opengraph-image.tsx",
     "src/app/growth-manifest.json/route.ts",
     "scripts/report-growth-opportunities.ts",
+    "scripts/fetch-search-console.mjs",
+    ".github/workflows/growth-intelligence.yml",
     "tests/growth-operating-system.test.ts",
     "docs/growth-operating-system.md",
   ];
@@ -45,6 +47,8 @@ async function main() {
   const og = files["src/app/opengraph-image.tsx"];
   const localOg = files["src/app/from/[origin]/[intent]/opengraph-image.tsx"];
   const report = files["scripts/report-growth-opportunities.ts"];
+  const gscFetch = files["scripts/fetch-search-console.mjs"];
+  const growthWorkflow = files[".github/workflows/growth-intelligence.yml"];
   const tests = files["tests/growth-operating-system.test.ts"];
   const doc = files["docs/growth-operating-system.md"];
 
@@ -86,7 +90,11 @@ async function main() {
     machineReadableContract:
       manifest.includes('version: "1.0.0"') &&
       manifest.includes("growthEventNames") &&
-      manifest.includes('"X-Robots-Tag": "noindex, nofollow"'),
+      manifest.includes('"X-Robots-Tag": "noindex, nofollow"') &&
+      gscFetch.includes('dimensions: ["page", "query"]') &&
+      gscFetch.includes('dataState: "final"') &&
+      growthWorkflow.includes("Weekly growth intelligence") &&
+      growthWorkflow.includes("GSC_SERVICE_ACCOUNT_JSON"),
     ctrCreative:
       !/Three practical Michigan plans/i.test(og) &&
       localOg.includes("Worth the drive?") &&
