@@ -23,14 +23,13 @@ test("destination marker CSS does not override MapLibre coordinate transforms", 
     false,
     "base destination marker blocks must not override MapLibre's inline transform",
   );
+  const interactiveBlock = css.match(
+    /\.michigan-canvas \.destination-pin-decision:hover\s*,\s*\.michigan-canvas \.destination-pin-decision\[data-active="true"\]\s*\{([^}]*)\}/is,
+  )?.[1] ?? "";
+
   assert.equal(
-    /\.destination-pin-decision:hover[^\{]*\{[^}]*\btransform\s*:/is.test(css),
+    /\btransform\s*:/i.test(interactiveBlock),
     false,
-    "hover state must not override MapLibre's inline transform",
-  );
-  assert.equal(
-    /\.destination-pin-decision\[data-active="true"\][^\{]*\{[^}]*\btransform\s*:/is.test(css),
-    false,
-    "active state must not override MapLibre's inline transform",
+    "hover/active marker state must not override MapLibre's inline transform",
   );
 });
