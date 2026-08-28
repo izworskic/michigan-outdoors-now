@@ -14,6 +14,9 @@ export type GrowthContext = {
 
 export const growthEventNames = [
   "search_landing_viewed",
+  "shared_setup_loaded",
+  "device_location_used",
+  "no_results_recovery",
   "planner_started",
   "planner_completed",
   "planner_failed",
