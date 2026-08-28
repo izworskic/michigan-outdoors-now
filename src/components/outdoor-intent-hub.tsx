@@ -205,14 +205,11 @@ function checkedAgeLabel(generatedAt: string | undefined) {
 
 function confidenceUnknowns(place: DiscoveryPlace, intelligence: PlaceIntelligence | null) {
   const unknowns: string[] = [];
-  const nearbyMappedMiles = intelligence?.trailSystems[0]?.nearbyMappedMiles ?? 0;
   if (place.travelSource !== "routed") unknowns.push("road-routed drive time");
   if (!intelligence?.weather) unknowns.push("fresh point weather");
-  if (!intelligence?.trailMetadata?.taggedDistanceMiles && nearbyMappedMiles <= 0) {
-    unknowns.push("exact hike mileage");
-  }
-  if (!intelligence?.trailMetadata?.difficulty) unknowns.push("verified trail difficulty");
-  if (!intelligence?.trailMetadata?.taggedAscentFeet) unknowns.push("route ascent");
+  if (!intelligence?.trailTruth?.distanceMiles) unknowns.push("selected-route mileage");
+  if (!intelligence?.trailTruth?.difficulty) unknowns.push("route difficulty tag");
+  if (!intelligence?.trailTruth?.ascentFeet) unknowns.push("route ascent");
   return unknowns;
 }
 
@@ -744,6 +741,8 @@ export function OutdoorIntentHub() {
     const alreadyKept = comparisonPlaces.some((candidate) => candidate.id === place.id);
     if (alreadyKept) {
       const next = comparisonPlaces.filter((candidate) => candidate.id !== place.id);
+      setDayPlan(null);
+      setDayPlanOpen(false);
       trackGrowthEvent("place_unkept", semanticGrowthContext, {
         keptCount: next.length,
         category: place.category,
@@ -759,6 +758,8 @@ export function OutdoorIntentHub() {
     }
 
     const nextPlaces = [...comparisonPlaces, place];
+    setDayPlan(null);
+    setDayPlanOpen(false);
     trackGrowthEvent("place_kept", semanticGrowthContext, {
       keptCount: nextPlaces.length,
       category: place.category,
@@ -816,6 +817,10 @@ export function OutdoorIntentHub() {
         stopCount: result.stops.length,
         routeSource: result.source,
         totalDriveMinutes: result.totalDriveMinutes,
+      });
+      trackGrowthEvent("day_plan_opened", semanticGrowthContext, {
+        stopCount: result.stops.length,
+        routeSource: result.source,
       });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not build the day.");
