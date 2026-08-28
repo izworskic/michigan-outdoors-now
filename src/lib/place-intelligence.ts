@@ -408,7 +408,7 @@ function numericValue(raw: string | undefined) {
   return Number.isFinite(value) ? { value, text } : null;
 }
 
-function parseDistanceMiles(
+export function parseDistanceMiles(
   raw: string | undefined,
   defaultUnit: "km" | "m" | "mi",
 ) {
@@ -425,7 +425,7 @@ function parseDistanceMiles(
   return Number(value.toFixed(1));
 }
 
-function parseElevationFeet(raw: string | undefined) {
+export function parseElevationFeet(raw: string | undefined) {
   const parsed = numericValue(raw);
   if (!parsed) return null;
   const { value, text } = parsed;
