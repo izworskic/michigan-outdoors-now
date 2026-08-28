@@ -22,6 +22,7 @@ export type DiscoveryTrait =
   | "wild"
   | "water"
   | "short"
+  | "long"
   | "family"
   | "dog"
   | "accessible"
@@ -180,6 +181,7 @@ const TRAIT_RULES: Array<[DiscoveryTrait, string[]]> = [
   ["wild", ["wild", "remote", "backcountry", "rugged", "undeveloped"]],
   ["water", ["water", "river", "lake", "shore", "waterfall", "beach", "paddle", "trout"]],
   ["short", ["short", "quick", "easy hike", "short hike", "half day", "half-day"]],
+  ["long", ["long", "long hike", "full day", "full-day", "all day", "all-day", "big hike", "big day", "high mileage", "lots of miles", "backcountry"]],
   ["family", ["family", "kids", "kid friendly", "children"]],
   ["dog", ["dog", "dogs", "pet"]],
   ["accessible", ["accessible", "wheelchair", "mobility", "step free", "step-free"]],
@@ -337,6 +339,42 @@ export function isDiscoveryCandidateInRange(args: {
   return estimateDriveHours(miles) <= args.maxDriveHours + 0.05;
 }
 
+function destinationEffortFit(destination: Destination, intent: DiscoveryIntent) {
+  const haystack = normalize(
+    `${destination.name} ${destination.area} ${destination.setting} ${destination.summary} ${destination.accessNote}`,
+  );
+
+  let adjustment = 0;
+  let note = "";
+
+  if (intent.traits.includes("long")) {
+    const longSignals = [
+      "long",
+      "full day",
+      "backcountry",
+      "rugged",
+      "remote",
+      "steep",
+      "wilderness",
+      "long trails",
+      "long natural surface trails",
+    ];
+    const longMatches = longSignals.filter((signal) => haystack.includes(signal)).length;
+    adjustment += longMatches ? Math.min(14, 7 + longMatches * 2) : -4;
+    note = longMatches
+      ? " It has stronger full-day / backcountry signals than a generic trailhead."
+      : " Exact route length still needs to be chosen inside the destination.";
+  }
+
+  if (intent.traits.includes("short")) {
+    const shortSignals = ["short", "compact", "focused stop", "easy stop", "overlook", "roadside"];
+    const shortMatches = shortSignals.filter((signal) => haystack.includes(signal)).length;
+    adjustment += shortMatches ? Math.min(10, 4 + shortMatches * 2) : 0;
+  }
+
+  return { adjustment, note };
+}
+
 function inferredCategoryForDestination(destination: Destination, intent: DiscoveryIntent): DiscoveryCategory {
   const haystack = normalize(
     `${destination.name} ${destination.area} ${destination.setting} ${destination.summary}`,
@@ -389,7 +427,11 @@ export function curatedDiscoveryPlaces(args: {
         website: destination.officialUrl,
       });
 
-      const score = Math.min(99, metrics.score + Math.min(8, activityMatches * 2) + 4);
+      const effortFit = destinationEffortFit(destination, args.intent);
+      const score = Math.min(
+        99,
+        Math.max(1, metrics.score + Math.min(8, activityMatches * 2) + 4 + effortFit.adjustment),
+      );
       return {
         id: `curated:${destination.id}`,
         name: destination.name,
@@ -401,7 +443,7 @@ export function curatedDiscoveryPlaces(args: {
         distanceMiles: metrics.distanceMiles,
         driveHours: metrics.driveHours,
         score,
-        why: destination.summary,
+        why: `${destination.summary}${effortFit.note}`,
         source: "Michigan Outdoors Now",
         sourceUrl: destination.officialUrl,
         directionsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${destination.name}, ${destination.area}, Michigan`)}`,
