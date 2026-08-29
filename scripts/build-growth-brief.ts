@@ -40,6 +40,7 @@ function percent(numerator: number, denominator: number) {
   return denominator > 0 ? numerator / denominator : 0;
 }
 
+async function main() {
 const searchFile = arg("--search", "data/growth/search-console-baseline.json");
 const productFile = arg("--product", "data/growth/product-events-baseline.json");
 const markdownOutput = arg("--markdown", "artifacts/growth/growth-brief.md");
@@ -211,3 +212,9 @@ await writeFile(path.resolve(root, jsonOutput), JSON.stringify(summary, null, 2)
 console.log(markdown);
 console.log(`Wrote ${path.resolve(root, markdownOutput)}`);
 console.log(`Wrote ${path.resolve(root, jsonOutput)}`);
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
