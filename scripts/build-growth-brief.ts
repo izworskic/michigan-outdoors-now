@@ -187,6 +187,10 @@ ${summary.opportunitySignals.length
 - Place saves: **${summary.myOutdoorsSignals.my_outdoors_place_saved ?? 0}**
 - Visited toggles: **${summary.myOutdoorsSignals.my_outdoors_visited_toggled ?? 0}**
 - Remembered setup loads: **${summary.myOutdoorsSignals.my_outdoors_loaded ?? 0}**
+- Material changes detected: **${summary.myOutdoorsSignals.my_outdoors_changes_detected ?? 0}**
+- Change sets viewed: **${summary.myOutdoorsSignals.my_outdoors_changes_seen ?? 0}**
+- Changed-place opens: **${summary.myOutdoorsSignals.my_outdoors_change_opened ?? 0}**
+- Changed-place verification opens: **${summary.myOutdoorsSignals.my_outdoors_change_verify_opened ?? 0}**
 
 ## Highest-leverage actions
 
