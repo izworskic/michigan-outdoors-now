@@ -78,6 +78,18 @@ The next depth pass targets destinations that previously had only one or two rou
 
 The release gate now measures remaining shallowness directly. It caps one-route destinations at seven and all one-or-two-route destinations at eleven. Places such as Rifle River, Fayette, Presque Isle Marquette and Belle Isle remain intentionally shallow when the managing agency publishes only network totals, unlabeled segments or no route-specific mileage.
 
+### Hard-source depth
+
+Trail Truth no longer equates "more records" with better truth. The remaining shallow destinations use two distinct depth paths:
+
+- **Route depth** when an agency publishes a defensible route name, mileage and shape. This pass adds the 3.8-mile Warner Creek Pathway and the City of Marquette's 0.5-mile Bog Walk Trails.
+- **Operational depth** when the land manager publishes one network total but multiple official ways into it. Brown Bridge, Rifle River, Highbanks and Fayette now expose official entry points instead of fabricated extra routes.
+- **Conflict disclosure** when official sources disagree. Brown Bridge's management plan states approximately 9.3 miles of hiking trail while the recreation-directory summary still says 6 miles; Trail Truth preserves that disagreement rather than silently choosing a false certainty.
+- **Status correction** when newer official evidence resolves an old caveat. Michigan DNR announced the 5.8-mile Ralph C. Wilson, Jr. Trail complete in September 2025, so Belle Isle is now represented as a completed loop rather than an incomplete mapped network.
+- **Current access caveats** remain explicit. Brown Bridge carries the city's April 23, 2026 Grasshopper Creek pedestrian-bridge closure notice and phased 2026 expansion access note.
+
+The release gate now tracks official entry-point count and `operationallyThinDestinationCount`: a one-route destination is only treated as truly thin when it also lacks at least two official entry points. This prevents agents from "fixing" shallow coverage by inventing route names.
+
 ### Current case
 
 Selected-place intelligence combines current weather, near-term precipitation and gusts, recent rain/snow, AQI, daylight and Michigan DNR access changes. The output is a planning signal, not a safety rating.
