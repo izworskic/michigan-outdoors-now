@@ -309,26 +309,29 @@ export function OutdoorIntentHub() {
     if (myOutdoorsLoadedRef.current) return;
     myOutdoorsLoadedRef.current = true;
     const profile = readMyOutdoorsProfile();
-    setDriveHours(profile.maxDriveHours);
-    setPull(pullForProfile(profile));
-    setKids(profile.kids);
-    setDog(profile.dog);
-    setAccessible(profile.accessible);
-    setSavedPlaceIds(profile.savedPlaces.map((place) => place.id));
-    if (profile.homeOrigin) {
-      setOrigin(profile.homeOrigin);
-      setOriginCoordinates(undefined);
-      setOriginStatus("idle");
-      setOriginFeedback("Remembered from My Outdoors. Set start to refresh the exact map point.");
-    }
-    if (profile.homeOrigin || profile.savedPlaces.length || profile.recentPlaces.length) {
-      trackGrowthEvent("my_outdoors_loaded", { surface: "homepage_planner", pageKey: "home" }, {
-        hasHomeOrigin: Boolean(profile.homeOrigin),
-        savedPlaceCount: profile.savedPlaces.length,
-        recentPlaceCount: profile.recentPlaces.length,
-        tripShape: profile.tripShape,
-      });
-    }
+    const timer = window.setTimeout(() => {
+      setDriveHours(profile.maxDriveHours);
+      setPull(pullForProfile(profile));
+      setKids(profile.kids);
+      setDog(profile.dog);
+      setAccessible(profile.accessible);
+      setSavedPlaceIds(profile.savedPlaces.map((place) => place.id));
+      if (profile.homeOrigin) {
+        setOrigin(profile.homeOrigin);
+        setOriginCoordinates(undefined);
+        setOriginStatus("idle");
+        setOriginFeedback("Remembered from My Outdoors. Set start to refresh the exact map point.");
+      }
+      if (profile.homeOrigin || profile.savedPlaces.length || profile.recentPlaces.length) {
+        trackGrowthEvent("my_outdoors_loaded", { surface: "homepage_planner", pageKey: "home" }, {
+          hasHomeOrigin: Boolean(profile.homeOrigin),
+          savedPlaceCount: profile.savedPlaces.length,
+          recentPlaceCount: profile.recentPlaces.length,
+          tripShape: profile.tripShape,
+        });
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
@@ -428,7 +431,6 @@ export function OutdoorIntentHub() {
         path: `/places/${destination.id}`,
       }),
     );
-    setSavedPlaceIds(profile.savedPlaces.map((place) => place.id));
     trackGrowthEvent("my_outdoors_place_remembered", semanticGrowthContext, {
       source: "canvas_curated",
     });
@@ -450,7 +452,6 @@ export function OutdoorIntentHub() {
         path,
       }),
     );
-    setSavedPlaceIds(profile.savedPlaces.map((item) => item.id));
     trackGrowthEvent("my_outdoors_place_remembered", semanticGrowthContext, {
       source: place.curatedPlaceId ? "canvas_discovery_curated" : "canvas_discovery_live",
     });
