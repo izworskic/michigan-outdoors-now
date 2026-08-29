@@ -69,6 +69,10 @@ async function accessToken(credentials) {
   return payload.access_token;
 }
 
+function brandedQuery(query) {
+  return /\\b(chris\\s+izworski|izworski|freighter\\s+view\\s+farms)\\b/i.test(query);
+}
+
 function classifyPath(pageUrl) {
   const pathname = new URL(pageUrl).pathname;
   const match = pathname.match(/^\/from\/([^/]+)\/([^/]+)\/?$/);
@@ -148,6 +152,7 @@ const normalized = rows.map((row) => {
   return {
     ...classified,
     query,
+    branded: brandedQuery(query),
     clicks: Number(row.clicks ?? 0),
     impressions: Number(row.impressions ?? 0),
     ctr: Number(row.ctr ?? 0),
