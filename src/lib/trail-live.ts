@@ -19,6 +19,7 @@ export type TrailLiveSignal = {
 export function assessDaylightFit(
   profile: TrailProfile,
   daylightHoursRemaining: number | null | undefined,
+  arrivalDelayMinutes = 0,
 ): DaylightFit {
   const range = estimateHikeTimeRange(profile.distanceMiles, profile.difficulty);
   if (!range || typeof daylightHoursRemaining !== "number" || !Number.isFinite(daylightHoursRemaining)) {
@@ -29,7 +30,10 @@ export function assessDaylightFit(
     };
   }
 
-  const remainingMinutes = Math.max(0, Math.round(daylightHoursRemaining * 60));
+  const remainingMinutes = Math.max(
+    0,
+    Math.round(daylightHoursRemaining * 60) - Math.max(0, Math.round(arrivalDelayMinutes)),
+  );
   const comfortableNeed = range.highMinutes + 45;
   const minimumNeed = range.lowMinutes + 30;
   const marginMinutes = remainingMinutes - comfortableNeed;
@@ -37,7 +41,7 @@ export function assessDaylightFit(
   if (remainingMinutes >= comfortableNeed) {
     return {
       status: "comfortable",
-      headline: `About ${Math.floor(Math.max(0, marginMinutes) / 60)}h ${Math.max(0, marginMinutes) % 60}m beyond the conservative hike estimate.`,
+      headline: `About ${Math.floor(Math.max(0, marginMinutes) / 60)}h ${Math.max(0, marginMinutes) % 60}m of daylight margin after expected arrival.`,
       marginMinutes,
     };
   }
@@ -58,6 +62,7 @@ export function assessDaylightFit(
 export function deriveTrailLiveSignal(
   profile: TrailProfile,
   intelligence: PlaceIntelligence | null,
+  arrivalDelayMinutes = 0,
 ): TrailLiveSignal {
   if (!intelligence) {
     return {
@@ -76,7 +81,11 @@ export function deriveTrailLiveSignal(
   const reasons: string[] = [];
   const cautions: string[] = [];
   const weather = intelligence.weather;
-  const daylight = assessDaylightFit(profile, weather?.daylightHoursRemaining);
+  const daylight = assessDaylightFit(
+    profile,
+    weather?.daylightHoursRemaining,
+    arrivalDelayMinutes,
+  );
 
   if (intelligence.access.closureCount > 0) {
     cautions.push(
