@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { activityIds, type ActivityId } from "../lib/types";
 import {
   emptyMyOutdoorsProfile,
+  MY_OUTDOORS_EVENT,
   readMyOutdoorsProfile,
   tripShapeDriveHours,
   tripShapes,
@@ -55,9 +56,14 @@ export function MyOutdoorsDrawer({
   const [savedNotice, setSavedNotice] = useState("");
 
   useEffect(() => {
-    const stored = readMyOutdoorsProfile();
-    setProfile(stored);
-    setRegionsText(stored.favoriteRegions.join(", "));
+    const sync = () => {
+      const stored = readMyOutdoorsProfile();
+      setProfile(stored);
+      setRegionsText(stored.favoriteRegions.join(", "));
+    };
+    sync();
+    window.addEventListener(MY_OUTDOORS_EVENT, sync);
+    return () => window.removeEventListener(MY_OUTDOORS_EVENT, sync);
   }, []);
 
   const memoryCount = profile.savedPlaces.length + profile.recentPlaces.length;
