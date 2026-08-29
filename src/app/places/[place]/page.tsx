@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PlaceConditions } from "../../../components/place-conditions";
+import { PlaceMemoryActions } from "../../../components/place-memory-actions";
 import { Planner } from "../../../components/planner";
 import { destinations } from "../../../data/destinations";
 import { guides } from "../../../data/guides";
@@ -157,6 +158,7 @@ export default async function PlacePage({ params }: { params: Promise<{ place: s
           <div className="place-activity-list" aria-label="Activities supported by the destination">
             {destination.activities.map((activity) => <span key={activity}>{activityLabels[activity]}</span>)}
           </div>
+          <PlaceMemoryActions placeId={destination.id} placeName={destination.name} area={destination.area} />
         </section>
 
         <div className="content-wrap">
