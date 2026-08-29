@@ -252,7 +252,11 @@ try {
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("opportunity_opened"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_loaded"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_place_saved"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_changes_detected"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_change_opened"));
   assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("exact coordinates"));
+  assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("saved-place identifiers in My Outdoors change events"));
+  assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("local opportunity baselines"));
 
   const preferenceDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
