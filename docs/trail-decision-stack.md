@@ -27,6 +27,16 @@ The hiking-time range is planning guidance, not a completion-time promise. Acces
 
 The selected-place sheet prefers an official route profile for those route facts, while keeping current OpenStreetMap relation data, Michigan DNR closures/reroutes and live weather as separate evidence layers.
 
+### Statewide coverage contract
+
+Trail Truth is now a statewide catalog rather than a small flagship sample. The release gate requires at least 70 verified route profiles, route-level coverage for at least 26 of the planner's hiking destination families, at least 80% destination-family coverage, unique profile IDs, positive mileage and explicit HTTPS provenance.
+
+Uncovered hiking destinations must be documented. A gap can exist because an agency maps trails without publishing route mileage clearly enough for this product, or because the land manager explicitly says there are no designated trails. In either case, the catalog stays empty rather than inventing a route.
+
+Network mileage is labeled as network mileage. It is never presented as though a six-mile trail network were one six-mile loop. Descriptive profile names such as a published maximum-length loop are permitted only when the source explicitly establishes that route length and the source note explains the choice.
+
+Current sources span Michigan DNR, National Park Service, U.S. Forest Service, U.S. Fish & Wildlife Service, Huron-Clinton Metroparks and municipal park agencies.
+
 ### Current case
 
 Selected-place intelligence combines current weather, near-term precipitation and gusts, recent rain/snow, AQI, daylight and Michigan DNR access changes. The output is a planning signal, not a safety rating.
