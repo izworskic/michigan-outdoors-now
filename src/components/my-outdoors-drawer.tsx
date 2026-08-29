@@ -83,7 +83,13 @@ export function MyOutdoorsDrawer({
 
 
   useEffect(() => {
-    if (!curatedSavedKey) return;
+    if (!curatedSavedKey) {
+      const timer = window.setTimeout(() => {
+        setChanges([]);
+        setPendingBaselines(null);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
     let active = true;
 
     fetch("/api/opportunities?scope=all")
@@ -146,6 +152,7 @@ export function MyOutdoorsDrawer({
         pendingBaselines,
       ),
     });
+    setPendingBaselines(null);
     trackGrowthEvent("my_outdoors_changes_seen", {
       surface: "homepage_planner",
       pageKey: "home",
@@ -233,6 +240,8 @@ export function MyOutdoorsDrawer({
     const blank = writeMyOutdoorsProfile(emptyMyOutdoorsProfile());
     setProfile(blank);
     setRegionsText("");
+    setChanges([]);
+    setPendingBaselines(null);
     setSavedNotice("Local My Outdoors memory cleared.");
   }
 
