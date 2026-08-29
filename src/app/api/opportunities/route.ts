@@ -6,7 +6,9 @@ import { targetDateFor } from "../../../lib/planner";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const scope = new URL(request.url).searchParams.get("scope");
+  const limit = scope === "all" ? destinations.length : 4;
   const targetDate = targetDateFor("today");
   const comparisonDate = targetDateFor("tomorrow");
 
@@ -20,7 +22,7 @@ export async function GET() {
       destinations,
       todayWeather,
       comparisonWeather,
-      4,
+      limit,
     );
 
     const response: OpportunityResponse = {
@@ -30,7 +32,9 @@ export async function GET() {
       status: opportunities.length ? "live" : "unavailable",
       opportunities,
       note: opportunities.length
-        ? "Flags unusually strong short-lived weather-fit windows. It does not replace closure, access, trail, marine, ice, or local hazard checks."
+        ? scope === "all"
+          ? "Full conservative statewide opportunity set for local return-visit comparison. No user profile or saved-place list is sent to this endpoint."
+          : "Flags unusually strong short-lived weather-fit windows. It does not replace closure, access, trail, marine, ice, or local hazard checks."
         : "No unusually strong statewide weather-fit window cleared the conservative opportunity threshold right now.",
     };
 
