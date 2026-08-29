@@ -247,4 +247,23 @@ export const shallowDestinationTrailBatch: TrailProfile[] = [
       sourceUrl: TAWAS_PAGE,
     },
   },
+  {
+    id: "ocqueoc-bicentennial-short-loop",
+    name: "Ocqueoc Falls Bicentennial Pathway — shortest loop",
+    destinationId: "ocqueoc-falls",
+    area: "Ocqueoc Falls",
+    distanceMiles: 3,
+    routeKind: "loop",
+    difficulty: "moderate",
+    terrain: "Hardwood forest pathway around the Ocqueoc River and waterfall area",
+    features: ["Ocqueoc Falls", "Ocqueoc River", "hardwood forest"],
+    tags: ["short", "waterfall"],
+    sourceLabel: "Michigan DNR",
+    sourceUrl: "https://www.michigan.gov/dnr/about/accessibility/trails",
+    sourceNote: "Michigan DNR states that the Bicentennial Pathway has four loops ranging from 3 to 6 miles; this profile represents the published shortest 3-mile option without inventing a separate loop name.",
+    access: {
+      trailhead: "Ocqueoc Falls State Forest Campground",
+      sourceUrl: "https://www.michigan.gov/recsearch/sfcampgroundsn-z/ocqueocfalls",
+    },
+  },
 ];
