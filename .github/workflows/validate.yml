@@ -70,6 +70,9 @@ jobs:
       - name: Score live opportunity detection
         run: npm run score:opportunity
 
+      - name: Score My Outdoors continuity
+        run: npm run score:my-outdoors
+
       - name: Build production output
         run: npm run build
 
