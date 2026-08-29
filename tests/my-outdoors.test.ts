@@ -75,3 +75,27 @@ test("visited state toggles and trip shapes map to bounded drive windows", () =>
   assert.equal(tripShapeDriveHours("full-day"), 4);
   assert.equal(tripShapeDriveHours("weekend"), 8);
 });
+
+
+test("normalizes bounded opportunity baselines without place text or coordinates", () => {
+  const profile = normalizeMyOutdoorsProfile({
+    opportunityBaselines: {
+      "tawas-point": {
+        checkedAt: "2026-08-28T20:00:00.000Z",
+        qualifies: true,
+        score: 120,
+        signalStrength: 250,
+        activity: "hiking",
+        kind: "standout-hike",
+      },
+    },
+  });
+
+  assert.equal(profile.opportunityBaselines["tawas-point"].score, 100);
+  assert.equal(profile.opportunityBaselines["tawas-point"].signalStrength, 200);
+  assert.equal(profile.opportunityBaselines["tawas-point"].activity, "hiking");
+  assert.equal(
+    "latitude" in profile.opportunityBaselines["tawas-point"],
+    false,
+  );
+});
