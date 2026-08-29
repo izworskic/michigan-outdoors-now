@@ -1,3 +1,4 @@
+import { hardSourceTrailDepthBatch } from "./trail-profile-hard-source-depth";
 import { shallowDestinationTrailBatch } from "./trail-profile-shallow-attack";
 import { trailProfileDepthBatch } from "./trail-profile-depth";
 
@@ -32,6 +33,12 @@ export type TrailProfile = {
     dogs?: string;
     notes?: string[];
     sourceUrl?: string;
+    entryPoints?: Array<{
+      name: string;
+      query?: string;
+      note?: string;
+      sourceUrl?: string;
+    }>;
   };
 };
 
@@ -1203,6 +1210,7 @@ export const trailProfiles: TrailProfile[] = [
   },
   ...trailProfileDepthBatch,
   ...shallowDestinationTrailBatch,
+  ...hardSourceTrailDepthBatch,
 ];
 
 export const trailProfileById = new Map(trailProfiles.map((profile) => [profile.id, profile]));
