@@ -4,8 +4,8 @@ import test from "node:test";
 import { trailProfiles } from "../src/data/trail-profiles";
 import { trailTruthCoverageSummary } from "../src/data/trail-truth-coverage";
 
-test("Trail Truth depth catalog clears the 125-route threshold without duplicate ids", () => {
-  assert.ok(trailProfiles.length >= 125, `expected at least 125 Trail Truth profiles, got ${trailProfiles.length}`);
+test("Trail Truth depth catalog clears the 127-route threshold without duplicate ids", () => {
+  assert.ok(trailProfiles.length >= 127, `expected at least 127 Trail Truth profiles, got ${trailProfiles.length}`);
   assert.equal(new Set(trailProfiles.map((profile) => profile.id)).size, trailProfiles.length);
 });
 
@@ -24,6 +24,8 @@ test("depth is concentrated into useful multi-route destinations", () => {
   assert.ok(countFor("mackinac-island") >= 2);
   assert.ok(countFor("tawas-point") >= 2);
   assert.ok(countFor("ocqueoc-falls") >= 2);
+  assert.ok(countFor("jordan-river") >= 2);
+  assert.ok(countFor("presque-isle-marquette") >= 2);
 });
 
 test("catalog depth keeps source and route-shape discipline", () => {
@@ -39,12 +41,14 @@ test("catalog depth keeps source and route-shape discipline", () => {
 });
 
 test("depth metrics track named trailheads and genuinely deep destinations", () => {
-  assert.ok(trailTruthCoverageSummary.profileCount >= 125);
-  assert.ok(trailTruthCoverageSummary.namedTrailheadCount >= 45);
-  assert.ok(trailTruthCoverageSummary.multiRouteDestinationCount >= 21);
+  assert.ok(trailTruthCoverageSummary.profileCount >= 127);
+  assert.ok(trailTruthCoverageSummary.namedTrailheadCount >= 50);
+  assert.ok(trailTruthCoverageSummary.officialEntryPointCount >= 20);
+  assert.ok(trailTruthCoverageSummary.multiRouteDestinationCount >= 23);
   assert.ok(trailTruthCoverageSummary.deepDestinationCount >= 10);
-  assert.ok(trailTruthCoverageSummary.oneRouteDestinationCount <= 7);
+  assert.ok(trailTruthCoverageSummary.oneRouteDestinationCount <= 5);
   assert.ok(trailTruthCoverageSummary.shallowDestinationCount <= 11);
+  assert.ok(trailTruthCoverageSummary.operationallyThinDestinationCount <= 1);
 });
 
 test("large local trail catalogs stay compact until expanded", async () => {
@@ -88,4 +92,50 @@ test("current official maps deepen Petoskey without erasing the representative r
   assert.ok(petoskey.some((profile) => profile.id === "petoskey-portage"));
   assert.ok(petoskey.some((profile) => profile.id === "petoskey-campground-trail"));
   assert.ok(petoskey.some((profile) => profile.id === "petoskey-portage-difficult"));
+});
+
+
+test("hard-source pass adds Warner Creek and Presque Isle Bog Walk without invented route mileage", () => {
+  const warner = trailProfiles.find((profile) => profile.id === "jordan-warner-creek-pathway");
+  assert.equal(warner?.distanceMiles, 3.8);
+  assert.equal(warner?.routeKind, "loop");
+  assert.equal(warner?.sourceLabel, "Michigan DNR");
+
+  const bogWalk = trailProfiles.find((profile) => profile.id === "presque-isle-bog-walk");
+  assert.equal(bogWalk?.distanceMiles, 0.5);
+  assert.equal(bogWalk?.routeKind, "network");
+  assert.equal(bogWalk?.sourceLabel, "City of Marquette");
+});
+
+test("single-route networks gain official entry-point depth instead of invented extra routes", () => {
+  const countFor = (destinationId: string) =>
+    trailProfiles.filter((profile) => profile.destinationId === destinationId).length;
+  const entryCountFor = (destinationId: string) =>
+    trailProfiles
+      .filter((profile) => profile.destinationId === destinationId)
+      .reduce((sum, profile) => sum + (profile.access?.entryPoints?.length ?? 0), 0);
+
+  assert.equal(countFor("brown-bridge"), 1);
+  assert.ok(entryCountFor("brown-bridge") >= 7);
+  assert.equal(countFor("rifle-river"), 1);
+  assert.ok(entryCountFor("rifle-river") >= 3);
+  assert.equal(countFor("lumbermans-monument"), 1);
+  assert.ok(entryCountFor("lumbermans-monument") >= 3);
+});
+
+test("Belle Isle route truth reflects the completed 5.8-mile loop", () => {
+  const belle = trailProfiles.find((profile) => profile.id === "belle-isle-wilson-trail");
+  assert.equal(belle?.distanceMiles, 5.8);
+  assert.equal(belle?.routeKind, "loop");
+  assert.match(belle?.sourceNote ?? "", /completion/i);
+  assert.match(belle?.sourceNote ?? "", /loops around Belle Isle/i);
+});
+
+test("Brown Bridge preserves the official mileage conflict instead of hiding it", () => {
+  const brown = trailProfiles.find((profile) => profile.id === "brown-bridge-network");
+  assert.equal(brown?.distanceMiles, 9.3);
+  assert.match(brown?.sourceNote ?? "", /6 miles/);
+  assert.match(brown?.sourceNote ?? "", /management-plan system mileage/);
+  assert.ok((brown?.access?.entryPoints?.length ?? 0) >= 7);
+  assert.ok((brown?.access?.notes ?? []).some((note) => /trail marker 5 closed/i.test(note)));
 });

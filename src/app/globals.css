@@ -4279,3 +4279,55 @@ label {
   text-underline-offset: 0.2em;
   cursor: pointer;
 }
+
+
+.canvas-entry-points {
+  display: grid;
+  gap: 0.42rem;
+  margin-top: 0.7rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.canvas-entry-points > span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.68;
+}
+
+.canvas-entry-point-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 0.42rem;
+}
+
+.canvas-entry-point-list a {
+  display: grid;
+  gap: 0.12rem;
+  min-height: 48px;
+  padding: 0.48rem 0.56rem;
+  border: 1px solid color-mix(in srgb, currentColor 13%, transparent);
+  border-radius: 0.66rem;
+  color: inherit;
+  text-decoration: none;
+  background: color-mix(in srgb, Canvas 96%, currentColor 4%);
+}
+
+.canvas-entry-point-list a strong {
+  font-size: 0.78rem;
+  line-height: 1.22;
+}
+
+.canvas-entry-point-list a small {
+  font-size: 0.7rem;
+  line-height: 1.28;
+  opacity: 0.72;
+}
+
+@media (max-width: 720px) {
+  .canvas-entry-point-list {
+    grid-template-columns: 1fr;
+  }
+}

@@ -10,7 +10,7 @@ import type { DayPlanResponse } from "../lib/day-plan";
 import type { DiscoveryPlace, DiscoveryResponse } from "../lib/discovery";
 import type { PlaceIntelligence } from "../lib/place-intelligence";
 import type { TrailGeometryResult } from "../lib/trail-geometry";
-import { deriveTrailLiveSignal, trailheadDirectionsUrl } from "../lib/trail-live";
+import { deriveTrailLiveSignal, trailEntryPointDirectionsUrl, trailheadDirectionsUrl } from "../lib/trail-live";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
 import { estimateHikeTimeRange, formatHikeTimeRange, trailRouteKindLabel } from "../lib/trail-planning";
@@ -2345,6 +2345,32 @@ export function OutdoorIntentHub() {
                           >
                             {activeTrailheadAction.label} →
                           </a>
+                        )}
+                        {activeTrailProfile.access?.entryPoints && activeTrailProfile.access.entryPoints.length > 1 && (
+                          <div className="canvas-entry-points">
+                            <span>Official ways in</span>
+                            <div className="canvas-entry-point-list">
+                              {activeTrailProfile.access.entryPoints.slice(0, 7).map((entryPoint, index) => (
+                                <a
+                                  key={`${activeTrailProfile.id}-entry-${index}`}
+                                  href={trailEntryPointDirectionsUrl(activeTrailProfile, entryPoint)}
+                                  target="_blank"
+                                  rel="noopener"
+                                  onClick={() =>
+                                    trackGrowthEvent("trailhead_directions_opened", semanticGrowthContext, {
+                                      profileId: activeTrailProfile.id,
+                                      destinationId: activeDiscovery.curatedPlaceId ?? "unknown",
+                                      navigationSource: "verified-entry-point",
+                                      entryPointIndex: index,
+                                    })
+                                  }
+                                >
+                                  <strong>{entryPoint.name}</strong>
+                                  {entryPoint.note && <small>{entryPoint.note}</small>}
+                                </a>
+                              ))}
+                            </div>
+                          </div>
                         )}
                         {activeTrailProfile.routeKind === "point-to-point" && (
                           <small className="canvas-point-to-point-warning">

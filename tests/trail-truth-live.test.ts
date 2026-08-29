@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { trailProfiles } from "../src/data/trail-profiles";
 import { trailGeometryNameScore } from "../src/lib/trail-geometry";
-import { assessDaylightFit, trailheadDirectionsUrl } from "../src/lib/trail-live";
+import { assessDaylightFit, trailEntryPointDirectionsUrl, trailheadDirectionsUrl } from "../src/lib/trail-live";
 
 function profile(id: string) {
   const value = trailProfiles.find((candidate) => candidate.id === id);
@@ -89,4 +89,14 @@ test("Trail Truth Live UI keeps official geometry separate from mapped fallback"
 
   assert.match(api, /X-Robots-Tag/);
   assert.match(api, /fetchTrailGeometry/);
+});
+
+
+test("official entry points get direct navigation without becoming invented route profiles", () => {
+  const brown = profile("brown-bridge-network");
+  const entry = brown.access?.entryPoints?.[0];
+  assert.ok(entry);
+  const url = trailEntryPointDirectionsUrl(brown, entry!);
+  assert.match(url, /google\.com\/maps\/search/);
+  assert.match(decodeURIComponent(url), /Buck's Landing Trailhead/);
 });
