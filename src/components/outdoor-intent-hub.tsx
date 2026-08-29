@@ -4,12 +4,14 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
+import { selectTrailProfileForDiscovery, type TrailProfile } from "../data/trail-profiles";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
 import type { DayPlanResponse } from "../lib/day-plan";
 import type { DiscoveryPlace, DiscoveryResponse } from "../lib/discovery";
 import type { PlaceIntelligence } from "../lib/place-intelligence";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
+import { estimateHikeTimeRange, formatHikeTimeRange, trailRouteKindLabel } from "../lib/trail-planning";
 import { trackGrowthEvent, type GrowthContext } from "../lib/growth-analytics";
 import {
   readMyOutdoorsProfile,
@@ -229,12 +231,20 @@ function checkedAgeLabel(generatedAt: string | undefined) {
   return `checked ${Math.round(ageMinutes / 60)} hr ago`;
 }
 
-function confidenceUnknowns(place: DiscoveryPlace, intelligence: PlaceIntelligence | null) {
+function confidenceUnknowns(
+  place: DiscoveryPlace,
+  intelligence: PlaceIntelligence | null,
+  trailProfile: TrailProfile | null,
+) {
   const unknowns: string[] = [];
   if (place.travelSource !== "routed") unknowns.push("road-routed drive time");
   if (!intelligence?.weather) unknowns.push("fresh point weather");
-  if (!intelligence?.trailTruth?.distanceMiles) unknowns.push("selected-route mileage");
-  if (!intelligence?.trailTruth?.difficulty) unknowns.push("route difficulty tag");
+  if (!intelligence?.trailTruth?.distanceMiles && !trailProfile?.distanceMiles) {
+    unknowns.push("selected-route mileage");
+  }
+  if (!intelligence?.trailTruth?.difficulty && !trailProfile?.difficulty) {
+    unknowns.push("route difficulty");
+  }
   if (!intelligence?.trailTruth?.ascentFeet) unknowns.push("route ascent");
   return unknowns;
 }
@@ -812,11 +822,17 @@ export function OutdoorIntentHub() {
     setActiveDiscoveryId(placeId);
     if (place) {
       const rank = Math.max(1, (discovery?.places.findIndex((candidate) => candidate.id === place.id) ?? 0) + 1);
+      const matchedTrailProfile = selectTrailProfileForDiscovery({
+        destinationId: place.curatedPlaceId,
+        query: discovery?.query,
+        traits: discovery?.intent.traits,
+      });
       trackGrowthEvent("semantic_result_opened", semanticGrowthContext, {
         rank,
         category: place.category,
         curated: Boolean(place.curatedPlaceId),
         travelSource: place.travelSource ?? "estimated",
+        trailTruthProfile: Boolean(matchedTrailProfile),
       });
       loadPlaceIntelligence(place);
       setFocusPoint({
@@ -826,7 +842,7 @@ export function OutdoorIntentHub() {
         zoom: 8.2,
       });
     }
-  }, [discovery?.places, loadPlaceIntelligence]);
+  }, [discovery?.intent.traits, discovery?.places, discovery?.query, loadPlaceIntelligence]);
 
 
   function moveDiscoverySelection(delta: number) {
@@ -1095,11 +1111,21 @@ export function OutdoorIntentHub() {
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
   const activeDiscovery = activeId ? null : discovery?.places.find((place) => place.id === activeDiscoveryId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
+  const activeTrailProfile = activeDiscovery
+    ? selectTrailProfileForDiscovery({
+        destinationId: activeDiscovery.curatedPlaceId,
+        query: discovery?.query,
+        traits: discovery?.intent.traits,
+      })
+    : null;
+  const activeTrailTime = activeTrailProfile
+    ? formatHikeTimeRange(estimateHikeTimeRange(activeTrailProfile.distanceMiles, activeTrailProfile.difficulty))
+    : null;
   const decisionArgument = activeDiscovery
     ? buildDecisionArgument(activeDiscovery, discovery?.places ?? [])
     : null;
   const activeUnknowns = activeDiscovery
-    ? confidenceUnknowns(activeDiscovery, placeIntelligence)
+    ? confidenceUnknowns(activeDiscovery, placeIntelligence, activeTrailProfile)
     : [];
   const leadPlan = plans?.plans[0] ?? null;
   const visibleSignals = signalSnapshot?.placeId === activeId ? signalSnapshot.signals : [];
@@ -1442,6 +1468,14 @@ export function OutdoorIntentHub() {
           <div className="canvas-result-rail">
             {discovery.places.map((place, index) => {
               const kept = comparisonPlaces.some((candidate) => candidate.id === place.id);
+              const trailProfile = selectTrailProfileForDiscovery({
+                destinationId: place.curatedPlaceId,
+                query: discovery.query,
+                traits: discovery.intent.traits,
+              });
+              const trailTime = trailProfile
+                ? formatHikeTimeRange(estimateHikeTimeRange(trailProfile.distanceMiles, trailProfile.difficulty))
+                : null;
               return (
                 <article
                   key={place.id}
@@ -1467,6 +1501,20 @@ export function OutdoorIntentHub() {
                       <b>{discoveryDriveLabel(place)}</b>
                       <small>{place.travelSource === "routed" ? "Routed · " : "Estimate · "}{place.categoryLabel}</small>
                     </div>
+                    {trailProfile && (
+                      <div className="canvas-result-trail-truth">
+                        <span>Trail Truth</span>
+                        <strong>{trailProfile.name}</strong>
+                        <small>
+                          {[
+                            `${trailProfile.distanceMiles} mi`,
+                            trailRouteKindLabel(trailProfile.routeKind),
+                            trailProfile.difficulty,
+                            trailTime ? `${trailTime} hike estimate` : null,
+                          ].filter(Boolean).join(" · ")}
+                        </small>
+                      </div>
+                    )}
                     <p>{place.why}</p>
                   </button>
                   <div className="canvas-result-card-footer">
@@ -1957,7 +2005,20 @@ export function OutdoorIntentHub() {
 
                     <article>
                       <span>Trail Truth</span>
-                      {placeIntelligence.trailTruth ? (
+                      {activeTrailProfile ? (
+                        <>
+                          <strong>{activeTrailProfile.name}</strong>
+                          <small>
+                            {[
+                              `${activeTrailProfile.distanceMiles} mi official route`,
+                              trailRouteKindLabel(activeTrailProfile.routeKind),
+                              activeTrailProfile.difficulty,
+                              activeTrailTime ? `${activeTrailTime} hike estimate` : null,
+                              activeTrailProfile.sourceLabel,
+                            ].filter(Boolean).join(" · ")}
+                          </small>
+                        </>
+                      ) : placeIntelligence.trailTruth ? (
                         <>
                           <strong>
                             {placeIntelligence.trailTruth.routeName ?? "Mapped hiking relation"}
@@ -1969,6 +2030,19 @@ export function OutdoorIntentHub() {
                                 : null,
                               placeIntelligence.trailTruth.routeKind !== "unknown"
                                 ? placeIntelligence.trailTruth.routeKind
+                                : null,
+                              formatHikeTimeRange(
+                                estimateHikeTimeRange(
+                                  placeIntelligence.trailTruth.distanceMiles,
+                                  placeIntelligence.trailTruth.difficulty,
+                                ),
+                              )
+                                ? `${formatHikeTimeRange(
+                                    estimateHikeTimeRange(
+                                      placeIntelligence.trailTruth.distanceMiles,
+                                      placeIntelligence.trailTruth.difficulty,
+                                    ),
+                                  )} hike estimate`
                                 : null,
                               `${placeIntelligence.trailTruth.confidence} confidence`,
                             ].filter(Boolean).join(" · ")}
@@ -2019,8 +2093,26 @@ export function OutdoorIntentHub() {
                             ? `${placeIntelligence.access.rerouteCount} DNR reroute${placeIntelligence.access.rerouteCount === 1 ? "" : "s"} nearby`
                             : "No nearby DNR closure/reroute returned"}
                       </strong>
-                      <small>{placeIntelligence.access.notes[0] ?? "Official DNR access-change layer checked within about 5 miles."}</small>
+                      <small>
+                        {placeIntelligence.access.notes[0] ??
+                          activeTrailProfile?.access?.parking ??
+                          "Official DNR access-change layer checked within about 5 miles."}
+                      </small>
                     </article>
+
+                    {activeTrailProfile?.access && (
+                      <article>
+                        <span>Trailhead</span>
+                        <strong>{activeTrailProfile.access.trailhead ?? "Official access details available"}</strong>
+                        <small>
+                          {[
+                            activeTrailProfile.access.toilets,
+                            activeTrailProfile.access.drinkingWater,
+                            activeTrailProfile.access.dogs,
+                          ].filter(Boolean).join(" · ") || activeTrailProfile.access.notes?.[0] || "Check the official route source before departure."}
+                        </small>
+                      </article>
+                    )}
                   </div>
                 )}
 
@@ -2059,11 +2151,13 @@ export function OutdoorIntentHub() {
 
                     <span>Map metadata</span>
                     <strong>
-                      {placeIntelligence?.trailTruth
-                        ? `OpenStreetMap hiking relation ${placeIntelligence.trailTruth.relationId ?? ""} · ${placeIntelligence.trailTruth.confidence} confidence`
-                        : activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
-                          ? "OpenStreetMap contributors"
-                          : "Used only when mapped metadata exists"}
+                      {activeTrailProfile
+                        ? `${activeTrailProfile.sourceLabel} official route profile · ${activeTrailProfile.distanceMiles} mi`
+                        : placeIntelligence?.trailTruth
+                          ? `OpenStreetMap hiking relation ${placeIntelligence.trailTruth.relationId ?? ""} · ${placeIntelligence.trailTruth.confidence} confidence`
+                          : activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
+                            ? "OpenStreetMap contributors"
+                            : "Used only when mapped metadata exists"}
                     </strong>
 
                     <span>Freshness</span>

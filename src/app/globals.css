@@ -4096,3 +4096,39 @@ label {
   .trail-search-next{grid-template-columns:1fr}
   .trail-search-method{gap:14px;padding-top:38px}
 }
+
+
+/* Trail Truth v2: keep route-specific evidence inside the ranked answer card. */
+.canvas-result-trail-truth {
+  display: grid;
+  gap: 0.18rem;
+  margin-top: 0.72rem;
+  padding-top: 0.68rem;
+  border-top: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+}
+
+.canvas-result-trail-truth > span {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.canvas-result-trail-truth > strong {
+  font-size: 0.98rem;
+  line-height: 1.2;
+}
+
+.canvas-result-trail-truth > small {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  opacity: 0.82;
+}
+
+@media (max-width: 720px) {
+  .canvas-result-trail-truth {
+    margin-top: 0.58rem;
+    padding-top: 0.56rem;
+  }
+}

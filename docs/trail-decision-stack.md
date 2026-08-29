@@ -10,6 +10,23 @@ A selected hiking result may resolve a nearby OpenStreetMap hiking relation. Whe
 
 Nearby DNR mapped miles are never presented as exact route mileage.
 
+### Ranked route answers
+
+For curated hiking destinations, semantic discovery may attach the best matching official trail profile directly to the ranked result card. The route matcher uses the visitor's expressed intent (for example long, short, easy, rugged, waterfall or roughly ten miles) and never substitutes a nearby trail-system mileage for a named route.
+
+When an agency-published route profile is available, the result card may show:
+
+- the named route;
+- official published mileage;
+- route shape;
+- broad difficulty;
+- a deliberately broad hiking-time estimate derived from mileage and difficulty;
+- agency-published trailhead/access facts where explicitly available.
+
+The hiking-time range is planning guidance, not a completion-time promise. Access facts are optional and remain absent when the official source does not establish them.
+
+The selected-place sheet prefers an official route profile for those route facts, while keeping current OpenStreetMap relation data, Michigan DNR closures/reroutes and live weather as separate evidence layers.
+
 ### Current case
 
 Selected-place intelligence combines current weather, near-term precipitation and gusts, recent rain/snow, AQI, daylight and Michigan DNR access changes. The output is a planning signal, not a safety rating.
