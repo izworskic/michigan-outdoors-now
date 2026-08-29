@@ -842,7 +842,7 @@ export function OutdoorIntentHub() {
         zoom: 8.2,
       });
     }
-  }, [discovery?.places, loadPlaceIntelligence]);
+  }, [discovery?.intent.traits, discovery?.places, discovery?.query, loadPlaceIntelligence]);
 
 
   function moveDiscoverySelection(delta: number) {
