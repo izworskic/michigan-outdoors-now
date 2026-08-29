@@ -36,14 +36,17 @@ export function snapshotSavedOpportunityBaselines(
   savedPlaces: RememberedPlace[],
   opportunities: OutdoorOpportunity[],
   checkedAt: string,
+  checkedPlaceIds?: Iterable<string>,
 ) {
   const byDestination = new Map(
     opportunities.map((opportunity) => [opportunity.destination.id, opportunity]),
   );
   const output: Record<string, OpportunityBaseline> = {};
+  const checked = checkedPlaceIds ? new Set(checkedPlaceIds) : null;
 
   for (const place of savedPlaces) {
     if (place.kind !== "curated") continue;
+    if (checked && !checked.has(place.id)) continue;
     output[place.id] = baselineFor(byDestination.get(place.id), checkedAt);
   }
 
@@ -55,11 +58,13 @@ export function detectSavedPlaceChanges(args: {
   previous: Record<string, OpportunityBaseline>;
   opportunities: OutdoorOpportunity[];
   checkedAt: string;
+  checkedPlaceIds?: Iterable<string>;
 }) {
   const current = snapshotSavedOpportunityBaselines(
     args.savedPlaces,
     args.opportunities,
     args.checkedAt,
+    args.checkedPlaceIds,
   );
   const byDestination = new Map(
     args.opportunities.map((opportunity) => [opportunity.destination.id, opportunity]),
