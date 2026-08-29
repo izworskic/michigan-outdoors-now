@@ -275,7 +275,7 @@ export function selectTrailProfileForDiscovery(args: {
   const wantsTenMiles = /10[ -]?mile|ten[ -]?mile/.test(query);
 
   return [...candidates]
-    .map((profile) => {
+    .map((profile, index) => {
       let score = 0;
       if (query.includes(normalizeTrailQuery(profile.name))) score += 40;
       if (wantsLong && profile.tags.includes("long")) score += 20;
@@ -286,12 +286,12 @@ export function selectTrailProfileForDiscovery(args: {
       if (wantsRugged && profile.tags.includes("rugged")) score += 16;
       if (wantsWaterfall && profile.tags.includes("waterfall")) score += 14;
       if (wantsTenMiles && profile.tags.includes("ten-mile")) score += 24;
-      return { profile, score };
+      return { profile, score, index };
     })
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
       if (wantsLong) return b.profile.distanceMiles - a.profile.distanceMiles;
       if (wantsShort || wantsEasy) return a.profile.distanceMiles - b.profile.distanceMiles;
-      return a.profile.distanceMiles - b.profile.distanceMiles;
+      return a.index - b.index;
     })[0]?.profile ?? null;
 }
