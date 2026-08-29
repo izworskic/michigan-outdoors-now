@@ -1,3 +1,4 @@
+import { shallowDestinationTrailBatch } from "./trail-profile-shallow-attack";
 import { trailProfileDepthBatch } from "./trail-profile-depth";
 
 export type TrailProfile = {
@@ -1201,6 +1202,7 @@ export const trailProfiles: TrailProfile[] = [
     sourceNote: "Michigan DNR describes the nearby Jordan Valley Pathway as 18 miles of hilly terrain.",
   },
   ...trailProfileDepthBatch,
+  ...shallowDestinationTrailBatch,
 ];
 
 export const trailProfileById = new Map(trailProfiles.map((profile) => [profile.id, profile]));
