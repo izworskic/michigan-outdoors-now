@@ -1,0 +1,16 @@
+{
+  "name": "my-michigan-outdoors-continuity",
+  "baseline": 46,
+  "releaseTarget": 92,
+  "flagshipTarget": 97,
+  "purpose": "Give returning visitors useful local continuity without accounts, hidden server profiles, privacy regressions, or preference theater.",
+  "fatalFailures": [
+    "Stores exact device coordinates in the My Outdoors profile",
+    "Sends home city, ZIP, favorite regions, saved-place names, or free-text personal preferences into growth analytics",
+    "Requires an account or server-side profile to remember the visitor",
+    "Allows local memory to override an explicit shared-plan fragment",
+    "Shows unverified live-map results when a strict family, dog, or lower-barrier preference is required",
+    "Saved household/access preferences do not affect actual recommendation filtering",
+    "Returning users still have to re-enter their normal start and range in secondary planners"
+  ]
+}

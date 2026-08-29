@@ -42,6 +42,9 @@ export async function GET() {
             "exact coordinates",
             "device location",
             "free-text search query",
+            "remembered home city or ZIP",
+            "favorite-region text",
+            "saved-place names",
           ],
         },
         evaluation: {

@@ -33,6 +33,7 @@ try {
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
   assert.match(homeHtml, /Go find something\./);
+  assert.match(homeHtml, /My Outdoors/);
   assert.match(homeHtml, /What are you after\?/);
   assert.match(homeHtml, /Best now/);
   assert.match(homeHtml, /Water/);
@@ -249,7 +250,29 @@ try {
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("day_plan_built"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("departure_mode_opened"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("opportunity_opened"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_loaded"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_place_saved"));
   assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("exact coordinates"));
+
+  const preferenceDiscovery = await fetch(`${origin}/api/discover`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      origin: typedOriginPayload.origin.name,
+      originCoordinates: {
+        latitude: typedOriginPayload.origin.latitude,
+        longitude: typedOriginPayload.origin.longitude,
+      },
+      query: "hiking and scenery",
+      maxDriveHours: 8,
+      preferences: { kids: true, dog: false, accessible: true },
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  assert.equal(preferenceDiscovery.status, 200);
+  const preferencePayload = await preferenceDiscovery.json();
+  assert.match(preferencePayload.sourceNote, /verified household\/access attributes/);
+  assert.ok(preferencePayload.places.every((place) => place.source === "Michigan Outdoors Now"));
 
   const fartherDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
@@ -370,7 +393,10 @@ try {
 
   const placePage = await fetch(`${origin}/places/tawas-point`);
   assert.equal(placePage.status, 200);
-  assert.match(await placePage.text(), /Plan a day at/);
+  const placePageHtml = await placePage.text();
+  assert.match(placePageHtml, /Plan a day at/);
+  assert.match(placePageHtml, /Save to My Outdoors/);
+  assert.match(placePageHtml, /Mark as been there/);
 
   const missingPlace = await fetch(`${origin}/places/not-a-place`);
   assert.equal(missingPlace.status, 404);

@@ -19,6 +19,7 @@ type ProductSnapshot = {
   window?: { label?: string };
   rows?: ProductFunnelRow[];
   opportunitySignals?: Array<{ kind: string; opens: number; verifications: number }>;
+  myOutdoorsSignals?: Record<string, number>;
 };
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -145,6 +146,7 @@ const summary = {
   })),
   familyDecisions,
   opportunitySignals: product.opportunitySignals ?? [],
+  myOutdoorsSignals: product.myOutdoorsSignals ?? {},
 };
 
 const fmtPct = (value: number) => `${(value * 100).toFixed(1)}%`;
@@ -177,6 +179,14 @@ ${summary.opportunitySignals.length
       .map((item) => `- **${item.kind}** — ${item.opens} opens · ${item.verifications} specialist verifications`)
       .join("\n")
   : "- No measured opportunity opens yet."}
+
+## My Outdoors continuity
+
+- Drawer opens: **${summary.myOutdoorsSignals.my_outdoors_opened ?? 0}**
+- Saved/applied setups: **${(summary.myOutdoorsSignals.my_outdoors_saved ?? 0) + (summary.myOutdoorsSignals.my_outdoors_applied ?? 0)}**
+- Place saves: **${summary.myOutdoorsSignals.my_outdoors_place_saved ?? 0}**
+- Visited toggles: **${summary.myOutdoorsSignals.my_outdoors_visited_toggled ?? 0}**
+- Remembered setup loads: **${summary.myOutdoorsSignals.my_outdoors_loaded ?? 0}**
 
 ## Highest-leverage actions
 

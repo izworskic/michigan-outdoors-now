@@ -45,6 +45,14 @@ export const growthEventNames = [
   "directions_opened",
   "opportunity_opened",
   "opportunity_verify_opened",
+  "my_outdoors_loaded",
+  "my_outdoors_opened",
+  "my_outdoors_saved",
+  "my_outdoors_applied",
+  "my_outdoors_place_remembered",
+  "my_outdoors_place_saved",
+  "my_outdoors_place_unsaved",
+  "my_outdoors_visited_toggled",
 ] as const;
 
 export type GrowthEventName = (typeof growthEventNames)[number];

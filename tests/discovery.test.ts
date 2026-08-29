@@ -127,3 +127,50 @@ test("long-hike intent favors stronger backcountry signals over a generic trail 
   assert.ok(rugged.score > generic.score);
   assert.match(rugged.why, /full-day|backcountry/i);
 });
+
+
+test("verified family, dog, and access traits filter curated discovery", () => {
+  const base: Destination = {
+    id: "fits-all",
+    name: "Fits All",
+    area: "Test",
+    latitude: 44.6,
+    longitude: -85.4,
+    activities: ["hiking"],
+    summary: "A hiking destination.",
+    setting: "Forest",
+    kidsFriendly: true,
+    dogsAllowed: true,
+    accessibleFriendly: true,
+    accessNote: "Lower-barrier route available.",
+    officialUrl: "https://example.com/fits",
+  };
+  const destinations: Destination[] = [
+    base,
+    {
+      ...base,
+      id: "no-dog",
+      name: "No Dog",
+      dogsAllowed: false,
+      officialUrl: "https://example.com/no-dog",
+    },
+    {
+      ...base,
+      id: "no-access",
+      name: "No Access",
+      accessibleFriendly: false,
+      officialUrl: "https://example.com/no-access",
+    },
+  ];
+
+  const intent = interpretOutdoorQuery("family dog accessible hike");
+  const places = curatedDiscoveryPlaces({
+    destinations,
+    intent,
+    originLatitude: 44.5,
+    originLongitude: -85.5,
+    maxDriveHours: 4,
+  });
+
+  assert.deepEqual(places.map((place) => place.curatedPlaceId), ["fits-all"]);
+});

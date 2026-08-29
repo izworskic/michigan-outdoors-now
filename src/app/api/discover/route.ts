@@ -34,6 +34,11 @@ type DiscoverRequest = {
   minDriveHours?: number;
   surpriseMode?: boolean;
   excludePlaceIds?: string[];
+  preferences?: {
+    kids?: boolean;
+    dog?: boolean;
+    accessible?: boolean;
+  };
 };
 
 type OverpassElement = {
@@ -88,6 +93,14 @@ function isDiscoverRequest(value: unknown): value is DiscoverRequest {
         request.excludePlaceIds.every(
           (id) => typeof id === "string" && id.length > 0 && id.length <= 140,
         ))) &&
+    (request.preferences === undefined ||
+      (request.preferences !== null &&
+        typeof request.preferences === "object" &&
+        ["kids", "dog", "accessible"].every(
+          (key) =>
+            !(key in (request.preferences as Record<string, unknown>)) ||
+            typeof (request.preferences as Record<string, unknown>)[key] === "boolean",
+        ))) &&
     validCoordinates
   );
 }
@@ -107,7 +120,8 @@ function buildOverpassQuery(
   return `[out:json][timeout:20];(${clauses.join("")});out center tags qt;`;
 }
 
-async function fetchOverpass(query: string) {
+async function fetchOverpass(query: string, disabled = false) {
+  if (disabled) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1_600);
 
@@ -349,6 +363,15 @@ export async function POST(request: Request) {
   if (!origin) return invalid("Enter a Michigan city or ZIP code.");
 
   const intent = interpretOutdoorQuery(body.query);
+  const preferenceTraits = [
+    body.preferences?.kids ? "family" : null,
+    body.preferences?.dog ? "dog" : null,
+    body.preferences?.accessible ? "accessible" : null,
+  ].filter((trait): trait is "family" | "dog" | "accessible" => trait !== null);
+  if (preferenceTraits.length) {
+    intent.traits = [...new Set([...intent.traits, ...preferenceTraits])];
+    intent.summary = `${intent.summary} · verified for ${preferenceTraits.map((trait) => trait.replace("-", " ")).join(", ")} fit`;
+  }
   const minDriveHours = Math.max(0, body.minDriveHours ?? 0);
 
   // Curated results are the guaranteed first layer. Public POI enrichment is
@@ -368,7 +391,8 @@ export async function POST(request: Request) {
     origin.latitude,
     origin.longitude,
   );
-  const elements = await fetchOverpass(overpassQuery);
+  const strictPreferenceMode = preferenceTraits.length > 0;
+  const elements = await fetchOverpass(overpassQuery, strictPreferenceMode);
   const live = elements
     ? osmPlaces(elements, {
         originLatitude: origin.latitude,
@@ -410,9 +434,11 @@ export async function POST(request: Request) {
     generatedAt: new Date().toISOString(),
     status: elements ? "live" : "fallback",
     mode: body.surpriseMode ? "surprise" : "search",
-    sourceNote: elements
-      ? `Fast mapped-place enrichment from OpenStreetMap contributors is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
-      : `Results are from the curated Michigan Outdoors Now destination set. Live mapped-place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
+    sourceNote: strictPreferenceMode
+      ? `Results are limited to Michigan Outdoors Now destinations with verified household/access attributes for the saved preferences. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`
+      : elements
+        ? `Fast mapped-place enrichment from OpenStreetMap contributors is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
+        : `Results are from the curated Michigan Outdoors Now destination set. Live mapped-place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
   };
 
   console.info(
