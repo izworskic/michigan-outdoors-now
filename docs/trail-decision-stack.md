@@ -65,6 +65,19 @@ Trail Truth depth is now measured as a product-quality property rather than raw 
 
 The first depth batch concentrates additional route truth in Pictured Rocks, Sleeping Bear Dunes, Kensington Metropark, Hartwick Pines, Ludington State Park and the Manistee River corridor.
 
+### Shallow-destination attack
+
+The next depth pass targets destinations that previously had only one or two route profiles.
+
+- Warren Dunes now exposes the DNR's numbered foot-trail route combinations instead of hiding behind only the six-mile network total.
+- Petoskey State Park now preserves the representative Old Baldy / Portage choices while adding current-map branch and campground trail detail.
+- Mackinac Island adds the exact three-quarter-mile Hardwood Nature Trail without inventing mileage for the many other named island trails whose official page does not publish distance.
+- Tawas Point adds the DNR-published approximately four-mile paved connection from the park entrance to East Tawas City Park.
+- Ocqueoc Falls adds the published shortest three-mile Bicentennial Pathway option while retaining the six-mile maximum option; neither gets an invented loop name.
+- Numbered/branch routes use `network` when the official map establishes mileage but not a defensible loop or point-to-point shape.
+
+The release gate now measures remaining shallowness directly. It caps one-route destinations at seven and all one-or-two-route destinations at eleven. Places such as Rifle River, Fayette, Presque Isle Marquette and Belle Isle remain intentionally shallow when the managing agency publishes only network totals, unlabeled segments or no route-specific mileage.
+
 ### Current case
 
 Selected-place intelligence combines current weather, near-term precipitation and gusts, recent rain/snow, AQI, daylight and Michigan DNR access changes. The output is a planning signal, not a safety rating.
