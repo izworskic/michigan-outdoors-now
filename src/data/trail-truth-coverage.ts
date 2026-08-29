@@ -65,8 +65,20 @@ const documentedGapIds = new Set(
   trailTruthCoverageGaps.map((gap) => gap.destinationId),
 );
 
+const profilesByDestination = new Map<string, number>();
+for (const profile of trailProfiles) {
+  if (!profile.destinationId) continue;
+  profilesByDestination.set(
+    profile.destinationId,
+    (profilesByDestination.get(profile.destinationId) ?? 0) + 1,
+  );
+}
+
 export const trailTruthCoverageSummary = {
   profileCount: trailProfiles.length,
+  namedTrailheadCount: trailProfiles.filter((profile) => Boolean(profile.access?.trailhead)).length,
+  multiRouteDestinationCount: [...profilesByDestination.values()].filter((count) => count >= 2).length,
+  deepDestinationCount: [...profilesByDestination.values()].filter((count) => count >= 5).length,
   hikingDestinationCount: hikingDestinations.length,
   coveredDestinationCount: hikingDestinations.filter((destination) =>
     coveredDestinationIds.has(destination.id),

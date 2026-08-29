@@ -51,6 +51,20 @@ A selected verified route is now an operational decision object rather than only
 
 The public geometry feeds are evidence layers, not distance authorities. The land manager's published route mileage remains authoritative when a centerline's calculated geometry differs.
 
+### Depth standard
+
+Trail Truth depth is now measured as a product-quality property rather than raw record count.
+
+- The release gate requires at least **100 verified route profiles**.
+- At least **35 profiles** must carry a named trailhead/access label before geometry fallback is counted.
+- At least **15 destinations** must have more than one verified route.
+- At least **8 destinations** must have five or more verified routes.
+- Large local catalogs stay collapsed to the best six routes until the visitor explicitly expands them.
+- A verified profile trailhead remains the preferred navigation target. When that is absent, official land-manager route geometry may provide an explicitly labeled mapped route start. OpenStreetMap fallback starts remain labeled as mapped fallback and are never promoted to official trailheads.
+- New route records must retain positive published mileage, route shape, source label and an official source URL.
+
+The first depth batch concentrates additional route truth in Pictured Rocks, Sleeping Bear Dunes, Kensington Metropark, Hartwick Pines, Ludington State Park and the Manistee River corridor.
+
 ### Current case
 
 Selected-place intelligence combines current weather, near-term precipitation and gusts, recent rain/snow, AQI, daylight and Michigan DNR access changes. The output is a planning signal, not a safety rating.

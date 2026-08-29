@@ -1,3 +1,5 @@
+import { trailProfileDepthBatch } from "./trail-profile-depth";
+
 export type TrailProfile = {
   id: string;
   name: string;
@@ -1198,6 +1200,7 @@ export const trailProfiles: TrailProfile[] = [
     sourceUrl: "https://www.michigan.gov/recsearch/sfcampgroundsn-z/PinneyBridge",
     sourceNote: "Michigan DNR describes the nearby Jordan Valley Pathway as 18 miles of hilly terrain.",
   },
+  ...trailProfileDepthBatch,
 ];
 
 export const trailProfileById = new Map(trailProfiles.map((profile) => [profile.id, profile]));

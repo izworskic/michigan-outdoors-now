@@ -155,9 +155,42 @@ export function deriveTrailLiveSignal(
   return { status, headline, reasons, cautions, daylight };
 }
 
-export function trailheadDirectionsUrl(profile: TrailProfile) {
+export function trailheadDirectionsUrl(
+  profile: TrailProfile,
+  geometry?: {
+    status: "official" | "mapped" | "unavailable";
+    routeStart: { latitude: number; longitude: number } | null;
+  } | null,
+) {
   const label = profile.access?.trailhead;
-  if (!label) return null;
-  const query = encodeURIComponent(`${label}, ${profile.area}`);
-  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+  if (label) {
+    const query = encodeURIComponent(`${label}, ${profile.area}`);
+    return {
+      url: `https://www.google.com/maps/search/?api=1&query=${query}`,
+      label: "Navigate to trailhead",
+      source: "verified-profile" as const,
+    };
+  }
+
+  if (geometry?.status === "official" && geometry.routeStart) {
+    const { latitude, longitude } = geometry.routeStart;
+    const query = encodeURIComponent(`${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+    return {
+      url: `https://www.google.com/maps/search/?api=1&query=${query}`,
+      label: "Navigate to official mapped route start",
+      source: "official-geometry" as const,
+    };
+  }
+
+  if (geometry?.status === "mapped" && geometry.routeStart) {
+    const { latitude, longitude } = geometry.routeStart;
+    const query = encodeURIComponent(`${latitude.toFixed(6)},${longitude.toFixed(6)}`);
+    return {
+      url: `https://www.google.com/maps/search/?api=1&query=${query}`,
+      label: "Open mapped route start",
+      source: "mapped-fallback" as const,
+    };
+  }
+
+  return null;
 }
