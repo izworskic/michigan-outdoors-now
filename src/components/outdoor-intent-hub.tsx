@@ -11,8 +11,10 @@ import type { PlaceIntelligence } from "../lib/place-intelligence";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
 import { trackGrowthEvent, type GrowthContext } from "../lib/growth-analytics";
+import { readMyOutdoorsProfile, type MyOutdoorsProfile } from "../lib/my-outdoors";
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse, SpecialistSignal } from "../lib/types";
 import { MichiganDestinationMap, type MapFocusPoint, type MapViewport } from "./michigan-destination-map";
+import { MyOutdoorsDrawer } from "./my-outdoors-drawer";
 
 type PullId = "best" | "water" | "trail" | "river" | "dark" | "long" | "weekend";
 
@@ -39,6 +41,23 @@ const semanticGrowthContext: GrowthContext = {
   surface: "flagship_semantic",
   pageKey: "home",
 };
+
+
+function pullForProfile(profile: MyOutdoorsProfile) {
+  if (profile.tripShape === "weekend") {
+    return pulls.find((candidate) => candidate.id === "weekend") ?? pulls[0];
+  }
+
+  const first = profile.favoriteActivities[0];
+  const id: PullId =
+    first === "fishing" ? "river" :
+    first === "paddling" || first === "beaches" ? "water" :
+    first === "dark-sky" ? "dark" :
+    first === "hiking" ? "trail" :
+    profile.tripShape === "full-day" && profile.maxDriveHours >= 5 ? "long" :
+    "best";
+  return pulls.find((candidate) => candidate.id === id) ?? pulls[0];
+}
 
 
 function emptyUniverse(layer: UniverseLayerId = "hiking"): OutdoorUniverseResponse {
@@ -236,6 +255,9 @@ export function OutdoorIntentHub() {
   const [originFeedback, setOriginFeedback] = useState("Choose a Michigan city or ZIP, or use your location.");
   const [pull, setPull] = useState<Pull>(pulls[0]);
   const [driveHours, setDriveHours] = useState(pulls[0].driveHours);
+  const [kids, setKids] = useState(false);
+  const [dog, setDog] = useState(false);
+  const [accessible, setAccessible] = useState(false);
   const [plans, setPlans] = useState<PlannerResponse | null>(null);
   const [wish, setWish] = useState("");
   const [discovery, setDiscovery] = useState<DiscoveryResponse | null>(null);
@@ -273,6 +295,32 @@ export function OutdoorIntentHub() {
   const wishInputRef = useRef<HTMLInputElement | null>(null);
   const resultDockRef = useRef<HTMLElement | null>(null);
   const resultCardRefs = useRef(new Map<string, HTMLButtonElement>());
+  const myOutdoorsLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (myOutdoorsLoadedRef.current) return;
+    myOutdoorsLoadedRef.current = true;
+    const profile = readMyOutdoorsProfile();
+    setDriveHours(profile.maxDriveHours);
+    setPull(pullForProfile(profile));
+    setKids(profile.kids);
+    setDog(profile.dog);
+    setAccessible(profile.accessible);
+    if (profile.homeOrigin) {
+      setOrigin(profile.homeOrigin);
+      setOriginCoordinates(undefined);
+      setOriginStatus("idle");
+      setOriginFeedback("Remembered from My Outdoors. Set start to refresh the exact map point.");
+    }
+    if (profile.homeOrigin || profile.savedPlaces.length || profile.recentPlaces.length) {
+      trackGrowthEvent("my_outdoors_loaded", { surface: "homepage_planner", pageKey: "home" }, {
+        hasHomeOrigin: Boolean(profile.homeOrigin),
+        savedPlaceCount: profile.savedPlaces.length,
+        recentPlaceCount: profile.recentPlaces.length,
+        tripShape: profile.tripShape,
+      });
+    }
+  }, []);
 
   useEffect(() => {
     if (!trailRequested) return;
@@ -390,9 +438,9 @@ export function OutdoorIntentHub() {
           date: nextPull.date,
           maxDriveHours: nextDriveHours,
           activities: nextPull.activities,
-          kids: false,
-          dog: false,
-          accessible: false,
+          kids,
+          dog,
+          accessible,
         }),
       });
 
@@ -420,7 +468,7 @@ export function OutdoorIntentHub() {
         setPlanning(false);
       }
     }
-  }, [driveHours, origin, originCoordinates, pull]);
+  }, [accessible, dog, driveHours, kids, origin, originCoordinates, pull]);
 
   function focusWishInput() {
     window.requestAnimationFrame(() => wishInputRef.current?.focus());
@@ -569,6 +617,7 @@ export function OutdoorIntentHub() {
           query,
           maxDriveHours: driveOverride,
           ...(minDriveOverride > 0 ? { minDriveHours: minDriveOverride } : {}),
+          preferences: { kids, dog, accessible },
           ...(surpriseMode ? { surpriseMode: true, excludePlaceIds: dismissedDiscoveryIds } : {}),
         }),
       });
@@ -857,6 +906,27 @@ export function OutdoorIntentHub() {
   function toggleAround() {
     if (!aroundOpen) setViewport(viewportRef.current);
     setAroundOpen((open) => !open);
+  }
+
+
+  function applyMyOutdoors(profile: MyOutdoorsProfile) {
+    requestRef.current?.abort();
+    discoveryRequestRef.current?.abort();
+    clearOpenResults();
+    setPull(pullForProfile(profile));
+    setDriveHours(profile.maxDriveHours);
+    setKids(profile.kids);
+    setDog(profile.dog);
+    setAccessible(profile.accessible);
+    if (profile.homeOrigin) {
+      setOrigin(profile.homeOrigin);
+      setOriginCoordinates(undefined);
+      setUserLocation(undefined);
+      setOriginStatus("idle");
+      setOriginFeedback("Using your remembered starting point. It will be resolved when you search.");
+    }
+    setMessage("Your My Outdoors setup is loaded.");
+    focusWishInput();
   }
 
   function choosePull(nextPull: Pull) {
@@ -1207,6 +1277,7 @@ export function OutdoorIntentHub() {
         </div>
 
         <div className="canvas-links">
+          <MyOutdoorsDrawer currentOrigin={origin} currentDriveHours={driveHours} onApply={applyMyOutdoors} />
           <Link href="/explore">Full atlas</Link>
           <details className="canvas-layer-menu">
             <summary>Layers</summary>
