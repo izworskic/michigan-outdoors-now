@@ -78,7 +78,7 @@ function nameTokens(value: string) {
     .filter((token) => token.length > 2 && !genericNameTokens.has(token));
 }
 
-function nameScore(profileName: string, candidateName: string) {
+export function trailGeometryNameScore(profileName: string, candidateName: string) {
   const profile = normalizeName(profileName);
   const candidate = normalizeName(candidateName);
   if (!profile || !candidate) return 0;
@@ -154,7 +154,7 @@ function chooseNamedFeatures(
   const ranked = collection.features
     .map((feature) => {
       const name = featureName(feature, fields);
-      return { feature, name, score: name ? nameScore(profileName, name) : 0 };
+      return { feature, name, score: name ? trailGeometryNameScore(profileName, name) : 0 };
     })
     .filter((candidate) => candidate.name && candidate.score >= 28)
     .sort((a, b) => b.score - a.score);
@@ -351,7 +351,7 @@ async function fetchMappedGeometry(
     .map((item) => ({
       feature: item.feature,
       name: item.element.tags?.name?.trim() ?? "",
-      score: nameScore(profile.name, item.element.tags?.name ?? ""),
+      score: trailGeometryNameScore(profile.name, item.element.tags?.name ?? ""),
     }))
     .filter((item) => item.name && item.score >= 30)
     .sort((a, b) => b.score - a.score);
