@@ -327,6 +327,22 @@ try {
     assert.ok(opportunityPayload.opportunities.every((item) => item.score >= 88));
   }
 
+  const allOpportunities = await fetch(`${origin}/api/opportunities?scope=all`, {
+    signal: AbortSignal.timeout(25_000),
+  });
+  assert.equal(allOpportunities.status, 200);
+  assert.match(allOpportunities.headers.get("x-robots-tag") ?? "", /noindex/);
+  const allOpportunityPayload = await allOpportunities.json();
+  assert.ok(["live", "unavailable"].includes(allOpportunityPayload.status));
+  assert.ok(Array.isArray(allOpportunityPayload.opportunities));
+  if (allOpportunityPayload.status === "live") {
+    assert.ok(
+      allOpportunityPayload.opportunities.length >= opportunityPayload.opportunities.length,
+      "full opportunity scope must not return fewer opportunities than the homepage scope",
+    );
+    assert.match(allOpportunityPayload.note, /return-visit comparison|No user profile/i);
+  }
+
   const localPage = await fetch(`${origin}/from/bay-city`);
   assert.equal(localPage.status, 200);
   assert.match(await localPage.text(), /Outdoor plans from/);
