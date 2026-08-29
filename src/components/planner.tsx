@@ -10,6 +10,7 @@ import {
   isPlausibleMichiganCoordinate,
 } from "../lib/planner";
 import { parsePlannerFragment, serializePlannerFragment } from "../lib/planner-share";
+import { readMyOutdoorsProfile } from "../lib/my-outdoors";
 import { trackGrowthEvent, type GrowthContext, type GrowthEventProperties } from "../lib/growth-analytics";
 import {
   activityIds,
@@ -111,19 +112,49 @@ export function Planner({
 
   useEffect(() => {
     const shared = parsePlannerFragment(window.location.hash);
-    if (!shared) return;
+
+    if (shared) {
+      const timer = window.setTimeout(() => {
+        setOrigin(shared.origin);
+        setOriginCoordinates(undefined);
+        setDate(shared.date);
+        setMaxDriveHours(shared.maxDriveHours);
+        setActivities(shared.activities);
+        setKids(shared.kids);
+        setDog(shared.dog);
+        setAccessible(shared.accessible);
+        setSetupStatus("Shared setup loaded. Review it, then build the plan with current conditions.");
+        trackEvent("shared_setup_loaded", { activityCount: shared.activities.length });
+      }, 0);
+
+      return () => window.clearTimeout(timer);
+    }
+
+    const remembered = readMyOutdoorsProfile();
+    if (
+      !remembered.homeOrigin &&
+      !remembered.kids &&
+      !remembered.dog &&
+      !remembered.accessible &&
+      remembered.maxDriveHours === 2
+    ) {
+      return;
+    }
 
     const timer = window.setTimeout(() => {
-      setOrigin(shared.origin);
-      setOriginCoordinates(undefined);
-      setDate(shared.date);
-      setMaxDriveHours(shared.maxDriveHours);
-      setActivities(shared.activities);
-      setKids(shared.kids);
-      setDog(shared.dog);
-      setAccessible(shared.accessible);
-      setSetupStatus("Shared setup loaded. Review it, then build the plan with current conditions.");
-      trackEvent("shared_setup_loaded", { activityCount: shared.activities.length });
+      if (remembered.homeOrigin) {
+        setOrigin(remembered.homeOrigin);
+        setOriginCoordinates(undefined);
+      }
+      setMaxDriveHours(remembered.maxDriveHours);
+      setKids(remembered.kids);
+      setDog(remembered.dog);
+      setAccessible(remembered.accessible);
+      setSetupStatus("My Outdoors start, range, and usual constraints loaded. This page keeps its activity focus.");
+      trackEvent("my_outdoors_loaded", {
+        source: "secondary_planner",
+        hasHomeOrigin: Boolean(remembered.homeOrigin),
+      });
     }, 0);
 
     return () => window.clearTimeout(timer);
