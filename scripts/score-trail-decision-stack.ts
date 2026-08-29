@@ -18,8 +18,22 @@ async function main() {
     await readFile(new URL("benchmarks/trail-decision-stack.json", root), "utf8"),
   ) as Benchmark;
 
-  const [intelligence, route, recommendations, dayPlan, dayApi, hub, trailPage, profiles, runtime, tests] =
-    await Promise.all([
+  const [
+    intelligence,
+    route,
+    recommendations,
+    dayPlan,
+    dayApi,
+    hub,
+    trailPage,
+    profiles,
+    runtime,
+    tests,
+    geometry,
+    trailLive,
+    map,
+    liveTests,
+  ] = await Promise.all([
       readFile(new URL("src/lib/place-intelligence.ts", root), "utf8"),
       readFile(new URL("src/lib/route-intelligence.ts", root), "utf8"),
       readFile(new URL("src/app/api/recommendations/route.ts", root), "utf8"),
@@ -30,6 +44,10 @@ async function main() {
       readFile(new URL("src/data/trail-profiles.ts", root), "utf8"),
       readFile(new URL("scripts/runtime-check.mjs", root), "utf8"),
       readFile(new URL("tests/result-flow-refinement.test.ts", root), "utf8"),
+      readFile(new URL("src/lib/trail-geometry.ts", root), "utf8"),
+      readFile(new URL("src/lib/trail-live.ts", root), "utf8"),
+      readFile(new URL("src/components/michigan-destination-map.tsx", root), "utf8"),
+      readFile(new URL("tests/trail-truth-live.test.ts", root), "utf8"),
     ]);
 
   const checks: Record<string, boolean> = {
@@ -41,7 +59,14 @@ async function main() {
       hub.includes("trailTruth.distanceMiles") &&
       hub.includes("canvas-result-trail-truth") &&
       hub.includes("selectTrailProfileForDiscovery") &&
-      hub.includes("hike estimate"),
+      hub.includes("hike estimate") &&
+      hub.includes("Pick your hike") &&
+      hub.includes("selectedTrailGeoJson") &&
+      geometry.includes("NPS_Public_Trails_Geographic") &&
+      geometry.includes("DNRTrailsOPENDATA") &&
+      geometry.includes('status: "official"') &&
+      geometry.includes('status: "mapped"') &&
+      map.includes("selected-trail-truth-line"),
     routeProvenance:
       intelligence.includes('"osm-tag"') &&
       intelligence.includes('"osm-geometry"') &&
@@ -53,7 +78,13 @@ async function main() {
       intelligence.includes("recentRainInches") &&
       intelligence.includes("daylightHoursRemaining") &&
       intelligence.includes("outingWindow") &&
-      hub.includes("Should I go?"),
+      hub.includes("Should I go?") &&
+      hub.includes("Trail Truth Live") &&
+      hub.includes("Finish before dark?") &&
+      hub.includes("Navigate to trailhead") &&
+      trailLive.includes("arrivalDelayMinutes") &&
+      trailLive.includes("assessDaylightFit") &&
+      trailLive.includes("deriveTrailLiveSignal"),
     structuredPlannerRouting:
       recommendations.includes("fetchRoutedPoints") &&
       recommendations.includes('travelSource: "routed"') &&
@@ -92,7 +123,9 @@ async function main() {
       runtime.includes("/api/day-plan") &&
       runtime.includes("/hiking/10-mile-hikes-michigan") &&
       runtime.includes("goSignal") &&
-      tests.includes("Decision Board can build a routed multi-stop day"),
+      tests.includes("Decision Board can build a routed multi-stop day") &&
+      liveTests.includes("finish-before-dark logic subtracts travel time") &&
+      liveTests.includes("official geometry separate from mapped fallback"),
   };
 
   const scored = benchmark.criteria.map((criterion) => ({

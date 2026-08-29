@@ -4132,3 +4132,136 @@ label {
     padding-top: 0.56rem;
   }
 }
+
+
+/* Trail Truth Live */
+.canvas-trail-chooser {
+  display: grid;
+  gap: 0.72rem;
+  margin: 0.9rem 0;
+  padding: 0.82rem;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 1rem;
+  background: color-mix(in srgb, Canvas 94%, currentColor 6%);
+}
+
+.canvas-trail-chooser-head {
+  display: grid;
+  gap: 0.16rem;
+}
+
+.canvas-trail-chooser-head > span,
+.canvas-trail-live > span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.canvas-trail-chooser-head > strong {
+  font-size: 1rem;
+}
+
+.canvas-trail-chooser-head > small {
+  line-height: 1.35;
+  opacity: 0.72;
+}
+
+.canvas-trail-chooser-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 0.5rem;
+}
+
+.canvas-trail-chooser-list button {
+  display: grid;
+  gap: 0.18rem;
+  min-height: 86px;
+  padding: 0.68rem;
+  text-align: left;
+  border-radius: 0.8rem;
+  border: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+  background: Canvas;
+  color: CanvasText;
+}
+
+.canvas-trail-chooser-list button.is-selected {
+  border-width: 2px;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.canvas-trail-chooser-list button > span {
+  font-weight: 800;
+  line-height: 1.18;
+}
+
+.canvas-trail-chooser-list button > strong {
+  font-size: 0.82rem;
+  line-height: 1.3;
+}
+
+.canvas-trail-chooser-list button > small {
+  font-size: 0.75rem;
+  opacity: 0.72;
+}
+
+.canvas-trail-live {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.7rem;
+  padding: 0.78rem 0.82rem;
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  background: color-mix(in srgb, Canvas 92%, currentColor 8%);
+}
+
+.canvas-trail-live.is-good {
+  border-left: 5px solid #2f6955;
+}
+
+.canvas-trail-live.is-mixed {
+  border-left: 5px solid #a06c2d;
+}
+
+.canvas-trail-live.is-poor {
+  border-left: 5px solid #8c433f;
+}
+
+.canvas-trail-live > strong {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.canvas-trail-live > p,
+.canvas-trail-live > small {
+  margin: 0;
+  line-height: 1.42;
+}
+
+.canvas-trailhead-link {
+  display: inline-flex;
+  margin-top: 0.45rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.canvas-point-to-point-warning {
+  display: block;
+  margin-top: 0.45rem;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .canvas-trail-chooser {
+    padding: 0.68rem;
+  }
+
+  .canvas-trail-chooser-list {
+    grid-template-columns: 1fr;
+  }
+
+  .canvas-trail-chooser-list button {
+    min-height: 0;
+  }
+}

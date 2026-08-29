@@ -5,6 +5,7 @@ import type { GeoJSONSource, Map as MapLibreMap, MapLayerMouseEvent, Marker as M
 import { BOAT_LAUNCH_FINDER, type BoatLaunchGeoJson } from "../lib/boat-launches";
 import type { DiscoveryPlace } from "../lib/discovery";
 import type { UniverseGeoJson, UniverseTrailProperties, UniverseTrailSystem } from "../lib/outdoor-universe";
+import type { TrailGeometryCollection } from "../lib/trail-geometry";
 import type { Destination } from "../lib/types";
 
 type LocationPoint = {
@@ -32,6 +33,9 @@ type MichiganDestinationMapProps = {
   closureCount?: number;
   rerouteCount?: number;
   trailLayerLabel?: string;
+  selectedTrailGeoJson?: TrailGeometryCollection | null;
+  selectedTrailLabel?: string;
+  selectedTrailStatus?: "official" | "mapped" | "unavailable";
   boatLaunchGeoJson?: BoatLaunchGeoJson | null;
   boatLaunchCount?: number;
   userLocation?: LocationPoint;
@@ -47,6 +51,9 @@ const trailSourceId = "official-dnr-trails";
 const trailLayerId = "official-dnr-trails-line";
 const trailSystemSourceId = "official-dnr-trail-systems";
 const trailSystemLayerId = "official-dnr-trail-systems-point";
+const selectedTrailSourceId = "selected-trail-truth";
+const selectedTrailOutlineLayerId = "selected-trail-truth-outline";
+const selectedTrailLayerId = "selected-trail-truth-line";
 const closureSourceId = "official-dnr-closures";
 const closureLayerId = "official-dnr-closures-line";
 const rerouteSourceId = "official-dnr-reroutes";
@@ -96,6 +103,9 @@ export function MichiganDestinationMap({
   closureCount = 0,
   rerouteCount = 0,
   trailLayerLabel,
+  selectedTrailGeoJson,
+  selectedTrailLabel,
+  selectedTrailStatus,
   boatLaunchGeoJson,
   boatLaunchCount = 0,
   userLocation,
@@ -169,8 +179,11 @@ export function MichiganDestinationMap({
     const mapApi = mapApiRef.current;
     if (!mapReady || !map || !mapApi) return;
 
-    const sources: Array<[string, UniverseGeoJson | null | undefined]> = [
+    const sources: Array<
+      [string, UniverseGeoJson | TrailGeometryCollection | null | undefined]
+    > = [
       [trailSourceId, trailGeoJson],
+      [selectedTrailSourceId, selectedTrailGeoJson],
       [closureSourceId, closuresGeoJson],
       [rerouteSourceId, reroutesGeoJson],
     ];
@@ -194,6 +207,43 @@ export function MichiganDestinationMap({
         },
       });
     }
+    if (!map.getLayer(selectedTrailOutlineLayerId)) {
+      map.addLayer({
+        id: selectedTrailOutlineLayerId,
+        type: "line",
+        source: selectedTrailSourceId,
+        paint: {
+          "line-color": "#ffffff",
+          "line-opacity": 0.96,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 5, 6, 9, 9, 13, 12],
+        },
+      });
+    }
+    if (!map.getLayer(selectedTrailLayerId)) {
+      map.addLayer({
+        id: selectedTrailLayerId,
+        type: "line",
+        source: selectedTrailSourceId,
+        paint: {
+          "line-color": selectedTrailStatus === "official" ? "#173f35" : "#7a5a2b",
+          "line-opacity": 0.98,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 5, 3.4, 9, 5.5, 13, 7.5],
+          "line-dasharray": selectedTrailStatus === "mapped" ? [2, 1.2] : [1, 0.01],
+        },
+      });
+    } else {
+      map.setPaintProperty(
+        selectedTrailLayerId,
+        "line-color",
+        selectedTrailStatus === "official" ? "#173f35" : "#7a5a2b",
+      );
+      map.setPaintProperty(
+        selectedTrailLayerId,
+        "line-dasharray",
+        selectedTrailStatus === "mapped" ? [2, 1.2] : [1, 0.01],
+      );
+    }
+
 
     const trailSystemData = {
       type: "FeatureCollection" as const,
@@ -356,6 +406,25 @@ export function MichiganDestinationMap({
         .addTo(activeMap);
     };
 
+    const selectedTrailClick = (event: MapLayerMouseEvent) => {
+      const node = document.createElement("div");
+      node.className = "trail-system-popup";
+      const eyebrow = document.createElement("span");
+      eyebrow.textContent = selectedTrailStatus === "official" ? "Trail Truth · official geometry" : "Trail Truth · mapped fallback";
+      const title = document.createElement("strong");
+      title.textContent = selectedTrailLabel || "Selected trail";
+      const detail = document.createElement("p");
+      detail.textContent =
+        selectedTrailStatus === "official"
+          ? "This highlighted centerline comes from the managing agency's public trail data."
+          : "This highlighted route is a name-matched map fallback; verify the land-manager map before leaving.";
+      node.append(eyebrow, title, detail);
+      new api.Popup({ closeButton: true, maxWidth: "350px" })
+        .setLngLat(event.lngLat)
+        .setDOMContent(node)
+        .addTo(activeMap);
+    };
+
     const trailSystemClick = (event: MapLayerMouseEvent) => {
       const feature = event.features?.[0];
       const properties = (feature?.properties ?? {}) as {
@@ -466,18 +535,21 @@ export function MichiganDestinationMap({
     const pointerOff = () => { activeMap.getCanvas().style.cursor = ""; };
 
     activeMap.on("click", trailLayerId, trailClick);
+    activeMap.on("click", selectedTrailLayerId, selectedTrailClick);
     activeMap.on("click", trailSystemLayerId, trailSystemClick);
     activeMap.on("click", boatLaunchClusterLayerId, boatClusterClick);
     activeMap.on("click", boatLaunchPointLayerId, boatLaunchClick);
     activeMap.on("click", closureLayerId, closureClick);
     activeMap.on("click", rerouteLayerId, rerouteClick);
     activeMap.on("mouseenter", trailLayerId, pointerOn);
+    activeMap.on("mouseenter", selectedTrailLayerId, pointerOn);
     activeMap.on("mouseenter", trailSystemLayerId, pointerOn);
     activeMap.on("mouseenter", boatLaunchClusterLayerId, pointerOn);
     activeMap.on("mouseenter", boatLaunchPointLayerId, pointerOn);
     activeMap.on("mouseenter", closureLayerId, pointerOn);
     activeMap.on("mouseenter", rerouteLayerId, pointerOn);
     activeMap.on("mouseleave", trailLayerId, pointerOff);
+    activeMap.on("mouseleave", selectedTrailLayerId, pointerOff);
     activeMap.on("mouseleave", trailSystemLayerId, pointerOff);
     activeMap.on("mouseleave", boatLaunchClusterLayerId, pointerOff);
     activeMap.on("mouseleave", boatLaunchPointLayerId, pointerOff);
@@ -486,25 +558,76 @@ export function MichiganDestinationMap({
 
     return () => {
       activeMap.off("click", trailLayerId, trailClick);
+      activeMap.off("click", selectedTrailLayerId, selectedTrailClick);
       activeMap.off("click", trailSystemLayerId, trailSystemClick);
       activeMap.off("click", boatLaunchClusterLayerId, boatClusterClick);
       activeMap.off("click", boatLaunchPointLayerId, boatLaunchClick);
       activeMap.off("click", closureLayerId, closureClick);
       activeMap.off("click", rerouteLayerId, rerouteClick);
       activeMap.off("mouseenter", trailLayerId, pointerOn);
+      activeMap.off("mouseenter", selectedTrailLayerId, pointerOn);
       activeMap.off("mouseenter", trailSystemLayerId, pointerOn);
       activeMap.off("mouseenter", boatLaunchClusterLayerId, pointerOn);
       activeMap.off("mouseenter", boatLaunchPointLayerId, pointerOn);
       activeMap.off("mouseenter", closureLayerId, pointerOn);
       activeMap.off("mouseenter", rerouteLayerId, pointerOn);
       activeMap.off("mouseleave", trailLayerId, pointerOff);
+      activeMap.off("mouseleave", selectedTrailLayerId, pointerOff);
       activeMap.off("mouseleave", trailSystemLayerId, pointerOff);
       activeMap.off("mouseleave", boatLaunchClusterLayerId, pointerOff);
       activeMap.off("mouseleave", boatLaunchPointLayerId, pointerOff);
       activeMap.off("mouseleave", closureLayerId, pointerOff);
       activeMap.off("mouseleave", rerouteLayerId, pointerOff);
     };
-  }, [mapReady, trailGeoJson, trailSystems, closuresGeoJson, reroutesGeoJson, boatLaunchGeoJson, trailLayerLabel]);
+  }, [
+    mapReady,
+    trailGeoJson,
+    trailSystems,
+    closuresGeoJson,
+    reroutesGeoJson,
+    boatLaunchGeoJson,
+    trailLayerLabel,
+    selectedTrailGeoJson,
+    selectedTrailLabel,
+    selectedTrailStatus,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const mapApi = mapApiRef.current;
+    if (!mapReady || !map || !mapApi || !selectedTrailGeoJson?.features.length) return;
+
+    const bounds = new mapApi.LngLatBounds();
+    let pointCount = 0;
+
+    function visit(value: unknown) {
+      if (!Array.isArray(value)) return;
+      if (
+        value.length >= 2 &&
+        typeof value[0] === "number" &&
+        typeof value[1] === "number" &&
+        Number.isFinite(value[0]) &&
+        Number.isFinite(value[1])
+      ) {
+        bounds.extend([value[0], value[1]]);
+        pointCount += 1;
+        return;
+      }
+      for (const item of value) visit(item);
+    }
+
+    for (const feature of selectedTrailGeoJson.features) {
+      visit(feature.geometry?.coordinates);
+    }
+
+    if (pointCount > 1 && !bounds.isEmpty()) {
+      map.fitBounds(bounds, {
+        padding: { top: 110, right: 70, bottom: 180, left: 70 },
+        maxZoom: 12.5,
+        duration: 520,
+      });
+    }
+  }, [mapReady, selectedTrailGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -636,7 +759,7 @@ export function MichiganDestinationMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapReady || !map || !activeDiscoveryId) return;
+    if (!mapReady || !map || !activeDiscoveryId || selectedTrailGeoJson?.features.length) return;
     const selected = discoveryPlaces.find((place) => place.id === activeDiscoveryId);
     if (!selected) return;
     map.flyTo({
@@ -644,7 +767,7 @@ export function MichiganDestinationMap({
       zoom: Math.max(map.getZoom(), 8),
       duration: 420,
     });
-  }, [activeDiscoveryId, discoveryPlaces, mapReady]);
+  }, [activeDiscoveryId, discoveryPlaces, mapReady, selectedTrailGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;

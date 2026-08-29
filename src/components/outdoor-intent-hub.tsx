@@ -4,11 +4,13 @@ import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { destinations } from "../data/destinations";
 import { specialistTools } from "../data/specialist-tools";
-import { selectTrailProfileForDiscovery, type TrailProfile } from "../data/trail-profiles";
+import { selectTrailProfileForDiscovery, trailProfiles, type TrailProfile } from "../data/trail-profiles";
 import { BOAT_LAUNCH_FINDER, type BoatLaunchResponse } from "../lib/boat-launches";
 import type { DayPlanResponse } from "../lib/day-plan";
 import type { DiscoveryPlace, DiscoveryResponse } from "../lib/discovery";
 import type { PlaceIntelligence } from "../lib/place-intelligence";
+import type { TrailGeometryResult } from "../lib/trail-geometry";
+import { deriveTrailLiveSignal, trailheadDirectionsUrl } from "../lib/trail-live";
 import { universeLayerIds, universeLayerLabels, type OutdoorUniverseResponse, type UniverseLayerId } from "../lib/outdoor-universe";
 import { haversineMiles } from "../lib/planner";
 import { estimateHikeTimeRange, formatHikeTimeRange, trailRouteKindLabel } from "../lib/trail-planning";
@@ -291,6 +293,9 @@ export function OutdoorIntentHub() {
   const [dayPlanning, setDayPlanning] = useState(false);
   const [placeIntelligence, setPlaceIntelligence] = useState<PlaceIntelligence | null>(null);
   const [placeIntelligenceLoading, setPlaceIntelligenceLoading] = useState(false);
+  const [selectedTrailProfileId, setSelectedTrailProfileId] = useState("");
+  const [trailGeometry, setTrailGeometry] = useState<TrailGeometryResult | null>(null);
+  const [trailGeometryLoading, setTrailGeometryLoading] = useState(false);
   const [planning, setPlanning] = useState(false);
   const [message, setMessage] = useState("");
   const [activeId, setActiveId] = useState("");
@@ -309,6 +314,7 @@ export function OutdoorIntentHub() {
   const signalCacheRef = useRef(new Map<string, SpecialistSignal[]>());
   const placeIntelligenceCacheRef = useRef(new Map<string, PlaceIntelligence>());
   const placeIntelligenceRequestRef = useRef<AbortController | null>(null);
+  const trailGeometryRequestRef = useRef<AbortController | null>(null);
   const originInputRef = useRef<HTMLInputElement | null>(null);
   const wishInputRef = useRef<HTMLInputElement | null>(null);
   const resultDockRef = useRef<HTMLElement | null>(null);
@@ -539,8 +545,12 @@ export function OutdoorIntentHub() {
     requestRef.current?.abort();
     discoveryRequestRef.current?.abort();
     placeIntelligenceRequestRef.current?.abort();
+    trailGeometryRequestRef.current?.abort();
     setPlaceIntelligence(null);
     setPlaceIntelligenceLoading(false);
+    setSelectedTrailProfileId("");
+    setTrailGeometry(null);
+    setTrailGeometryLoading(false);
     setPlans(null);
     setDiscovery(null);
     setDiscoveryRange(null);
@@ -818,6 +828,10 @@ export function OutdoorIntentHub() {
 
   const activateDiscovery = useCallback((placeId: string) => {
     const place = discovery?.places.find((candidate) => candidate.id === placeId);
+    trailGeometryRequestRef.current?.abort();
+    setSelectedTrailProfileId("");
+    setTrailGeometry(null);
+    setTrailGeometryLoading(false);
     setActiveId("");
     setActiveDiscoveryId(placeId);
     if (place) {
@@ -1111,16 +1125,30 @@ export function OutdoorIntentHub() {
   const activeDestination = destinations.find((destination) => destination.id === activeId) ?? null;
   const activeDiscovery = activeId ? null : discovery?.places.find((place) => place.id === activeDiscoveryId) ?? null;
   const activePlan = plans?.plans.find((plan) => plan.destination.id === activeId) ?? null;
-  const activeTrailProfile = activeDiscovery
+  const activeTrailProfiles = activeDiscovery?.curatedPlaceId
+    ? trailProfiles.filter((profile) => profile.destinationId === activeDiscovery.curatedPlaceId)
+    : [];
+  const suggestedTrailProfile = activeDiscovery
     ? selectTrailProfileForDiscovery({
         destinationId: activeDiscovery.curatedPlaceId,
         query: discovery?.query,
         traits: discovery?.intent.traits,
       })
     : null;
+  const activeTrailProfile =
+    activeTrailProfiles.find((profile) => profile.id === selectedTrailProfileId) ??
+    suggestedTrailProfile;
   const activeTrailTime = activeTrailProfile
     ? formatHikeTimeRange(estimateHikeTimeRange(activeTrailProfile.distanceMiles, activeTrailProfile.difficulty))
     : null;
+  const activeTrailLive = activeTrailProfile && activeDiscovery
+    ? deriveTrailLiveSignal(
+        activeTrailProfile,
+        placeIntelligence,
+        activeDiscovery.driveMinutes ?? Math.round(activeDiscovery.driveHours * 60),
+      )
+    : null;
+  const activeTrailheadUrl = activeTrailProfile ? trailheadDirectionsUrl(activeTrailProfile) : null;
   const decisionArgument = activeDiscovery
     ? buildDecisionArgument(activeDiscovery, discovery?.places ?? [])
     : null;
@@ -1129,6 +1157,60 @@ export function OutdoorIntentHub() {
     : [];
   const leadPlan = plans?.plans[0] ?? null;
   const visibleSignals = signalSnapshot?.placeId === activeId ? signalSnapshot.signals : [];
+
+  useEffect(() => {
+    trailGeometryRequestRef.current?.abort();
+    if (!activeDiscovery || !activeTrailProfile) return;
+
+    const controller = new AbortController();
+    trailGeometryRequestRef.current = controller;
+    const timer = window.setTimeout(() => {
+      if (controller.signal.aborted) return;
+      setTrailGeometry(null);
+      setTrailGeometryLoading(true);
+
+      fetch("/api/trail-geometry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          profileId: activeTrailProfile.id,
+          latitude: activeDiscovery.latitude,
+          longitude: activeDiscovery.longitude,
+        }),
+      })
+        .then(async (response) => {
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error ?? "Trail geometry unavailable");
+          return payload as TrailGeometryResult;
+        })
+        .then((payload) => {
+          if (trailGeometryRequestRef.current !== controller) return;
+          setTrailGeometry(payload);
+          trackGrowthEvent("trail_truth_geometry_resolved", semanticGrowthContext, {
+            profileId: activeTrailProfile.id,
+            geometryStatus: payload.status,
+            segmentCount: payload.segmentCount,
+          });
+        })
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          if (trailGeometryRequestRef.current !== controller) return;
+          setTrailGeometry(null);
+        })
+        .finally(() => {
+          if (trailGeometryRequestRef.current === controller) {
+            trailGeometryRequestRef.current = null;
+            setTrailGeometryLoading(false);
+          }
+        });
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [activeDiscovery, activeTrailProfile]);
 
 
   const fromHerePlaces = useMemo(() => {
@@ -1247,6 +1329,9 @@ export function OutdoorIntentHub() {
           closureCount={universe.access.closureCount}
           rerouteCount={universe.access.rerouteCount}
           trailLayerLabel={universe.label}
+          selectedTrailGeoJson={trailGeometry?.geojson ?? null}
+          selectedTrailLabel={activeTrailProfile?.name}
+          selectedTrailStatus={trailGeometry?.status}
           boatLaunchGeoJson={boatLaunches.geojson}
           boatLaunchCount={boatLaunches.count}
           userLocation={userLocation}
@@ -1903,8 +1988,12 @@ export function OutdoorIntentHub() {
             className="canvas-sheet-close"
             onClick={() => {
               placeIntelligenceRequestRef.current?.abort();
+              trailGeometryRequestRef.current?.abort();
               setPlaceIntelligence(null);
               setPlaceIntelligenceLoading(false);
+              setSelectedTrailProfileId("");
+              setTrailGeometry(null);
+              setTrailGeometryLoading(false);
               setDepartureOpen(false);
               setActiveId("");
               setActiveDiscoveryId("");
@@ -1968,6 +2057,46 @@ export function OutdoorIntentHub() {
                 <strong>{discovery?.intent.summary}</strong>
                 <small>{activeDiscovery.source === "OpenStreetMap" ? "Live mapped place from OpenStreetMap contributors." : "Curated Michigan Outdoors Now destination."}</small>
               </div>
+              {activeTrailProfiles.length > 1 && (
+                <section className="canvas-trail-chooser" aria-label="Choose a trail">
+                  <div className="canvas-trail-chooser-head">
+                    <span>Pick your hike</span>
+                    <strong>{activeTrailProfiles.length} verified routes here</strong>
+                    <small>Changing the route updates Trail Truth Live, daylight fit and the highlighted map line.</small>
+                  </div>
+                  <div className="canvas-trail-chooser-list">
+                    {activeTrailProfiles.map((profile) => {
+                      const selected = profile.id === activeTrailProfile?.id;
+                      const time = formatHikeTimeRange(
+                        estimateHikeTimeRange(profile.distanceMiles, profile.difficulty),
+                      );
+                      return (
+                        <button
+                          type="button"
+                          key={profile.id}
+                          className={selected ? "is-selected" : ""}
+                          aria-pressed={selected}
+                          onClick={() => {
+                            setSelectedTrailProfileId(profile.id);
+                            trackGrowthEvent("trail_truth_route_selected", semanticGrowthContext, {
+                              profileId: profile.id,
+                              destinationId: activeDiscovery.curatedPlaceId ?? "unknown",
+                              distanceMiles: profile.distanceMiles,
+                              difficulty: profile.difficulty,
+                            });
+                          }}
+                        >
+                          <span>{profile.name}</span>
+                          <strong>
+                            {profile.distanceMiles} mi · {trailRouteKindLabel(profile.routeKind)}
+                          </strong>
+                          <small>{profile.difficulty}{time ? ` · ${time}` : ""}</small>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
 
               <section className="canvas-field-intelligence" aria-label="Current trip confidence">
                 <div className="canvas-field-intelligence-head">
@@ -1985,6 +2114,18 @@ export function OutdoorIntentHub() {
                     )}
                     {placeIntelligence.goSignal.cautions.length > 0 && (
                       <small>{placeIntelligence.goSignal.cautions.join(" ")}</small>
+                    )}
+                  </div>
+                )}
+                {activeTrailProfile && activeTrailLive && (
+                  <div className={`canvas-trail-live is-${activeTrailLive.status}`}>
+                    <span>Trail Truth Live · {activeTrailProfile.name}</span>
+                    <strong>{activeTrailLive.headline}</strong>
+                    {activeTrailLive.reasons.length > 0 && (
+                      <p>{activeTrailLive.reasons.slice(0, 3).join(" ")}</p>
+                    )}
+                    {activeTrailLive.cautions.length > 0 && (
+                      <small>{activeTrailLive.cautions.slice(0, 3).join(" ")}</small>
                     )}
                   </div>
                 )}
@@ -2083,6 +2224,44 @@ export function OutdoorIntentHub() {
                         ].filter(Boolean).join(" · ") || "Difficulty/surface tags not available on the selected relation"}
                       </small>
                     </article>
+                    {activeTrailProfile && (
+                      <article className={activeTrailLive?.daylight.status === "insufficient" ? "has-caution" : ""}>
+                        <span>Finish before dark?</span>
+                        <strong>
+                          {activeTrailLive?.daylight.status === "comfortable"
+                            ? "Comfortable daylight margin"
+                            : activeTrailLive?.daylight.status === "tight"
+                              ? "Tight daylight margin"
+                              : activeTrailLive?.daylight.status === "insufficient"
+                                ? "Not a comfortable day-hike window"
+                                : "Daylight margin unavailable"}
+                        </strong>
+                        <small>
+                          {activeTrailLive?.daylight.headline}
+                          {activeDiscovery ? ` Expected arrival around ${arrivalTimeLabel(activeDiscovery)}.` : ""}
+                        </small>
+                      </article>
+                    )}
+
+                    {activeTrailProfile && (
+                      <article className={trailGeometry?.status === "mapped" ? "has-caution" : ""}>
+                        <span>Route on map</span>
+                        <strong>
+                          {trailGeometryLoading
+                            ? "Resolving route geometry…"
+                            : trailGeometry?.status === "official"
+                              ? "Official route geometry highlighted"
+                              : trailGeometry?.status === "mapped"
+                                ? "Mapped fallback highlighted"
+                                : "Route geometry not resolved"}
+                        </strong>
+                        <small>
+                          {trailGeometry
+                            ? `${trailGeometry.sourceLabel} · ${trailGeometry.segmentCount} mapped segment${trailGeometry.segmentCount === 1 ? "" : "s"}`
+                            : "Published Trail Truth mileage remains available even when geometry is not."}
+                        </small>
+                      </article>
+                    )}
 
                     <article className={placeIntelligence.access.closureCount > 0 ? "has-caution" : ""}>
                       <span>Access</span>
@@ -2111,6 +2290,27 @@ export function OutdoorIntentHub() {
                             activeTrailProfile.access.dogs,
                           ].filter(Boolean).join(" · ") || activeTrailProfile.access.notes?.[0] || "Check the official route source before departure."}
                         </small>
+                        {activeTrailheadUrl && (
+                          <a
+                            className="canvas-trailhead-link"
+                            href={activeTrailheadUrl}
+                            target="_blank"
+                            rel="noopener"
+                            onClick={() =>
+                              trackGrowthEvent("trailhead_directions_opened", semanticGrowthContext, {
+                                profileId: activeTrailProfile.id,
+                                destinationId: activeDiscovery.curatedPlaceId ?? "unknown",
+                              })
+                            }
+                          >
+                            Navigate to trailhead →
+                          </a>
+                        )}
+                        {activeTrailProfile.routeKind === "point-to-point" && (
+                          <small className="canvas-point-to-point-warning">
+                            Point-to-point route: plan the return, shuttle, or second vehicle before starting.
+                          </small>
+                        )}
                       </article>
                     )}
                   </div>
@@ -2149,15 +2349,17 @@ export function OutdoorIntentHub() {
                         : "Checking official Michigan DNR layers"}
                     </strong>
 
-                    <span>Map metadata</span>
+                    <span>Route geometry</span>
                     <strong>
-                      {activeTrailProfile
-                        ? `${activeTrailProfile.sourceLabel} official route profile · ${activeTrailProfile.distanceMiles} mi`
-                        : placeIntelligence?.trailTruth
-                          ? `OpenStreetMap hiking relation ${placeIntelligence.trailTruth.relationId ?? ""} · ${placeIntelligence.trailTruth.confidence} confidence`
-                          : activeDiscovery.source === "OpenStreetMap" || placeIntelligence?.trailMetadata
-                            ? "OpenStreetMap contributors"
-                            : "Used only when mapped metadata exists"}
+                      {trailGeometry?.status === "official"
+                        ? `${trailGeometry.sourceLabel} · official highlighted centerline`
+                        : trailGeometry?.status === "mapped"
+                          ? `${trailGeometry.sourceLabel} · mapped fallback, not official`
+                          : activeTrailProfile
+                            ? `${activeTrailProfile.sourceLabel} route profile · geometry unresolved`
+                            : placeIntelligence?.trailTruth
+                              ? `OpenStreetMap hiking relation ${placeIntelligence.trailTruth.relationId ?? ""} · ${placeIntelligence.trailTruth.confidence} confidence`
+                              : "No selected route geometry"}
                     </strong>
 
                     <span>Freshness</span>
