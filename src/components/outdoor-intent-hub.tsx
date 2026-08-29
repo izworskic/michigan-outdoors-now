@@ -423,7 +423,7 @@ export function OutdoorIntentHub() {
     if (!activeId) return;
     const destination = destinations.find((candidate) => candidate.id === activeId);
     if (!destination) return;
-    const profile = writeMyOutdoorsProfile(
+    writeMyOutdoorsProfile(
       recordRecentPlace(readMyOutdoorsProfile(), {
         id: destination.id,
         name: destination.name,
@@ -444,7 +444,7 @@ export function OutdoorIntentHub() {
     const path = place.curatedPlaceId
       ? `/places/${place.curatedPlaceId}`
       : place.website ?? place.sourceUrl;
-    const profile = writeMyOutdoorsProfile(
+    writeMyOutdoorsProfile(
       recordRecentPlace(readMyOutdoorsProfile(), {
         id: memoryId,
         name: place.name,
