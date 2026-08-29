@@ -44,6 +44,7 @@ async function main() {
     ["new-window threshold", /!previous\.qualifies && now\.qualifies/.test(changes)],
     ["material stronger threshold", /scoreDelta >= 8/.test(changes) && /strengthDelta >= 10/.test(changes)],
     ["small-fluctuation tests", /Small fluctuations|small fluctuations/.test(tests)],
+    ["missing coverage cannot reset baseline", /checkedPlaceIds/.test(changes) && /missing live coverage/.test(tests)],
     ["seen baseline waits for drawer open", /markChangesSeen\(\)/.test(drawer) && drawer.indexOf("markChangesSeen();") < drawer.indexOf("setOpen(true)")],
     ["compact changed badge", /changeBadge/.test(drawer) && /changed/.test(drawer)],
     ["no second homepage block", /MyOutdoorsDrawer/.test(hub) && !/Something got better/.test(hub)],
