@@ -104,3 +104,14 @@ test("150-route depth raises useful trailhead and deep-destination coverage", ()
   assert.ok(trailTruthCoverageSummary.multiRouteDestinationCount >= 23);
   assert.ok(trailTruthCoverageSummary.operationallyThinDestinationCount <= 1);
 });
+
+
+test("selected Trail Truth UI exposes current-source drift instead of hiding it", async () => {
+  const hub = await import("node:fs/promises").then(({ readFile }) =>
+    readFile(new URL("../src/components/outdoor-intent-hub.tsx", import.meta.url), "utf8"),
+  );
+  assert.match(hub, /Source drift/);
+  assert.match(hub, /Current land-manager mileage wins/);
+  assert.match(hub, /Open current route source/);
+  assert.match(hub, /activeTrailProfile\.sourceNote/);
+});
