@@ -3,6 +3,10 @@ import { growthEventNames } from "../../lib/growth-contract";
 import { landingQualitySummary, searchLandingIntents } from "../../lib/search-landings";
 import { siteUrl } from "../../lib/site";
 import { trailSearchPages } from "../../lib/trail-search-pages";
+import {
+  trailSearchExpansionGate,
+  trailSearchOpportunities,
+} from "../../lib/trail-search-opportunities";
 
 export const runtime = "nodejs";
 
@@ -21,6 +25,9 @@ export async function GET() {
         families: searchLandingIntents.map((intent) => intent.slug),
         trailIntentPages: trailSearchPages.length,
         trailFamilies: trailSearchPages.map((page) => page.slug),
+        trailSearchOpportunities,
+        trailSearchExpansionGate,
+        trailSearchExpansionState: "blocked-during-location-intent-measurement-window",
         excludedCanonicalOwners: {
           beaches: "https://chrisizworski.com/great-lakes-beaches/",
           freighters: "https://chrisizworski.com/great-lakes-freighter-tracking/",
