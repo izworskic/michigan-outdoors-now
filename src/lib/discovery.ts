@@ -401,8 +401,15 @@ export function curatedDiscoveryPlaces(args: {
 }) {
   const selectedActivities = new Set(args.intent.activities);
 
+  const requiresFamilyFit = args.intent.traits.includes("family");
+  const requiresDogFit = args.intent.traits.includes("dog");
+  const requiresAccessibleFit = args.intent.traits.includes("accessible");
+
   return args.destinations
     .filter((destination) =>
+      (!requiresFamilyFit || destination.kidsFriendly) &&
+      (!requiresDogFit || destination.dogsAllowed) &&
+      (!requiresAccessibleFit || destination.accessibleFriendly) &&
       isDiscoveryCandidateInRange({
         latitude: destination.latitude,
         longitude: destination.longitude,
