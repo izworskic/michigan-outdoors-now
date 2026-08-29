@@ -248,6 +248,7 @@ try {
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("planner_completed"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("day_plan_built"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("departure_mode_opened"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("opportunity_opened"));
   assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("exact coordinates"));
 
   const fartherDiscovery = await fetch(`${origin}/api/discover`, {
@@ -287,6 +288,20 @@ try {
   if (statewidePayload.conditionsStatus === "live") {
     assert.ok(statewidePayload.picks.length > 0);
     assert.ok(statewidePayload.picks.every((pick) => ["hiking", "scenic", "birding"].includes(pick.activity)));
+  }
+
+  const opportunities = await fetch(`${origin}/api/opportunities`, {
+    signal: AbortSignal.timeout(25_000),
+  });
+  assert.equal(opportunities.status, 200);
+  assert.match(opportunities.headers.get("x-robots-tag") ?? "", /noindex/);
+  const opportunityPayload = await opportunities.json();
+  assert.ok(["live", "unavailable"].includes(opportunityPayload.status));
+  assert.ok(Array.isArray(opportunityPayload.opportunities));
+  assert.match(opportunityPayload.note, /opportun|weather-fit|unavailable/i);
+  if (opportunityPayload.status === "live") {
+    assert.ok(opportunityPayload.opportunities.length > 0);
+    assert.ok(opportunityPayload.opportunities.every((item) => item.score >= 88));
   }
 
   const localPage = await fetch(`${origin}/from/bay-city`);
