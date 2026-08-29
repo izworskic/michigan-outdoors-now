@@ -15,7 +15,7 @@ export async function GET() {
 
   return NextResponse.json(
     {
-      version: "1.0.0",
+      version: "1.1.0",
       generatedFrom: "repository-contract",
       canonical: siteUrl,
       owner: "https://chrisizworski.com/#person",
