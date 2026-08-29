@@ -957,7 +957,7 @@ export const trailProfiles: TrailProfile[] = [
     tags: ["short"],
     sourceLabel: "Michigan DNR",
     sourceUrl: "https://www.michigan.gov/recsearch/parks/petoskey",
-    sourceNote: "Michigan DNR lists Old Baldy Trail as a half-mile loop to a panoramic dune summit.",
+    sourceNote: "Michigan DNR lists Old Baldy Trail as a 0.5-mile loop to a panoramic dune summit.",
   },
   {
     id: "petoskey-portage",
