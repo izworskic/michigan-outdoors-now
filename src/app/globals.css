@@ -4331,3 +4331,73 @@ label {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Existing-canonical Trail Truth search harvest */
+.trail-search-evidence {
+  display: grid;
+  gap: 1rem;
+  padding-top: 1.4rem;
+  padding-bottom: 1.4rem;
+}
+
+.trail-search-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.trail-search-evidence-grid article {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.8rem;
+  border: 1px solid color-mix(in srgb, currentColor 13%, transparent);
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, Canvas 96%, currentColor 4%);
+}
+
+.trail-search-evidence-grid strong {
+  font-size: 1.15rem;
+}
+
+.trail-search-evidence-grid span,
+.trail-search-area-links > span {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.68;
+}
+
+.trail-search-evidence > p {
+  margin: 0;
+  max-width: 78ch;
+  line-height: 1.55;
+}
+
+.trail-search-area-links {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.trail-search-area-links > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.trail-search-area-links a {
+  display: inline-flex;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid color-mix(in srgb, currentColor 13%, transparent);
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+@media (max-width: 760px) {
+  .trail-search-evidence-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
