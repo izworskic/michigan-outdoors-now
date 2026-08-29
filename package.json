@@ -28,7 +28,8 @@
     "report:growth": "node --import tsx scripts/report-growth-opportunities.ts",
     "fetch:gsc": "node scripts/fetch-search-console.mjs",
     "fetch:vercel-events": "node scripts/fetch-vercel-product-events.mjs",
-    "score:trail-stack": "node --import tsx scripts/score-trail-decision-stack.ts"
+    "score:trail-stack": "node --import tsx scripts/score-trail-decision-stack.ts",
+    "brief:growth": "node --import tsx scripts/build-growth-brief.ts"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
