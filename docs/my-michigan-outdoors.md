@@ -88,6 +88,10 @@ The weekly product snapshot now counts:
 - `my_outdoors_place_remembered`;
 - `my_outdoors_place_saved`;
 - `my_outdoors_place_unsaved`;
-- `my_outdoors_visited_toggled`.
+- `my_outdoors_visited_toggled`;
+- `my_outdoors_changes_detected`;
+- `my_outdoors_changes_seen`;
+- `my_outdoors_change_opened`;
+- `my_outdoors_change_verify_opened`.
 
 The weekly growth brief exposes the key continuity indicators so repeat-use value can be judged alongside search acquisition and opportunity engagement.
