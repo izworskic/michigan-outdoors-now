@@ -43,3 +43,14 @@ test("hike time is a broad planning range rather than false exact timing", () =>
   assert.ok(range!.highMinutes > range!.lowMinutes);
   assert.match(formatHikeTimeRange(range) ?? "", /hr/);
 });
+
+
+test("generic hiking intent keeps the curated representative route instead of defaulting to the shortest", () => {
+  const profile = selectTrailProfileForDiscovery({
+    destinationId: "porcupine-mountains",
+    query: "go hiking",
+    traits: [],
+  });
+
+  assert.equal(profile?.id, "escarpment-trail");
+});
