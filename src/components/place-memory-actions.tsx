@@ -31,12 +31,15 @@ export function PlaceMemoryActions({ placeId, placeName, area }: Props) {
       path: `/places/${placeId}`,
     });
     profile = writeMyOutdoorsProfile(profile);
-    setSaved(profile.savedPlaces.some((item) => item.id === placeId));
-    setVisited(profile.visitedPlaceIds.includes(placeId));
+    const timer = window.setTimeout(() => {
+      setSaved(profile.savedPlaces.some((item) => item.id === placeId));
+      setVisited(profile.visitedPlaceIds.includes(placeId));
+    }, 0);
     trackGrowthEvent("my_outdoors_place_remembered", {
       surface: "place_detail",
       pageKey: `places/${placeId}`,
     }, { source: "place_view" });
+    return () => window.clearTimeout(timer);
   }, [area, placeId, placeName]);
 
   function toggleSave() {
