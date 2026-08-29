@@ -79,6 +79,56 @@ async function aggregateEvent({
     .filter((row) => row.pageKey && Number.isFinite(row.count));
 }
 
+async function aggregateOpportunityEvent({
+  token,
+  teamId,
+  projectId,
+  eventName,
+  since,
+  until,
+}) {
+  const params = new URLSearchParams({
+    teamId,
+    projectId,
+    since,
+    until,
+    by: "eventData/opportunity_kind",
+    filter: `eventName eq '${eventName}' and eventData/surface eq 'homepage_planner'`,
+  });
+  const response = await fetch(
+    `https://api.vercel.com/v1/query/web-analytics/events/aggregate?${params}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `Vercel Web Analytics query failed for ${eventName}: ${response.status} ${detail.slice(0, 300)}`,
+    );
+  }
+
+  const payload = await response.json();
+  const rows = Array.isArray(payload.data) ? payload.data : [];
+  return rows
+    .map((row) => ({
+      kind:
+        typeof row.eventData === "string"
+          ? row.eventData
+          : typeof row.value === "string"
+            ? row.value
+            : typeof row.key === "string"
+              ? row.key
+              : "unknown",
+      count: Number(row.count ?? 0),
+    }))
+    .filter((row) => Number.isFinite(row.count));
+}
+
 const token = process.env.VERCEL_ANALYTICS_TOKEN?.trim() || process.env.VERCEL_TOKEN?.trim();
 const teamId = process.env.VERCEL_ANALYTICS_TEAM_ID?.trim() || process.env.VERCEL_TEAM_ID?.trim();
 const projectId =
@@ -134,6 +184,33 @@ for (const [eventName, field] of Object.entries(eventMap)) {
   }
 }
 
+
+const opportunityOpened = await aggregateOpportunityEvent({
+  token,
+  teamId,
+  projectId,
+  eventName: "opportunity_opened",
+  since,
+  until,
+});
+const opportunityVerified = await aggregateOpportunityEvent({
+  token,
+  teamId,
+  projectId,
+  eventName: "opportunity_verify_opened",
+  since,
+  until,
+});
+const opportunityKinds = [...new Set([
+  ...opportunityOpened.map((row) => row.kind),
+  ...opportunityVerified.map((row) => row.kind),
+])].sort();
+const opportunitySignals = opportunityKinds.map((kind) => ({
+  kind,
+  opens: opportunityOpened.find((row) => row.kind === kind)?.count ?? 0,
+  verifications: opportunityVerified.find((row) => row.kind === kind)?.count ?? 0,
+}));
+
 const payload = {
   version: 1,
   kind: "product-funnel-normalized",
@@ -147,8 +224,9 @@ const payload = {
     projectId,
     teamId,
     surface: "location_intent",
-    events: Object.keys(eventMap),
+    events: [...Object.keys(eventMap), "opportunity_opened", "opportunity_verify_opened"],
   },
+  opportunitySignals,
   rows: [...byPage.values()].sort((a, b) => a.pageKey.localeCompare(b.pageKey)),
 };
 
