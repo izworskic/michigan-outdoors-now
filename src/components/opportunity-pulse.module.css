@@ -1,0 +1,144 @@
+.section {
+  width: min(1180px, calc(100% - 32px));
+  margin: 22px auto 36px;
+  padding: 22px;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 22px;
+  background: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+}
+
+.heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 18px;
+}
+
+.heading h2 {
+  margin: 2px 0 0;
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.68;
+}
+
+.explainer,
+.note {
+  margin: 0;
+  line-height: 1.5;
+  opacity: 0.72;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  border-radius: 16px;
+  background: Canvas;
+}
+
+.card h3,
+.card p {
+  margin: 0;
+}
+
+.card h3 {
+  font-size: 1.08rem;
+  line-height: 1.2;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  font-size: 0.78rem;
+  text-transform: capitalize;
+}
+
+.meta span {
+  opacity: 0.68;
+}
+
+.place {
+  font-weight: 700;
+}
+
+.comparison {
+  font-size: 0.9rem;
+  opacity: 0.74;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.actions a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.caveat {
+  font-size: 0.82rem;
+  opacity: 0.76;
+}
+
+.caveat summary {
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.caveat p {
+  padding-top: 8px;
+  line-height: 1.45;
+}
+
+.note {
+  margin-top: 14px;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 820px) {
+  .section {
+    width: min(100% - 20px, 1180px);
+    margin-top: 14px;
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .heading {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
