@@ -67,7 +67,7 @@ export default async function TrailIntentPage({
         url: pageUrl,
         name: page.title,
         description: page.description,
-        dateModified: "2026-08-28",
+        dateModified: "2026-08-29",
         inLanguage: "en-US",
         author: { "@id": personSchema["@id"] },
         creator: { "@id": personSchema["@id"] },
@@ -127,7 +127,7 @@ export default async function TrailIntentPage({
           <h1>{page.h1}</h1>
           <p className="trail-search-deck">{page.directAnswer}</p>
           <p className="guide-review">
-            By <a href="https://chrisizworski.com/chris-izworski/">Chris Izworski</a> · Official route sources checked August 28, 2026
+            By <a href="https://chrisizworski.com/chris-izworski/">Chris Izworski</a> · Official route sources checked August 29, 2026
           </p>
         </div>
       </header>
