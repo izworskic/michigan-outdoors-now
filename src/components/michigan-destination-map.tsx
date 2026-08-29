@@ -228,7 +228,7 @@ export function MichiganDestinationMap({
           "line-color": selectedTrailStatus === "official" ? "#173f35" : "#7a5a2b",
           "line-opacity": 0.98,
           "line-width": ["interpolate", ["linear"], ["zoom"], 5, 3.4, 9, 5.5, 13, 7.5],
-          "line-dasharray": selectedTrailStatus === "mapped" ? [2, 1.2] : [1, 0],
+          "line-dasharray": selectedTrailStatus === "mapped" ? [2, 1.2] : [1, 0.01],
         },
       });
     } else {
@@ -240,7 +240,7 @@ export function MichiganDestinationMap({
       map.setPaintProperty(
         selectedTrailLayerId,
         "line-dasharray",
-        selectedTrailStatus === "mapped" ? [2, 1.2] : [1, 0],
+        selectedTrailStatus === "mapped" ? [2, 1.2] : [1, 0.01],
       );
     }
 
