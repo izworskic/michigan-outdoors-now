@@ -67,6 +67,9 @@ jobs:
       - name: Score Trail Decision Stack
         run: npm run score:trail-stack
 
+      - name: Score live opportunity detection
+        run: npm run score:opportunity
+
       - name: Build production output
         run: npm run build
 
