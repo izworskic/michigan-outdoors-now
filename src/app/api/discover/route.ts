@@ -120,7 +120,8 @@ function buildOverpassQuery(
   return `[out:json][timeout:20];(${clauses.join("")});out center tags qt;`;
 }
 
-async function fetchOverpass(query: string) {
+async function fetchOverpass(query: string, disabled = false) {
+  if (disabled) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1_600);
 
@@ -391,7 +392,7 @@ export async function POST(request: Request) {
     origin.longitude,
   );
   const strictPreferenceMode = preferenceTraits.length > 0;
-  const elements = strictPreferenceMode ? null : await fetchOverpass(overpassQuery);
+  const elements = await fetchOverpass(overpassQuery, strictPreferenceMode);
   const live = elements
     ? osmPlaces(elements, {
         originLatitude: origin.latitude,
