@@ -7,6 +7,7 @@ export type SearchConsoleRow = {
   position: number;
   family?: string;
   origin?: string;
+  branded?: boolean;
 };
 
 export type ProductFunnelRow = {

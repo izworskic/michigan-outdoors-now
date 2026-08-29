@@ -43,6 +43,8 @@ export const growthEventNames = [
   "proof_ledger_opened",
   "departure_mode_opened",
   "directions_opened",
+  "opportunity_opened",
+  "opportunity_verify_opened",
 ] as const;
 
 export type GrowthEventName = (typeof growthEventNames)[number];

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { OutdoorIntentHub } from "../components/outdoor-intent-hub";
+import { OpportunityPulse } from "../components/opportunity-pulse";
 import { jsonLd, personSchema, siteUrl } from "../lib/site";
 
 export const metadata: Metadata = {
@@ -79,6 +80,7 @@ export default function Home() {
   return (
     <>
       <OutdoorIntentHub />
+      <OpportunityPulse />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(structuredData) }} />
     </>
   );
