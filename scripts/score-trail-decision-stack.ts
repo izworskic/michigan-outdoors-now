@@ -114,10 +114,12 @@ async function main() {
       profiles.includes("isle-royale-mount-franklin") &&
       profiles.includes("wilderness-nct-segment") &&
       profiles.includes("presque-isle-anderton") &&
-      trailTruthCoverageSummary.profileCount >= 100 &&
-      trailTruthCoverageSummary.namedTrailheadCount >= 35 &&
-      trailTruthCoverageSummary.multiRouteDestinationCount >= 15 &&
-      trailTruthCoverageSummary.deepDestinationCount >= 8 &&
+      trailTruthCoverageSummary.profileCount >= 125 &&
+      trailTruthCoverageSummary.namedTrailheadCount >= 45 &&
+      trailTruthCoverageSummary.multiRouteDestinationCount >= 21 &&
+      trailTruthCoverageSummary.deepDestinationCount >= 10 &&
+      trailTruthCoverageSummary.oneRouteDestinationCount <= 7 &&
+      trailTruthCoverageSummary.shallowDestinationCount <= 11 &&
       trailTruthCoverageSummary.coveredDestinationCount >= 26 &&
       trailTruthCoverageSummary.coveragePercent >= 80 &&
       trailTruthCoverageSummary.uncoveredUndocumentedDestinationIds.length === 0 &&
@@ -134,7 +136,7 @@ async function main() {
       tests.includes("Decision Board can build a routed multi-stop day") &&
       liveTests.includes("finish-before-dark logic subtracts travel time") &&
       liveTests.includes("official geometry separate from mapped fallback") &&
-      depthTests.includes("100-route threshold") &&
+      depthTests.includes("125-route threshold") &&
       depthTests.includes("large local trail catalogs stay compact") &&
       hub.includes("Show all ${activeTrailProfiles.length} verified routes"),
   };
