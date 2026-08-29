@@ -138,3 +138,26 @@ test("baseline snapshots are bounded to curated saved places", () => {
   );
   assert.deepEqual(Object.keys(snapshot), ["tawas-point"]);
 });
+
+
+test("missing live coverage never overwrites or upgrades a saved-place baseline", () => {
+  const result = detectSavedPlaceChanges({
+    savedPlaces: saved,
+    previous: {
+      "tawas-point": {
+        checkedAt: "2026-08-27T20:00:00.000Z",
+        qualifies: false,
+        score: null,
+        signalStrength: null,
+        activity: null,
+        kind: null,
+      },
+    },
+    opportunities: [opportunity()],
+    checkedAt: "2026-08-28T20:00:00.000Z",
+    checkedPlaceIds: [],
+  });
+
+  assert.equal(result.changes.length, 0);
+  assert.equal(result.current["tawas-point"], undefined);
+});
