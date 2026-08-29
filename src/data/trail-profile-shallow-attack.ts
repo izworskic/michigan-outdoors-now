@@ -2,7 +2,6 @@ import type { TrailProfile } from "./trail-profiles";
 
 const WARREN_MAP =
   "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsT-Z/warren_dunes_map.pdf";
-const WARREN_PAGE = "https://www.michigan.gov/recsearch/parks/warrendunes";
 const PETOSKEY_MAP =
   "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/petoskey_map.pdf";
 const PETOSKEY_PAGE = "https://www.michigan.gov/recsearch/parks/petoskey";
