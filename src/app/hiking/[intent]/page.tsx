@@ -6,6 +6,7 @@ import { jsonLd, personSchema, siteUrl } from "../../../lib/site";
 import {
   trailSearchPageBySlug,
   trailSearchPages,
+  trailSearchPageStats,
 } from "../../../lib/trail-search-pages";
 
 export const dynamicParams = false;
@@ -55,9 +56,20 @@ export default async function TrailIntentPage({
   if (!page) notFound();
 
   const pageUrl = `${siteUrl}/hiking/${page.slug}`;
+  const stats = trailSearchPageStats(page);
   const destinationById = new Map(
     destinations.map((destination) => [destination.id, destination]),
   );
+  const representedDestinations = [
+    ...new Set(
+      page.profiles
+        .map((profile) => profile.destinationId)
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ]
+    .map((id) => destinationById.get(id))
+    .filter((destination): destination is NonNullable<typeof destination> => Boolean(destination));
+
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
@@ -73,6 +85,11 @@ export default async function TrailIntentPage({
         creator: { "@id": personSchema["@id"] },
         isPartOf: { "@id": `${siteUrl}/#website` },
         mainEntity: { "@id": `${pageUrl}#routes` },
+        about: [
+          { "@type": "Thing", name: "Michigan hiking" },
+          { "@type": "Thing", name: "official trail mileage" },
+          { "@type": "Thing", name: page.eyebrow },
+        ],
       },
       {
         "@type": "BreadcrumbList",
@@ -144,6 +161,43 @@ export default async function TrailIntentPage({
           mapped route metadata when you open a place. A published route length is
           not a statement that the trail is open or suitable today.
         </p>
+      </section>
+      <section className="content-wrap trail-search-evidence" aria-label="Trail Truth catalog coverage">
+        <div className="trail-search-evidence-grid">
+          <article>
+            <strong>{stats.routeCount}</strong>
+            <span>verified route choices</span>
+          </article>
+          <article>
+            <strong>{stats.destinationCount}</strong>
+            <span>Michigan destinations</span>
+          </article>
+          <article>
+            <strong>{stats.minMiles}–{stats.maxMiles} mi</strong>
+            <span>published mileage range</span>
+          </article>
+          <article>
+            <strong>{stats.sourceLabels.length}</strong>
+            <span>official source systems</span>
+          </article>
+        </div>
+        <p>
+          Route shapes in this set: {stats.loopCount} loops, {stats.outAndBackCount} out-and-backs,
+          {" "}{stats.pointToPointCount} point-to-point routes and {stats.networkCount} trail networks.
+          These counts describe the verified catalog on this page; they are not estimates of every trail in Michigan.
+        </p>
+        {representedDestinations.length > 0 && (
+          <div className="trail-search-area-links">
+            <span>Hiking areas represented</span>
+            <div>
+              {representedDestinations.slice(0, 14).map((destination) => (
+                <Link href={`/places/${destination.id}`} key={destination.id}>
+                  {destination.name}
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="content-wrap trail-search-grid" aria-label={page.h1}>

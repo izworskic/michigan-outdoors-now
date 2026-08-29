@@ -22,7 +22,18 @@ async function main() {
     await readFile(new URL("benchmarks/organic-search-growth.json", root), "utf8"),
   ) as Benchmark;
 
-  const [page, originPage, guidePage, sitemap, site, layout, tests] = await Promise.all([
+  const [
+    page,
+    originPage,
+    guidePage,
+    sitemap,
+    site,
+    layout,
+    tests,
+    trailPage,
+    trailOpportunitySource,
+    trailOpportunityTests,
+  ] = await Promise.all([
     readFile(new URL("src/app/from/[origin]/[intent]/page.tsx", root), "utf8"),
     readFile(new URL("src/app/from/[origin]/page.tsx", root), "utf8"),
     readFile(new URL("src/app/ideas/[guide]/page.tsx", root), "utf8"),
@@ -30,6 +41,9 @@ async function main() {
     readFile(new URL("src/lib/site.ts", root), "utf8"),
     readFile(new URL("src/app/layout.tsx", root), "utf8"),
     readFile(new URL("tests/search-growth-landings.test.ts", root), "utf8"),
+    readFile(new URL("src/app/hiking/[intent]/page.tsx", root), "utf8"),
+    readFile(new URL("src/lib/trail-search-opportunities.ts", root), "utf8"),
+    readFile(new URL("tests/trail-search-opportunities.test.ts", root), "utf8"),
   ]);
 
   const quality = landingQualitySummary();
@@ -71,7 +85,9 @@ async function main() {
       originPage.includes("searchLandingsForOrigin") &&
       guidePage.includes("searchLandingsForGuide") &&
       page.includes("Chris Izworski profile") &&
-      page.includes("More projects"),
+      page.includes("More projects") &&
+      trailPage.includes("Hiking areas represented") &&
+      trailPage.includes("representedDestinations"),
     canonicalChrisEntity:
       site.includes('"@id": "https://chrisizworski.com/#person"') &&
       !site.includes("#chris-izworski") &&
@@ -83,7 +99,11 @@ async function main() {
     regressionCoverage:
       tests.includes("meaningful but bounded search surface area") &&
       tests.includes("canonical Chris Izworski Person ID") &&
-      tests.includes("avoids beach, freighter, and birding cannibalization"),
+      tests.includes("avoids beach, freighter, and birding cannibalization") &&
+      trailOpportunitySource.includes("blocked-until-expansion-gate") &&
+      trailOpportunitySource.includes("completeWindowDays: 28") &&
+      trailOpportunityTests.includes("stay out of sitemap and static route generation") &&
+      !sitemap.includes("trailSearchOpportunities.map"),
   };
 
   const scored = benchmark.criteria.map((criterion) => ({

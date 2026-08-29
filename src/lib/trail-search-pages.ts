@@ -77,3 +77,35 @@ export const trailSearchPages: TrailSearchPage[] = definitions
 export const trailSearchPageBySlug = new Map(
   trailSearchPages.map((page) => [page.slug, page]),
 );
+
+
+export type TrailSearchPageStats = {
+  routeCount: number;
+  destinationCount: number;
+  areaCount: number;
+  minMiles: number;
+  maxMiles: number;
+  loopCount: number;
+  outAndBackCount: number;
+  pointToPointCount: number;
+  networkCount: number;
+  sourceLabels: string[];
+};
+
+export function trailSearchPageStats(page: TrailSearchPage): TrailSearchPageStats {
+  const distances = page.profiles.map((profile) => profile.distanceMiles);
+  return {
+    routeCount: page.profiles.length,
+    destinationCount: new Set(
+      page.profiles.map((profile) => profile.destinationId).filter(Boolean),
+    ).size,
+    areaCount: new Set(page.profiles.map((profile) => profile.area)).size,
+    minMiles: Math.min(...distances),
+    maxMiles: Math.max(...distances),
+    loopCount: page.profiles.filter((profile) => profile.routeKind === "loop").length,
+    outAndBackCount: page.profiles.filter((profile) => profile.routeKind === "out-and-back").length,
+    pointToPointCount: page.profiles.filter((profile) => profile.routeKind === "point-to-point").length,
+    networkCount: page.profiles.filter((profile) => profile.routeKind === "network").length,
+    sourceLabels: [...new Set(page.profiles.map((profile) => profile.sourceLabel))].sort(),
+  };
+}

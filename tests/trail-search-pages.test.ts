@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { trailProfiles } from "../src/data/trail-profiles";
-import { trailSearchPages } from "../src/lib/trail-search-pages";
+import { trailSearchPages, trailSearchPageStats } from "../src/lib/trail-search-pages";
 
 test("statewide trail search cluster stays small and route-specific", () => {
   assert.equal(trailSearchPages.length, 6);
@@ -47,4 +47,33 @@ test("trail search pages expose route truth and Chris entity connections", async
   assert.match(page, /Chris Izworski profile/);
   assert.match(page, /trailSearchPages/);
   assert.match(page, /ItemList/);
+});
+
+
+test("existing trail canonicals expose catalog depth without changing the page family", () => {
+  assert.equal(trailSearchPages.length, 6);
+  for (const page of trailSearchPages) {
+    const stats = trailSearchPageStats(page);
+    assert.equal(stats.routeCount, page.profiles.length);
+    assert.ok(stats.destinationCount >= 1);
+    assert.ok(stats.areaCount >= 1);
+    assert.ok(stats.minMiles > 0);
+    assert.ok(stats.maxMiles >= stats.minMiles);
+    assert.equal(
+      stats.loopCount + stats.outAndBackCount + stats.pointToPointCount + stats.networkCount,
+      page.profiles.length,
+    );
+  }
+});
+
+test("trail search pages add crawlable evidence and destination handoffs without title churn", async () => {
+  const page = await readFile(
+    new URL("../src/app/hiking/[intent]/page.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.match(page, /Trail Truth catalog coverage/);
+  assert.match(page, /verified route choices/);
+  assert.match(page, /Hiking areas represented/);
+  assert.match(page, /representedDestinations/);
+  assert.match(page, /stats\.routeCount/);
 });

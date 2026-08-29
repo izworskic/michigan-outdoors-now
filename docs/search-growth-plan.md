@@ -40,6 +40,16 @@ Primary guidance:
 - https://developers.google.com/search/docs/appearance/structured-data/breadcrumb
 - https://developers.google.com/search/docs/appearance/snippet
 
+## Protected-window trail search harvest
+
+Trail Truth depth can improve the **six existing statewide hiking intent pages** during the current measurement window without creating a new canonical family. Those pages may gain richer route-count evidence, represented-destination links, route-shape summaries, and stronger creator/entity connections while their URL, title, H1, canonical, and family count remain stable.
+
+Potential future trail families are maintained in a noindex repository opportunity ledger and exposed through `growth-manifest.json` for measurement. They are not included in `generateStaticParams`, the sitemap, or crawlable navigation.
+
+A new trail-search family remains blocked until the complete 28-day location-intent measurement window ends and the central expansion gate is satisfied: at least 250 qualified impressions, 5 clicks, 10 planner completions, 3 directions opens, plus the global new-canonical/cannibalization gate.
+
+This lets the current Trail Truth catalog support more long-tail relevance now without contaminating the launch experiment or turning route depth into page-count growth.
+
 ## Measurement
 
 Search Console is the search source of truth: indexed canonical URLs, non-brand impressions, clicks, click-through rate, average position, query clusters, and guide-, explorer-, and destination-page landing traffic. Vercel Analytics measures what happens after the click: explorer filtering, planner starts and completions, primary/backup decisions, shares, maps, and official-detail opens.
