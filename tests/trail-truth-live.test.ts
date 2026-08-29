@@ -45,10 +45,22 @@ test("long rugged hikes are rejected when the daylight window cannot fit them", 
 
 test("verified named trailheads get a direct navigation action", () => {
   const empire = profile("empire-bluff");
-  const url = trailheadDirectionsUrl(empire);
-  assert.ok(url);
-  assert.match(url!, /google\.com\/maps\/search/);
-  assert.match(decodeURIComponent(url!), /Empire Bluff Trailhead/);
+  const action = trailheadDirectionsUrl(empire);
+  assert.ok(action);
+  assert.match(action!.url, /google\.com\/maps\/search/);
+  assert.match(decodeURIComponent(action!.url), /Empire Bluff Trailhead/);
+  assert.equal(action!.source, "verified-profile");
+});
+
+test("official geometry can provide a route-start navigation fallback", () => {
+  const lakeSuperior = profile("lake-superior-trail");
+  const action = trailheadDirectionsUrl(lakeSuperior, {
+    status: "official",
+    routeStart: { latitude: 46.812345, longitude: -89.612345 },
+  });
+  assert.ok(action);
+  assert.equal(action!.source, "official-geometry");
+  assert.match(decodeURIComponent(action!.url), /46\.812345,-89\.612345/);
 });
 
 test("Trail Truth Live UI keeps official geometry separate from mapped fallback", async () => {
