@@ -9,6 +9,10 @@ import {
   type ProductFunnelRow,
   type SearchConsoleRow,
 } from "../src/lib/growth-opportunities";
+import {
+  trailCandidateDemand,
+  trailCandidateDemandRule,
+} from "../src/lib/trail-query-demand";
 
 type SearchSnapshot = {
   window?: { label?: string };
@@ -53,6 +57,7 @@ const families = [
 const familyDecisions = families.map((family) =>
   scoreFamilyGrowth(family, search.rows ?? [], product.rows ?? []),
 );
+const trailDemand = trailCandidateDemand(search.rows ?? []);
 
 console.log("\nMICHIGAN OUTDOORS NOW GROWTH REPORT");
 console.log("=".repeat(78));
@@ -64,6 +69,20 @@ for (const item of opportunities) {
   console.log(`${item.action.padEnd(15)} pos ${item.row.position.toFixed(1).padStart(5)}  imp ${String(item.row.impressions).padStart(5)}  ctr ${(item.row.ctr * 100).toFixed(2).padStart(5)}%  ${item.row.query}`);
   console.log(`  ${item.reason}`);
 }
+
+console.log("\nBLOCKED TRAIL-FAMILY DEMAND — LEADING SIGNAL ONLY\n");
+for (const item of trailDemand.filter((candidate) => candidate.impressions > 0)) {
+  console.log(
+    `${item.label.padEnd(34)} imp ${String(item.impressions).padStart(5)}  clicks ${String(item.clicks).padStart(3)}  ctr ${(item.ctr * 100).toFixed(2).padStart(5)}%  pos ${item.weightedPosition.toFixed(1).padStart(5)}`,
+  );
+  console.log(
+    `  ${item.profileCount} verified routes across ${item.destinationCount} destinations · ${item.state}`,
+  );
+}
+if (!trailDemand.some((candidate) => candidate.impressions > 0)) {
+  console.log("No blocked trail-family candidate has matched query demand yet.");
+}
+console.log(`\nRULE: ${trailCandidateDemandRule}\n`);
 
 console.log("\nFAMILY EXPANSION GATES\n");
 for (const item of familyDecisions) {
