@@ -21,6 +21,15 @@ export type TrailProfile = {
   sourceLabel: string;
   sourceUrl: string;
   sourceNote: string;
+  access?: {
+    trailhead?: string;
+    parking?: string;
+    toilets?: string;
+    drinkingWater?: string;
+    dogs?: string;
+    notes?: string[];
+    sourceUrl?: string;
+  };
 };
 
 export const trailProfiles: TrailProfile[] = [
@@ -38,6 +47,15 @@ export const trailProfiles: TrailProfile[] = [
     sourceLabel: "National Park Service",
     sourceUrl: "https://www.nps.gov/thingstodo/hikes-over-mile-piro.htm",
     sourceNote: "NPS lists the full Chapel Loop, including Mosquito Falls, at 10.5 miles.",
+    access: {
+      trailhead: "Chapel Road trailhead",
+      parking: "Trailhead parking fills quickly, often by 9 a.m.; Chapel Road is a rough backcountry road.",
+      toilets: "Vault toilet at the trailhead",
+      drinkingWater: "No drinking water at the trailhead",
+      dogs: "Pets are prohibited on Chapel area trails",
+      notes: ["Summer and early-fall congestion can materially change the start of the day."],
+      sourceUrl: "https://www.nps.gov/places/chapel-rock.htm",
+    },
   },
   {
     id: "mosquito-beach-loop",
@@ -83,6 +101,14 @@ export const trailProfiles: TrailProfile[] = [
     sourceLabel: "National Park Service",
     sourceUrl: "https://www.nps.gov/places/000/empire-bluff-trail.htm",
     sourceNote: "NPS lists the roundtrip at 1.5 miles and the terrain as hilly.",
+    access: {
+      trailhead: "Empire Bluff Trailhead",
+      parking: "Auto parking at the trailhead",
+      toilets: "Vault/composting toilet at the trailhead",
+      dogs: "Leashed pets are allowed on this trail",
+      notes: ["A small picnic area is available at the trailhead."],
+      sourceUrl: "https://www.nps.gov/places/000/empire-bluff-trail.htm",
+    },
   },
   {
     id: "good-harbor-bay",
@@ -113,6 +139,12 @@ export const trailProfiles: TrailProfile[] = [
     sourceLabel: "National Park Service",
     sourceUrl: "https://www.nps.gov/slbe/planyourvisit/trails.htm",
     sourceNote: "NPS lists a 4.25-mile paved section and notes it works for strollers and wheelchairs.",
+    access: {
+      parking: "Trailhead parking is available at multiple points along the Heritage Trail.",
+      dogs: "Pets are not allowed on the trail from December 1 through March 31.",
+      notes: ["Some sections have steep grades despite the hard surface."],
+      sourceUrl: "https://www.nps.gov/slbe/planyourvisit/sbht.htm",
+    },
   },
   {
     id: "escarpment-trail",
@@ -128,6 +160,12 @@ export const trailProfiles: TrailProfile[] = [
     sourceLabel: "Michigan DNR",
     sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
     sourceNote: "Michigan DNR lists 4.3 miles and calls the large elevation changes a challenge.",
+    access: {
+      trailhead: "Lake of the Clouds parking area to Government Peak Trailhead on M-107",
+      parking: "The DNR route description names parking/trailhead access at both ends.",
+      dogs: "Park backcountry guidance requires pets to be leashed.",
+      sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
+    },
   },
   {
     id: "lake-superior-trail",
@@ -173,6 +211,11 @@ export const trailProfiles: TrailProfile[] = [
     sourceLabel: "Michigan DNR",
     sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
     sourceNote: "Michigan DNR lists 0.5 mile from parking to the tower and a 300-foot climb.",
+    access: {
+      trailhead: "Summit Peak parking area",
+      parking: "Route begins at the Summit Peak parking area.",
+      sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
+    },
   },
   {
     id: "manistee-river-trail",
@@ -207,3 +250,48 @@ export const trailProfiles: TrailProfile[] = [
 ];
 
 export const trailProfileById = new Map(trailProfiles.map((profile) => [profile.id, profile]));
+
+
+function normalizeTrailQuery(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+export function selectTrailProfileForDiscovery(args: {
+  destinationId?: string;
+  query?: string;
+  traits?: readonly string[];
+}) {
+  if (!args.destinationId) return null;
+  const candidates = trailProfiles.filter((profile) => profile.destinationId === args.destinationId);
+  if (!candidates.length) return null;
+
+  const query = normalizeTrailQuery(args.query ?? "");
+  const traits = new Set(args.traits ?? []);
+  const wantsLong = traits.has("long") || /\blong\b|full day|all day|big hike|hard hike/.test(query);
+  const wantsShort = traits.has("short") || /\bshort\b|quick|easy walk/.test(query);
+  const wantsEasy = /\beasy\b|gentle|flat|lower barrier|accessible/.test(query);
+  const wantsRugged = /rugged|hard|challenging|backcountry|wilderness/.test(query);
+  const wantsWaterfall = /waterfall|falls/.test(query);
+  const wantsTenMiles = /10[ -]?mile|ten[ -]?mile/.test(query);
+
+  return [...candidates]
+    .map((profile) => {
+      let score = 0;
+      if (query.includes(normalizeTrailQuery(profile.name))) score += 40;
+      if (wantsLong && profile.tags.includes("long")) score += 20;
+      if (wantsLong && profile.tags.includes("full-day")) score += 8;
+      if (wantsShort && profile.tags.includes("short")) score += 22;
+      if (wantsEasy && profile.tags.includes("easy")) score += 18;
+      if (wantsEasy && profile.tags.includes("lower-barrier")) score += 8;
+      if (wantsRugged && profile.tags.includes("rugged")) score += 16;
+      if (wantsWaterfall && profile.tags.includes("waterfall")) score += 14;
+      if (wantsTenMiles && profile.tags.includes("ten-mile")) score += 24;
+      return { profile, score };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (wantsLong) return b.profile.distanceMiles - a.profile.distanceMiles;
+      if (wantsShort || wantsEasy) return a.profile.distanceMiles - b.profile.distanceMiles;
+      return a.profile.distanceMiles - b.profile.distanceMiles;
+    })[0]?.profile ?? null;
+}
