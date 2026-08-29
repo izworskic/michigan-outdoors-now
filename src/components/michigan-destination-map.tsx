@@ -759,7 +759,7 @@ export function MichiganDestinationMap({
 
   useEffect(() => {
     const map = mapRef.current;
-    if (!mapReady || !map || !activeDiscoveryId) return;
+    if (!mapReady || !map || !activeDiscoveryId || selectedTrailGeoJson?.features.length) return;
     const selected = discoveryPlaces.find((place) => place.id === activeDiscoveryId);
     if (!selected) return;
     map.flyTo({
@@ -767,7 +767,7 @@ export function MichiganDestinationMap({
       zoom: Math.max(map.getZoom(), 8),
       duration: 420,
     });
-  }, [activeDiscoveryId, discoveryPlaces, mapReady]);
+  }, [activeDiscoveryId, discoveryPlaces, mapReady, selectedTrailGeoJson]);
 
   useEffect(() => {
     const map = mapRef.current;
