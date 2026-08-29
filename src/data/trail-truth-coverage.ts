@@ -74,9 +74,27 @@ for (const profile of trailProfiles) {
   );
 }
 
+const officialEntryPointCount = trailProfiles.reduce(
+  (sum, profile) => sum + (profile.access?.entryPoints?.length ?? 0),
+  0,
+);
+
+const operationallyThinDestinationIds = [...profilesByDestination.entries()]
+  .filter(([destinationId, routeCount]) => {
+    if (routeCount !== 1) return false;
+    const entryPointCount = trailProfiles
+      .filter((profile) => profile.destinationId === destinationId)
+      .reduce((sum, profile) => sum + (profile.access?.entryPoints?.length ?? 0), 0);
+    return entryPointCount < 2;
+  })
+  .map(([destinationId]) => destinationId);
+
 export const trailTruthCoverageSummary = {
   profileCount: trailProfiles.length,
   namedTrailheadCount: trailProfiles.filter((profile) => Boolean(profile.access?.trailhead)).length,
+  officialEntryPointCount,
+  operationallyThinDestinationCount: operationallyThinDestinationIds.length,
+  operationallyThinDestinationIds,
   oneRouteDestinationCount: [...profilesByDestination.values()].filter((count) => count === 1).length,
   shallowDestinationCount: [...profilesByDestination.values()].filter((count) => count <= 2).length,
   multiRouteDestinationCount: [...profilesByDestination.values()].filter((count) => count >= 2).length,
