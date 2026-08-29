@@ -18,7 +18,17 @@ test("every trail-search page has SERP-disciplined metadata", () => {
 });
 
 test("published trail mileage is tied to an official land-manager source", () => {
-  const allowed = new Set(["National Park Service", "Michigan DNR", "U.S. Forest Service"]);
+  const allowed = new Set([
+    "National Park Service",
+    "Michigan DNR",
+    "U.S. Forest Service",
+    "Huron-Clinton Metroparks",
+    "U.S. Fish & Wildlife Service",
+    "Michigan DNR / Huron-Manistee National Forests",
+    "City of Traverse City",
+    "Mackinac State Historic Parks",
+    "City of Marquette",
+  ]);
   for (const profile of trailProfiles) {
     assert.ok(profile.distanceMiles > 0);
     assert.ok(allowed.has(profile.sourceLabel), profile.sourceLabel);
