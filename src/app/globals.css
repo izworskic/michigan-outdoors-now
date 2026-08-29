@@ -4265,3 +4265,17 @@ label {
     min-height: 0;
   }
 }
+
+
+.canvas-trail-chooser-more {
+  justify-self: start;
+  min-height: 36px;
+  padding: 0.42rem 0.7rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
