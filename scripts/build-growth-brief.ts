@@ -9,6 +9,10 @@ import {
   type ProductFunnelRow,
   type SearchConsoleRow,
 } from "../src/lib/growth-opportunities";
+import {
+  trailCandidateDemand,
+  trailCandidateDemandRule,
+} from "../src/lib/trail-query-demand";
 
 type SearchSnapshot = {
   window?: { label?: string };
@@ -83,6 +87,7 @@ const families = [
 const familyDecisions = families.map((family) =>
   scoreFamilyGrowth(family, searchRows, productRows),
 );
+const trailDemand = trailCandidateDemand(searchRows);
 
 const brandedRows = searchRows.filter((row) => row.branded ?? brandedQuery(row.query));
 const nonBrandedRows = searchRows.filter((row) => !(row.branded ?? brandedQuery(row.query)));
@@ -145,6 +150,7 @@ const summary = {
     reason: item.reason,
   })),
   familyDecisions,
+  trailCandidateDemand: trailDemand,
   opportunitySignals: product.opportunitySignals ?? [],
   myOutdoorsSignals: product.myOutdoorsSignals ?? {},
 };
@@ -202,6 +208,20 @@ ${summary.priorities.length
       )
       .join("\n")
   : "No page/query rows have enough evidence to prioritize yet."}
+
+## Trail candidate demand — leading signal only
+
+${summary.trailCandidateDemand.some((item) => item.impressions > 0)
+  ? summary.trailCandidateDemand
+      .filter((item) => item.impressions > 0)
+      .map(
+        (item) =>
+          `- **${item.label}** — ${item.impressions} impressions · ${item.clicks} clicks · ${fmtPct(item.ctr)} CTR · pos ${fmtPos(item.weightedPosition)} · ${item.profileCount} verified routes across ${item.destinationCount} destinations.`,
+      )
+      .join("\n")
+  : "- No blocked trail-family candidate has matched Search Console query demand yet."}
+
+> ${trailCandidateDemandRule}
 
 ## Family expansion gates
 
