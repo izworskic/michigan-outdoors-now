@@ -242,10 +242,16 @@ try {
   assert.equal(growthManifest.status, 200);
   assert.match(growthManifest.headers.get("x-robots-tag") ?? "", /noindex/);
   const growthManifestPayload = await growthManifest.json();
-  assert.equal(growthManifestPayload.version, "1.0.0");
+  assert.equal(growthManifestPayload.version, "1.1.0");
   assert.equal(growthManifestPayload.owner, "https://chrisizworski.com/#person");
   assert.equal(growthManifestPayload.launch.locationIntentPages, 54);
   assert.equal(growthManifestPayload.launch.trailIntentPages, 6);
+  assert.equal(
+    growthManifestPayload.launch.trailSearchExpansionState,
+    "blocked-during-location-intent-measurement-window",
+  );
+  assert.ok(growthManifestPayload.launch.trailSearchOpportunities.length >= 4);
+  assert.equal(growthManifestPayload.launch.trailSearchExpansionGate.completeWindowDays, 28);
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("planner_completed"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("day_plan_built"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("departure_mode_opened"));
