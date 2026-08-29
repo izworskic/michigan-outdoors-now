@@ -129,6 +129,44 @@ async function aggregateOpportunityEvent({
     .filter((row) => Number.isFinite(row.count));
 }
 
+async function aggregateTotalEvent({
+  token,
+  teamId,
+  projectId,
+  eventName,
+  since,
+  until,
+}) {
+  const params = new URLSearchParams({
+    teamId,
+    projectId,
+    since,
+    until,
+    by: "eventData/surface",
+    filter: `eventName eq '${eventName}'`,
+  });
+  const response = await fetch(
+    `https://api.vercel.com/v1/query/web-analytics/events/aggregate?${params}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `Vercel Web Analytics query failed for ${eventName}: ${response.status} ${detail.slice(0, 300)}`,
+    );
+  }
+
+  const payload = await response.json();
+  const rows = Array.isArray(payload.data) ? payload.data : [];
+  return rows.reduce((sum, row) => sum + Number(row.count ?? 0), 0);
+}
+
 const token = process.env.VERCEL_ANALYTICS_TOKEN?.trim() || process.env.VERCEL_TOKEN?.trim();
 const teamId = process.env.VERCEL_ANALYTICS_TEAM_ID?.trim() || process.env.VERCEL_TEAM_ID?.trim();
 const projectId =
@@ -211,6 +249,29 @@ const opportunitySignals = opportunityKinds.map((kind) => ({
   verifications: opportunityVerified.find((row) => row.kind === kind)?.count ?? 0,
 }));
 
+
+const myOutdoorsEventNames = [
+  "my_outdoors_loaded",
+  "my_outdoors_opened",
+  "my_outdoors_saved",
+  "my_outdoors_applied",
+  "my_outdoors_place_remembered",
+  "my_outdoors_place_saved",
+  "my_outdoors_place_unsaved",
+  "my_outdoors_visited_toggled",
+];
+const myOutdoorsSignals = {};
+for (const eventName of myOutdoorsEventNames) {
+  myOutdoorsSignals[eventName] = await aggregateTotalEvent({
+    token,
+    teamId,
+    projectId,
+    eventName,
+    since,
+    until,
+  });
+}
+
 const payload = {
   version: 1,
   kind: "product-funnel-normalized",
@@ -224,9 +285,10 @@ const payload = {
     projectId,
     teamId,
     surface: "location_intent",
-    events: [...Object.keys(eventMap), "opportunity_opened", "opportunity_verify_opened"],
+    events: [...Object.keys(eventMap), "opportunity_opened", "opportunity_verify_opened", ...myOutdoorsEventNames],
   },
   opportunitySignals,
+  myOutdoorsSignals,
   rows: [...byPage.values()].sort((a, b) => a.pageKey.localeCompare(b.pageKey)),
 };
 
