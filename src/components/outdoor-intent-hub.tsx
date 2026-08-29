@@ -1160,55 +1160,56 @@ export function OutdoorIntentHub() {
 
   useEffect(() => {
     trailGeometryRequestRef.current?.abort();
-
-    if (!activeDiscovery || !activeTrailProfile) {
-      setTrailGeometry(null);
-      setTrailGeometryLoading(false);
-      return;
-    }
+    if (!activeDiscovery || !activeTrailProfile) return;
 
     const controller = new AbortController();
     trailGeometryRequestRef.current = controller;
-    setTrailGeometry(null);
-    setTrailGeometryLoading(true);
+    const timer = window.setTimeout(() => {
+      if (controller.signal.aborted) return;
+      setTrailGeometry(null);
+      setTrailGeometryLoading(true);
 
-    fetch("/api/trail-geometry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        profileId: activeTrailProfile.id,
-        latitude: activeDiscovery.latitude,
-        longitude: activeDiscovery.longitude,
-      }),
-    })
-      .then(async (response) => {
-        const payload = await response.json();
-        if (!response.ok) throw new Error(payload.error ?? "Trail geometry unavailable");
-        return payload as TrailGeometryResult;
-      })
-      .then((payload) => {
-        if (trailGeometryRequestRef.current !== controller) return;
-        setTrailGeometry(payload);
-        trackGrowthEvent("trail_truth_geometry_resolved", semanticGrowthContext, {
+      fetch("/api/trail-geometry", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
           profileId: activeTrailProfile.id,
-          geometryStatus: payload.status,
-          segmentCount: payload.segmentCount,
+          latitude: activeDiscovery.latitude,
+          longitude: activeDiscovery.longitude,
+        }),
+      })
+        .then(async (response) => {
+          const payload = await response.json();
+          if (!response.ok) throw new Error(payload.error ?? "Trail geometry unavailable");
+          return payload as TrailGeometryResult;
+        })
+        .then((payload) => {
+          if (trailGeometryRequestRef.current !== controller) return;
+          setTrailGeometry(payload);
+          trackGrowthEvent("trail_truth_geometry_resolved", semanticGrowthContext, {
+            profileId: activeTrailProfile.id,
+            geometryStatus: payload.status,
+            segmentCount: payload.segmentCount,
+          });
+        })
+        .catch((error) => {
+          if (error instanceof DOMException && error.name === "AbortError") return;
+          if (trailGeometryRequestRef.current !== controller) return;
+          setTrailGeometry(null);
+        })
+        .finally(() => {
+          if (trailGeometryRequestRef.current === controller) {
+            trailGeometryRequestRef.current = null;
+            setTrailGeometryLoading(false);
+          }
         });
-      })
-      .catch((error) => {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        if (trailGeometryRequestRef.current !== controller) return;
-        setTrailGeometry(null);
-      })
-      .finally(() => {
-        if (trailGeometryRequestRef.current === controller) {
-          trailGeometryRequestRef.current = null;
-          setTrailGeometryLoading(false);
-        }
-      });
+    }, 0);
 
-    return () => controller.abort();
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
   }, [activeDiscovery, activeTrailProfile]);
 
 
