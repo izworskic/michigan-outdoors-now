@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import process from "node:process";
 import { trailSearchPages } from "../src/lib/trail-search-pages";
+import { trailTruthCoverageSummary } from "../src/data/trail-truth-coverage";
 
 type Criterion = { key: string; weight: number };
 type Benchmark = {
@@ -74,6 +75,13 @@ async function main() {
       profiles.includes("U.S. Forest Service") &&
       profiles.includes("selectTrailProfileForDiscovery") &&
       profiles.includes("Trailhead") &&
+      profiles.includes("isle-royale-mount-franklin") &&
+      profiles.includes("wilderness-nct-segment") &&
+      profiles.includes("presque-isle-anderton") &&
+      trailTruthCoverageSummary.profileCount >= 70 &&
+      trailTruthCoverageSummary.coveredDestinationCount >= 26 &&
+      trailTruthCoverageSummary.coveragePercent >= 80 &&
+      trailTruthCoverageSummary.uncoveredUndocumentedDestinationIds.length === 0 &&
       hub.includes("Official access details available"),
     honestFallbacks:
       dayPlan.includes('source === "routed"') &&
@@ -109,6 +117,7 @@ async function main() {
     flagshipTarget: benchmark.flagshipTarget,
     deltaFromBaseline: score - benchmark.baselineScore,
     trailSearchPages: trailSearchPages.length,
+    trailTruthCoverage: trailTruthCoverageSummary,
     criteria: scored,
     criticalFailures,
   }, null, 2));
