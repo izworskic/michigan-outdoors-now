@@ -37,6 +37,19 @@ The report engine can return:
 - **PROTECT** — visibility and CTR are healthy enough to hold the treatment.
 - **HOLD** — not enough evidence for a search-facing change.
 
+## Trail candidate demand
+
+The weekly growth brief also aggregates Search Console queries against the **blocked future Trail Truth families** recorded in the repository opportunity ledger.
+
+This is intentionally a leading indicator. It answers questions such as:
+- Is Google already testing the six existing hiking canonicals for "loop hikes Michigan"?
+- Is lower-barrier trail intent showing measurable demand?
+- Are state-park or national-park hiking queries accumulating impressions before a dedicated canonical exists?
+
+Candidate-demand output includes matched-query count, impressions, clicks, CTR, weighted position, verified route count and represented-destination count.
+
+It **cannot** return `EXPAND_FAMILY` and it cannot create a URL. A candidate still needs the complete family expansion gate plus the central new-canonical/cannibalization review after the protected window.
+
 ## Family expansion
 
 A search family does not earn more URLs from impressions alone.
