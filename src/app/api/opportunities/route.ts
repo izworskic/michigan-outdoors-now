@@ -30,6 +30,7 @@ export async function GET(request: Request) {
       targetDate,
       comparisonDate,
       status: opportunities.length ? "live" : "unavailable",
+      checkedDestinationIds: [...todayWeather.keys()].sort(),
       opportunities,
       note: opportunities.length
         ? scope === "all"
@@ -50,6 +51,7 @@ export async function GET(request: Request) {
       targetDate,
       comparisonDate,
       status: "unavailable",
+      checkedDestinationIds: [],
       opportunities: [],
       note: "Live opportunity detection is temporarily unavailable.",
     };
