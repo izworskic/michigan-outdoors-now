@@ -321,6 +321,7 @@ try {
   const opportunityPayload = await opportunities.json();
   assert.ok(["live", "unavailable"].includes(opportunityPayload.status));
   assert.ok(Array.isArray(opportunityPayload.opportunities));
+  assert.ok(Array.isArray(opportunityPayload.checkedDestinationIds));
   assert.match(opportunityPayload.note, /opportun|weather-fit|unavailable/i);
   if (opportunityPayload.status === "live") {
     assert.ok(opportunityPayload.opportunities.length > 0);
@@ -335,6 +336,7 @@ try {
   const allOpportunityPayload = await allOpportunities.json();
   assert.ok(["live", "unavailable"].includes(allOpportunityPayload.status));
   assert.ok(Array.isArray(allOpportunityPayload.opportunities));
+  assert.ok(Array.isArray(allOpportunityPayload.checkedDestinationIds));
   if (allOpportunityPayload.status === "live") {
     assert.ok(
       allOpportunityPayload.opportunities.length >= opportunityPayload.opportunities.length,
