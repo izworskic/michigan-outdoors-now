@@ -33,6 +33,7 @@ async function main() {
     trailLive,
     map,
     liveTests,
+    depthTests,
   ] = await Promise.all([
       readFile(new URL("src/lib/place-intelligence.ts", root), "utf8"),
       readFile(new URL("src/lib/route-intelligence.ts", root), "utf8"),
@@ -48,6 +49,7 @@ async function main() {
       readFile(new URL("src/lib/trail-live.ts", root), "utf8"),
       readFile(new URL("src/components/michigan-destination-map.tsx", root), "utf8"),
       readFile(new URL("tests/trail-truth-live.test.ts", root), "utf8"),
+      readFile(new URL("tests/trail-truth-depth.test.ts", root), "utf8"),
     ]);
 
   const checks: Record<string, boolean> = {
@@ -109,7 +111,10 @@ async function main() {
       profiles.includes("isle-royale-mount-franklin") &&
       profiles.includes("wilderness-nct-segment") &&
       profiles.includes("presque-isle-anderton") &&
-      trailTruthCoverageSummary.profileCount >= 70 &&
+      trailTruthCoverageSummary.profileCount >= 100 &&
+      trailTruthCoverageSummary.namedTrailheadCount >= 35 &&
+      trailTruthCoverageSummary.multiRouteDestinationCount >= 15 &&
+      trailTruthCoverageSummary.deepDestinationCount >= 8 &&
       trailTruthCoverageSummary.coveredDestinationCount >= 26 &&
       trailTruthCoverageSummary.coveragePercent >= 80 &&
       trailTruthCoverageSummary.uncoveredUndocumentedDestinationIds.length === 0 &&
@@ -125,7 +130,10 @@ async function main() {
       runtime.includes("goSignal") &&
       tests.includes("Decision Board can build a routed multi-stop day") &&
       liveTests.includes("finish-before-dark logic subtracts travel time") &&
-      liveTests.includes("official geometry separate from mapped fallback"),
+      liveTests.includes("official geometry separate from mapped fallback") &&
+      depthTests.includes("100-route threshold") &&
+      depthTests.includes("large local trail catalogs stay compact") &&
+      hub.includes("Show all ${activeTrailProfiles.length} verified routes"),
   };
 
   const scored = benchmark.criteria.map((criterion) => ({
