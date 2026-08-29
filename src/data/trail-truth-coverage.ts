@@ -77,6 +77,8 @@ for (const profile of trailProfiles) {
 export const trailTruthCoverageSummary = {
   profileCount: trailProfiles.length,
   namedTrailheadCount: trailProfiles.filter((profile) => Boolean(profile.access?.trailhead)).length,
+  oneRouteDestinationCount: [...profilesByDestination.values()].filter((count) => count === 1).length,
+  shallowDestinationCount: [...profilesByDestination.values()].filter((count) => count <= 2).length,
   multiRouteDestinationCount: [...profilesByDestination.values()].filter((count) => count >= 2).length,
   deepDestinationCount: [...profilesByDestination.values()].filter((count) => count >= 5).length,
   hikingDestinationCount: hikingDestinations.length,
