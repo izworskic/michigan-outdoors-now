@@ -23,6 +23,15 @@ export type RecentPlace = {
   viewedAt: string;
 };
 
+export type OpportunityBaseline = {
+  checkedAt: string;
+  qualifies: boolean;
+  score: number | null;
+  signalStrength: number | null;
+  activity: ActivityId | null;
+  kind: string | null;
+};
+
 export type MyOutdoorsProfile = {
   version: 1;
   homeOrigin: string;
@@ -36,6 +45,7 @@ export type MyOutdoorsProfile = {
   savedPlaces: RememberedPlace[];
   visitedPlaceIds: string[];
   recentPlaces: RecentPlace[];
+  opportunityBaselines: Record<string, OpportunityBaseline>;
   updatedAt: string;
 };
 
@@ -57,6 +67,7 @@ export function emptyMyOutdoorsProfile(): MyOutdoorsProfile {
     savedPlaces: [],
     visitedPlaceIds: [],
     recentPlaces: [],
+    opportunityBaselines: {},
     updatedAt: nowIso(),
   };
 }
@@ -115,6 +126,43 @@ function cleanRememberedPlaces(value: unknown): RememberedPlace[] {
   return result.slice(0, 24);
 }
 
+
+function cleanOpportunityBaselines(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {} as Record<string, OpportunityBaseline>;
+  }
+
+  const output: Record<string, OpportunityBaseline> = {};
+  for (const [rawId, rawValue] of Object.entries(value).slice(0, 40)) {
+    const id = cleanText(rawId, 120);
+    if (!id || !rawValue || typeof rawValue !== "object") continue;
+    const item = rawValue as Partial<OpportunityBaseline>;
+    const score =
+      typeof item.score === "number" && Number.isFinite(item.score)
+        ? Math.max(0, Math.min(100, Math.round(item.score)))
+        : null;
+    const signalStrength =
+      typeof item.signalStrength === "number" && Number.isFinite(item.signalStrength)
+        ? Math.max(0, Math.min(200, Number(item.signalStrength.toFixed(1))))
+        : null;
+    const activity =
+      item.activity && activityIds.includes(item.activity as ActivityId)
+        ? (item.activity as ActivityId)
+        : null;
+
+    output[id] = {
+      checkedAt: cleanText(item.checkedAt, 40) || nowIso(),
+      qualifies: Boolean(item.qualifies),
+      score,
+      signalStrength,
+      activity,
+      kind: cleanText(item.kind, 60) || null,
+    };
+  }
+
+  return output;
+}
+
 function cleanRecentPlaces(value: unknown): RecentPlace[] {
   if (!Array.isArray(value)) return [];
   const result: RecentPlace[] = [];
@@ -159,6 +207,7 @@ export function normalizeMyOutdoorsProfile(value: unknown): MyOutdoorsProfile {
       ? [...new Set(raw.visitedPlaceIds.map((item) => cleanText(item, 120)).filter(Boolean))].slice(0, 100)
       : [],
     recentPlaces: cleanRecentPlaces(raw.recentPlaces),
+    opportunityBaselines: cleanOpportunityBaselines(raw.opportunityBaselines),
     updatedAt: cleanText(raw.updatedAt, 40) || fallback.updatedAt,
   };
 }
