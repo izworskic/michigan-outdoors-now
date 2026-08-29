@@ -73,7 +73,7 @@ test("Trail Truth Live UI keeps official geometry separate from mapped fallback"
 
   assert.match(hub, /Pick your hike/);
   assert.match(hub, /Finish before dark\?/);
-  assert.match(hub, /Navigate to trailhead/);
+  assert.match(hub, /activeTrailheadAction\.label/);
   assert.match(hub, /Trail Truth Live/);
   assert.match(hub, /selectedTrailGeoJson/);
 
