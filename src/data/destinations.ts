@@ -358,8 +358,8 @@ export const destinations: Destination[] = [
     kidsFriendly: true,
     dogsAllowed: true,
     accessibleFriendly: false,
-    accessNote: "Most routes use natural surfaces with grades; verify the specific trailhead if mobility is a concern.",
-    officialUrl: "https://www.traversecitymi.gov/community/recreation-directory/brown-bridge-quiet-area/brown-bridge-quiet-area.html",
+    accessNote: "Most routes use natural surfaces with grades. The city reported the Grasshopper Creek pedestrian bridge at trail marker 5 closed in its April 23, 2026 flooding update; verify current loop continuity.",
+    officialUrl: "https://www.traversecitymi.gov/community/recreation-directory/brown-bridge-quiet-area/",
   },
   {
     id: "ludington-state-park",
