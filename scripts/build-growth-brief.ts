@@ -18,6 +18,7 @@ type SearchSnapshot = {
 type ProductSnapshot = {
   window?: { label?: string };
   rows?: ProductFunnelRow[];
+  opportunitySignals?: Array<{ kind: string; opens: number; verifications: number }>;
 };
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -142,6 +143,7 @@ const summary = {
     reason: item.reason,
   })),
   familyDecisions,
+  opportunitySignals: product.opportunitySignals ?? [],
 };
 
 const fmtPct = (value: number) => `${(value * 100).toFixed(1)}%`;
@@ -166,6 +168,14 @@ const markdown = `# Michigan Outdoors Now weekly growth brief
 - Planner starts: **${summary.product.plannerStarts}** (${fmtPct(summary.product.plannerStartRate)} of landings)
 - Completed plans: **${summary.product.plannerCompletions}** (${fmtPct(summary.product.completionRate)} of starts)
 - Directions opens: **${summary.product.directions}** (${fmtPct(summary.product.directionsRate)} of landings)
+
+## Live opportunity engagement
+
+${summary.opportunitySignals.length
+  ? summary.opportunitySignals
+      .map((item) => `- **${item.kind}** — ${item.opens} opens · ${item.verifications} specialist verifications`)
+      .join("\n")
+  : "- No measured opportunity opens yet."}
 
 ## Highest-leverage actions
 
