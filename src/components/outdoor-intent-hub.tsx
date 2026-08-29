@@ -294,6 +294,7 @@ export function OutdoorIntentHub() {
   const [placeIntelligence, setPlaceIntelligence] = useState<PlaceIntelligence | null>(null);
   const [placeIntelligenceLoading, setPlaceIntelligenceLoading] = useState(false);
   const [selectedTrailProfileId, setSelectedTrailProfileId] = useState("");
+  const [trailProfilesExpanded, setTrailProfilesExpanded] = useState(false);
   const [trailGeometry, setTrailGeometry] = useState<TrailGeometryResult | null>(null);
   const [trailGeometryLoading, setTrailGeometryLoading] = useState(false);
   const [planning, setPlanning] = useState(false);
@@ -549,6 +550,7 @@ export function OutdoorIntentHub() {
     setPlaceIntelligence(null);
     setPlaceIntelligenceLoading(false);
     setSelectedTrailProfileId("");
+    setTrailProfilesExpanded(false);
     setTrailGeometry(null);
     setTrailGeometryLoading(false);
     setPlans(null);
@@ -830,6 +832,7 @@ export function OutdoorIntentHub() {
     const place = discovery?.places.find((candidate) => candidate.id === placeId);
     trailGeometryRequestRef.current?.abort();
     setSelectedTrailProfileId("");
+    setTrailProfilesExpanded(false);
     setTrailGeometry(null);
     setTrailGeometryLoading(false);
     setActiveId("");
@@ -1138,6 +1141,15 @@ export function OutdoorIntentHub() {
   const activeTrailProfile =
     activeTrailProfiles.find((profile) => profile.id === selectedTrailProfileId) ??
     suggestedTrailProfile;
+  const orderedTrailProfiles = activeTrailProfile
+    ? [
+        activeTrailProfile,
+        ...activeTrailProfiles.filter((profile) => profile.id !== activeTrailProfile.id),
+      ]
+    : activeTrailProfiles;
+  const visibleTrailProfiles = trailProfilesExpanded
+    ? orderedTrailProfiles
+    : orderedTrailProfiles.slice(0, 6);
   const activeTrailTime = activeTrailProfile
     ? formatHikeTimeRange(estimateHikeTimeRange(activeTrailProfile.distanceMiles, activeTrailProfile.difficulty))
     : null;
@@ -1148,7 +1160,9 @@ export function OutdoorIntentHub() {
         activeDiscovery.driveMinutes ?? Math.round(activeDiscovery.driveHours * 60),
       )
     : null;
-  const activeTrailheadUrl = activeTrailProfile ? trailheadDirectionsUrl(activeTrailProfile) : null;
+  const activeTrailheadAction = activeTrailProfile
+    ? trailheadDirectionsUrl(activeTrailProfile, trailGeometry)
+    : null;
   const decisionArgument = activeDiscovery
     ? buildDecisionArgument(activeDiscovery, discovery?.places ?? [])
     : null;
@@ -2065,7 +2079,7 @@ export function OutdoorIntentHub() {
                     <small>Changing the route updates Trail Truth Live, daylight fit and the highlighted map line.</small>
                   </div>
                   <div className="canvas-trail-chooser-list">
-                    {activeTrailProfiles.map((profile) => {
+                    {visibleTrailProfiles.map((profile) => {
                       const selected = profile.id === activeTrailProfile?.id;
                       const time = formatHikeTimeRange(
                         estimateHikeTimeRange(profile.distanceMiles, profile.difficulty),
@@ -2095,6 +2109,18 @@ export function OutdoorIntentHub() {
                       );
                     })}
                   </div>
+                  {activeTrailProfiles.length > 6 && (
+                    <button
+                      type="button"
+                      className="canvas-trail-chooser-more"
+                      aria-expanded={trailProfilesExpanded}
+                      onClick={() => setTrailProfilesExpanded((value) => !value)}
+                    >
+                      {trailProfilesExpanded
+                        ? "Show the best few"
+                        : `Show all ${activeTrailProfiles.length} verified routes`}
+                    </button>
+                  )}
                 </section>
               )}
 
@@ -2279,31 +2305,45 @@ export function OutdoorIntentHub() {
                       </small>
                     </article>
 
-                    {activeTrailProfile?.access && (
+                    {activeTrailProfile && (activeTrailProfile.access || activeTrailheadAction) && (
                       <article>
-                        <span>Trailhead</span>
-                        <strong>{activeTrailProfile.access.trailhead ?? "Official access details available"}</strong>
+                        <span>Trailhead / route start</span>
+                        <strong>
+                          {activeTrailProfile.access?.trailhead ??
+                            (activeTrailheadAction?.source === "official-geometry"
+                              ? "Official mapped route start"
+                              : activeTrailheadAction?.source === "mapped-fallback"
+                                ? "Mapped route start — verify before departure"
+                                : "Official access details available")}
+                        </strong>
                         <small>
                           {[
-                            activeTrailProfile.access.toilets,
-                            activeTrailProfile.access.drinkingWater,
-                            activeTrailProfile.access.dogs,
-                          ].filter(Boolean).join(" · ") || activeTrailProfile.access.notes?.[0] || "Check the official route source before departure."}
+                            activeTrailProfile.access?.toilets,
+                            activeTrailProfile.access?.drinkingWater,
+                            activeTrailProfile.access?.dogs,
+                          ].filter(Boolean).join(" · ") ||
+                            activeTrailProfile.access?.notes?.[0] ||
+                            (activeTrailheadAction?.source === "official-geometry"
+                              ? "Navigation uses the resolved land-manager trail geometry."
+                              : activeTrailheadAction?.source === "mapped-fallback"
+                                ? "Navigation uses a mapped fallback, not an official trailhead record."
+                                : "Check the official route source before departure.")}
                         </small>
-                        {activeTrailheadUrl && (
+                        {activeTrailheadAction && (
                           <a
                             className="canvas-trailhead-link"
-                            href={activeTrailheadUrl}
+                            href={activeTrailheadAction.url}
                             target="_blank"
                             rel="noopener"
                             onClick={() =>
                               trackGrowthEvent("trailhead_directions_opened", semanticGrowthContext, {
                                 profileId: activeTrailProfile.id,
                                 destinationId: activeDiscovery.curatedPlaceId ?? "unknown",
+                                navigationSource: activeTrailheadAction.source,
                               })
                             }
                           >
-                            Navigate to trailhead →
+                            {activeTrailheadAction.label} →
                           </a>
                         )}
                         {activeTrailProfile.routeKind === "point-to-point" && (
