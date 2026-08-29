@@ -194,3 +194,12 @@ export function trailheadDirectionsUrl(
 
   return null;
 }
+
+
+export function trailEntryPointDirectionsUrl(
+  profile: TrailProfile,
+  entryPoint: { name: string; query?: string },
+) {
+  const query = encodeURIComponent(entryPoint.query ?? `${entryPoint.name}, ${profile.area}`);
+  return `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
