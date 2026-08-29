@@ -259,6 +259,10 @@ const myOutdoorsEventNames = [
   "my_outdoors_place_saved",
   "my_outdoors_place_unsaved",
   "my_outdoors_visited_toggled",
+  "my_outdoors_changes_detected",
+  "my_outdoors_changes_seen",
+  "my_outdoors_change_opened",
+  "my_outdoors_change_verify_opened",
 ];
 const myOutdoorsSignals = {};
 for (const eventName of myOutdoorsEventNames) {
