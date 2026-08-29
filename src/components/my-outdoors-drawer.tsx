@@ -97,6 +97,7 @@ export function MyOutdoorsDrawer({
           previous: latest.opportunityBaselines,
           opportunities: response.opportunities,
           checkedAt: response.generatedAt,
+          checkedPlaceIds: response.checkedDestinationIds,
         });
 
         setChanges(result.changes);
