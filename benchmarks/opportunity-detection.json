@@ -1,0 +1,14 @@
+{
+  "name": "live-opportunity-detection",
+  "baseline": 58,
+  "releaseTarget": 90,
+  "flagshipTarget": 96,
+  "purpose": "Keep the repeat-use opportunity layer selective, comparative, source-honest, measurable, and subordinate to specialist safety/condition tools.",
+  "fatalFailures": [
+    "Calls a weather-only paddling lead safe or omits marine/wave verification",
+    "Claims aurora visibility from clouds alone",
+    "Shows ordinary high-score recommendations as unusual opportunities without a comparative or exceptional threshold",
+    "Records exact coordinates or free-text user queries in opportunity analytics",
+    "Opportunity API loses noindex or graceful-unavailable behavior"
+  ]
+}
