@@ -42,6 +42,27 @@ For curated destinations, those preferences filter against the verified destinat
 
 For semantic discovery, when any of those strict preferences is active, the API deliberately limits results to curated destinations with verified attributes rather than claiming that generic OpenStreetMap POIs prove household or accessibility suitability.
 
+
+## What changed on return
+
+Saved curated places now establish a lightweight opportunity baseline on the visitor's device.
+
+The browser requests the same public statewide opportunity set used by Michigan Outdoors Now. It does **not** send the visitor's saved-place list, home location, favorite regions, or local baseline to a personalization endpoint.
+
+On later visits, a saved curated place appears under **Since your last check** only when:
+
+- it previously did not clear the conservative opportunity threshold and now does; or
+- it was already strong but its weather-fit score improves by at least 8 points; or
+- it improves by at least 4 score points plus at least 10 signal-strength points.
+
+The first check only establishes a baseline. Small fluctuations do not create a notification.
+
+When a material change exists, the My Outdoors trigger shows a compact changed badge. Opening My Outdoors marks the current baseline as seen while leaving the explanation visible for that visit.
+
+This is intentionally an in-product return signal, not a push notification. It does not claim that access, trail, marine, ice, road, or local hazard conditions are safe merely because the weather-fit window improved.
+
+Only curated saved places participate in this first version. Live semantic/OpenStreetMap-only saves remain saved, but do not receive a change claim until an equally trustworthy comparison model exists for them.
+
 ## Privacy boundary
 
 My Outdoors uses browser localStorage only. It creates no account, server profile, cookie identity graph, or cross-device sync.
@@ -52,6 +73,7 @@ Growth analytics use fixed-label events and counts only. They may record whether
 - the remembered home city/ZIP value;
 - favorite-region text;
 - saved-place names;
+- saved-place identifiers or opportunity baselines in My Outdoors change events;
 - free-text outdoor searches;
 - other local profile text.
 
