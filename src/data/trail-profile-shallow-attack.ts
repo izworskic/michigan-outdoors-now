@@ -88,7 +88,7 @@ export const shallowDestinationTrailBatch: TrailProfile[] = [
     tags: ["short"],
     sourceLabel: "Michigan DNR",
     sourceUrl: WARREN_MAP,
-    sourceNote: "Michigan DNR's current Warren Dunes map lists foot trail 7–14 at approximately two-thirds of a mile.",
+    sourceNote: "Michigan DNR's current Warren Dunes map lists foot trail 7–14 at approximately 0.67 mile (two-thirds of a mile).",
   },
   {
     id: "warren-foot-8-14",
@@ -133,7 +133,7 @@ export const shallowDestinationTrailBatch: TrailProfile[] = [
     tags: ["short"],
     sourceLabel: "Michigan DNR",
     sourceUrl: WARREN_MAP,
-    sourceNote: "Michigan DNR's current Warren Dunes map lists the Trail 12 loop at approximately one-third of a mile.",
+    sourceNote: "Michigan DNR's current Warren Dunes map lists the Trail 12 loop at approximately 0.33 mile (one-third of a mile).",
   },
   {
     id: "warren-foot-1-14",
@@ -218,7 +218,7 @@ export const shallowDestinationTrailBatch: TrailProfile[] = [
     tags: ["short"],
     sourceLabel: "Mackinac State Historic Parks",
     sourceUrl: MACKINAC_TRAILS,
-    sourceNote: "Mackinac State Historic Parks identifies Hardwood Nature Trail as a three-quarter-mile loop.",
+    sourceNote: "Mackinac State Historic Parks identifies Hardwood Nature Trail as a 0.75-mile (three-quarter-mile) loop.",
     access: {
       trailhead: "Beechwood Trail at Garrison Road",
       notes: ["Island interior trails include steep slopes; motor vehicles are generally prohibited on Mackinac Island."],
