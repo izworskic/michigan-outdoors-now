@@ -252,7 +252,11 @@ try {
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("opportunity_opened"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_loaded"));
   assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_place_saved"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_changes_detected"));
+  assert.ok(growthManifestPayload.measurement.eventTaxonomy.includes("my_outdoors_change_opened"));
   assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("exact coordinates"));
+  assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("saved-place identifiers in My Outdoors change events"));
+  assert.ok(growthManifestPayload.measurement.privacy.forbidden.includes("local opportunity baselines"));
 
   const preferenceDiscovery = await fetch(`${origin}/api/discover`, {
     method: "POST",
@@ -321,10 +325,28 @@ try {
   const opportunityPayload = await opportunities.json();
   assert.ok(["live", "unavailable"].includes(opportunityPayload.status));
   assert.ok(Array.isArray(opportunityPayload.opportunities));
+  assert.ok(Array.isArray(opportunityPayload.checkedDestinationIds));
   assert.match(opportunityPayload.note, /opportun|weather-fit|unavailable/i);
   if (opportunityPayload.status === "live") {
     assert.ok(opportunityPayload.opportunities.length > 0);
     assert.ok(opportunityPayload.opportunities.every((item) => item.score >= 88));
+  }
+
+  const allOpportunities = await fetch(`${origin}/api/opportunities?scope=all`, {
+    signal: AbortSignal.timeout(25_000),
+  });
+  assert.equal(allOpportunities.status, 200);
+  assert.match(allOpportunities.headers.get("x-robots-tag") ?? "", /noindex/);
+  const allOpportunityPayload = await allOpportunities.json();
+  assert.ok(["live", "unavailable"].includes(allOpportunityPayload.status));
+  assert.ok(Array.isArray(allOpportunityPayload.opportunities));
+  assert.ok(Array.isArray(allOpportunityPayload.checkedDestinationIds));
+  if (allOpportunityPayload.status === "live") {
+    assert.ok(
+      allOpportunityPayload.opportunities.length >= opportunityPayload.opportunities.length,
+      "full opportunity scope must not return fewer opportunities than the homepage scope",
+    );
+    assert.match(allOpportunityPayload.note, /return-visit comparison|No user profile/i);
   }
 
   const localPage = await fetch(`${origin}/from/bay-city`);

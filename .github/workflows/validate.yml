@@ -73,6 +73,9 @@ jobs:
       - name: Score My Outdoors continuity
         run: npm run score:my-outdoors
 
+      - name: Score My Outdoors return-visit changes
+        run: npm run score:return-changes
+
       - name: Build production output
         run: npm run build
 

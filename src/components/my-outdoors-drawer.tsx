@@ -13,6 +13,12 @@ import {
   type TripShape,
 } from "../lib/my-outdoors";
 import { trackGrowthEvent } from "../lib/growth-analytics";
+import type { OpportunityResponse } from "../lib/opportunity-engine";
+import {
+  detectSavedPlaceChanges,
+  mergeOpportunityBaselines,
+  type MyOutdoorsChange,
+} from "../lib/my-outdoors-changes";
 import styles from "./my-outdoors-drawer.module.css";
 
 const activityLabels: Record<ActivityId, string> = {
@@ -54,6 +60,8 @@ export function MyOutdoorsDrawer({
   const [profile, setProfile] = useState<MyOutdoorsProfile>(() => emptyMyOutdoorsProfile());
   const [regionsText, setRegionsText] = useState("");
   const [savedNotice, setSavedNotice] = useState("");
+  const [changes, setChanges] = useState<MyOutdoorsChange[]>([]);
+  const [pendingBaselines, setPendingBaselines] = useState<MyOutdoorsProfile["opportunityBaselines"] | null>(null);
 
   useEffect(() => {
     const sync = () => {
@@ -68,11 +76,90 @@ export function MyOutdoorsDrawer({
 
   const memoryCount = profile.savedPlaces.length + profile.recentPlaces.length;
   const hasSetup = Boolean(profile.homeOrigin || profile.savedPlaces.length || profile.recentPlaces.length);
+  const curatedSavedKey = useMemo(
+    () => profile.savedPlaces.filter((place) => place.kind === "curated").map((place) => place.id).sort().join(","),
+    [profile.savedPlaces],
+  );
+
+
+  useEffect(() => {
+    if (!curatedSavedKey) {
+      const timer = window.setTimeout(() => {
+        setChanges([]);
+        setPendingBaselines(null);
+      }, 0);
+      return () => window.clearTimeout(timer);
+    }
+    let active = true;
+
+    fetch("/api/opportunities?scope=all")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload) => {
+        if (!active || !payload) return;
+        const response = payload as OpportunityResponse;
+        const latest = readMyOutdoorsProfile();
+        const result = detectSavedPlaceChanges({
+          savedPlaces: latest.savedPlaces,
+          previous: latest.opportunityBaselines,
+          opportunities: response.opportunities,
+          checkedAt: response.generatedAt,
+          checkedPlaceIds: response.checkedDestinationIds,
+        });
+
+        setChanges(result.changes);
+        setPendingBaselines(result.current);
+
+        if (!result.changes.length) {
+          writeMyOutdoorsProfile({
+            ...latest,
+            opportunityBaselines: mergeOpportunityBaselines(
+              latest.opportunityBaselines,
+              result.current,
+            ),
+          });
+          return;
+        }
+
+        trackGrowthEvent("my_outdoors_changes_detected", {
+          surface: "homepage_planner",
+          pageKey: "home",
+        }, {
+          changeCount: result.changes.length,
+          newWindowCount: result.changes.filter((change) => change.kind === "new-window").length,
+          strongerWindowCount: result.changes.filter((change) => change.kind === "stronger-window").length,
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [curatedSavedKey]);
 
   const recent = useMemo(
     () => profile.recentPlaces.filter((item) => !profile.savedPlaces.some((saved) => saved.id === item.id)).slice(0, 5),
     [profile.recentPlaces, profile.savedPlaces],
   );
+
+
+  function markChangesSeen() {
+    if (!changes.length || !pendingBaselines) return;
+    const latest = readMyOutdoorsProfile();
+    writeMyOutdoorsProfile({
+      ...latest,
+      opportunityBaselines: mergeOpportunityBaselines(
+        latest.opportunityBaselines,
+        pendingBaselines,
+      ),
+    });
+    setPendingBaselines(null);
+    trackGrowthEvent("my_outdoors_changes_seen", {
+      surface: "homepage_planner",
+      pageKey: "home",
+    }, {
+      changeCount: changes.length,
+    });
+  }
 
   function update<K extends keyof MyOutdoorsProfile>(key: K, value: MyOutdoorsProfile[K]) {
     setProfile((previous) => ({ ...previous, [key]: value }));
@@ -153,6 +240,8 @@ export function MyOutdoorsDrawer({
     const blank = writeMyOutdoorsProfile(emptyMyOutdoorsProfile());
     setProfile(blank);
     setRegionsText("");
+    setChanges([]);
+    setPendingBaselines(null);
     setSavedNotice("Local My Outdoors memory cleared.");
   }
 
@@ -162,6 +251,7 @@ export function MyOutdoorsDrawer({
         type="button"
         className={styles.trigger}
         onClick={() => {
+          markChangesSeen();
           setOpen(true);
           trackGrowthEvent("my_outdoors_opened", {
             surface: "homepage_planner",
@@ -175,6 +265,7 @@ export function MyOutdoorsDrawer({
         aria-controls="my-outdoors-drawer"
       >
         <span>My Outdoors</span>
+        {changes.length > 0 && <em className={styles.changeBadge}>{changes.length} changed</em>}
         {memoryCount > 0 && <strong>{Math.min(99, memoryCount)}</strong>}
       </button>
 
@@ -202,6 +293,62 @@ export function MyOutdoorsDrawer({
             </div>
 
             <div className={styles.body}>
+
+              {changes.length > 0 && (
+                <section className={styles.changeSection} aria-labelledby="my-outdoors-changes-title">
+                  <div className={styles.changeHeading}>
+                    <div>
+                      <p>Since your last check</p>
+                      <h3 id="my-outdoors-changes-title">Something got better.</h3>
+                    </div>
+                    <span>{changes.length} worth another look</span>
+                  </div>
+                  <div className={styles.changeList}>
+                    {changes.map((change) => (
+                      <article key={change.placeId}>
+                        <div className={styles.changeMeta}>
+                          <span>{change.kind === "new-window" ? "New window" : "Stronger now"}</span>
+                          <strong>{change.opportunity.score}/100</strong>
+                        </div>
+                        <h4>{change.title}</h4>
+                        <p>{change.opportunity.whyNow}</p>
+                        <small>{change.detail}</small>
+                        <div className={styles.changeActions}>
+                          <a
+                            href={change.path}
+                            onClick={() => trackGrowthEvent("my_outdoors_change_opened", {
+                              surface: "homepage_planner",
+                              pageKey: "home",
+                            }, {
+                              changeKind: change.kind,
+                              activity: change.opportunity.activity,
+                              scoreBand: Math.floor(change.opportunity.score / 10) * 10,
+                            })}
+                          >
+                            Open the place
+                          </a>
+                          <a
+                            href={change.opportunity.verifyUrl}
+                            onClick={() => trackGrowthEvent("my_outdoors_change_verify_opened", {
+                              surface: "homepage_planner",
+                              pageKey: "home",
+                            }, {
+                              changeKind: change.kind,
+                              activity: change.opportunity.activity,
+                            })}
+                          >
+                            {change.opportunity.verifyLabel}
+                          </a>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                  <p className={styles.changeNote}>
+                    Compared locally on this device. A stronger window is not a safety clearance; verify access and activity-specific conditions before leaving.
+                  </p>
+                </section>
+              )}
+
               <section className={styles.section}>
                 <div className={styles.sectionHead}>
                   <h3>Your usual setup</h3>

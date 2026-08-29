@@ -1,0 +1,16 @@
+{
+  "name": "my-outdoors-return-visit-changes",
+  "baseline": 51,
+  "releaseTarget": 92,
+  "flagshipTarget": 97,
+  "purpose": "Make saved places useful on return by surfacing only material improvements, while keeping comparison local and avoiding another homepage content block.",
+  "fatalFailures": [
+    "Sends the visitor's saved-place list or local opportunity baselines to a personalization endpoint",
+    "Treats the first baseline check as a material change",
+    "Surfaces small score fluctuations as changed",
+    "Overwrites a material-change baseline before the visitor has a chance to see it",
+    "Creates a server-side user profile or cross-device identity",
+    "Adds another permanent homepage opportunity section instead of using My Outdoors",
+    "Emits saved-place names or identifiers in My Outdoors change analytics"
+  ]
+}

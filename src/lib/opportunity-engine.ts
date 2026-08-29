@@ -30,6 +30,7 @@ export type OpportunityResponse = {
   targetDate: string;
   comparisonDate: string;
   status: "live" | "unavailable";
+  checkedDestinationIds: string[];
   opportunities: OutdoorOpportunity[];
   note: string;
 };

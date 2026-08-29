@@ -45,6 +45,8 @@ export async function GET() {
             "remembered home city or ZIP",
             "favorite-region text",
             "saved-place names",
+            "saved-place identifiers in My Outdoors change events",
+            "local opportunity baselines",
           ],
         },
         evaluation: {
