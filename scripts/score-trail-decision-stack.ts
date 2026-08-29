@@ -37,7 +37,10 @@ async function main() {
       intelligence.includes("relation(around:3500") &&
       intelligence.includes("way(r.routes)") &&
       hub.includes(">Trail Truth<") &&
-      hub.includes("trailTruth.distanceMiles"),
+      hub.includes("trailTruth.distanceMiles") &&
+      hub.includes("canvas-result-trail-truth") &&
+      hub.includes("selectTrailProfileForDiscovery") &&
+      hub.includes("hike estimate"),
     routeProvenance:
       intelligence.includes('"osm-tag"') &&
       intelligence.includes('"osm-geometry"') &&
@@ -68,7 +71,10 @@ async function main() {
       trailPage.includes("Trail Truth standard") &&
       profiles.includes("National Park Service") &&
       profiles.includes("Michigan DNR") &&
-      profiles.includes("U.S. Forest Service"),
+      profiles.includes("U.S. Forest Service") &&
+      profiles.includes("selectTrailProfileForDiscovery") &&
+      profiles.includes("Trailhead") &&
+      hub.includes("Official access details available"),
     honestFallbacks:
       dayPlan.includes('source === "routed"') &&
       dayPlan.includes("straight-line planning estimates") &&
