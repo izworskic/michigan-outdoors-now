@@ -247,7 +247,7 @@ async function fetchNpsGeometry(
     NPS_TRAIL_SERVICE,
     latitude,
     longitude,
-    "PUBLICDISPLAY <> 'No'",
+    "(PUBLICDISPLAY IS NULL OR PUBLICDISPLAY <> 'No')",
     "OBJECTID,TRLNAME,TRLALTNAME,MAPLABEL,TRLSTATUS,TRLSURFACE,TRLTYPE,TRLUSE,UNITCODE,UNITNAME,OPENTOPUBLIC,SEASONAL,SEASDESC",
   );
   const selected = chooseNamedFeatures(collection, profile.name, ["TRLNAME", "TRLALTNAME", "MAPLABEL"]);
