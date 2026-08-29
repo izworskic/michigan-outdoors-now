@@ -71,6 +71,8 @@ jobs:
             PRODUCT_FILE="artifacts/growth/product-events-latest.json"
           fi
           npm run report:growth -- --search artifacts/growth/search-console-latest.json --product "${PRODUCT_FILE}" | tee artifacts/growth/growth-report.txt
+          npm run brief:growth -- --search artifacts/growth/search-console-latest.json --product "${PRODUCT_FILE}" --markdown artifacts/growth/growth-brief.md --json artifacts/growth/growth-brief.json
+          cat artifacts/growth/growth-brief.md >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload growth intelligence artifact
         if: steps.gsc.outputs.configured == 'true' || steps.vercel.outputs.configured == 'true'
