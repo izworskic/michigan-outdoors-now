@@ -83,7 +83,10 @@ async function main() {
       hub.includes("Should I go?") &&
       hub.includes("Trail Truth Live") &&
       hub.includes("Finish before dark?") &&
-      hub.includes("Navigate to trailhead") &&
+      hub.includes("activeTrailheadAction.label") &&
+      trailLive.includes('"verified-profile"') &&
+      trailLive.includes('"official-geometry"') &&
+      trailLive.includes('"mapped-fallback"') &&
       trailLive.includes("arrivalDelayMinutes") &&
       trailLive.includes("assessDaylightFit") &&
       trailLive.includes("deriveTrailLiveSignal"),
