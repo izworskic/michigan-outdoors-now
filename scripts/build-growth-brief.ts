@@ -24,6 +24,14 @@ type ProductSnapshot = {
   rows?: ProductFunnelRow[];
   opportunitySignals?: Array<{ kind: string; opens: number; verifications: number }>;
   myOutdoorsSignals?: Record<string, number>;
+  publisherSignals?: Array<{
+    source: string;
+    landings: number;
+    plannerStarts: number;
+    plannerCompletions: number;
+    dayPlans: number;
+    directions: number;
+  }>;
 };
 
 const root = path.resolve(import.meta.dirname, "..");
@@ -153,6 +161,7 @@ const summary = {
   trailCandidateDemand: trailDemand,
   opportunitySignals: product.opportunitySignals ?? [],
   myOutdoorsSignals: product.myOutdoorsSignals ?? {},
+  publisherSignals: product.publisherSignals ?? [],
 };
 
 const fmtPct = (value: number) => `${(value * 100).toFixed(1)}%`;
@@ -177,6 +186,17 @@ const markdown = `# Michigan Outdoors Now weekly growth brief
 - Planner starts: **${summary.product.plannerStarts}** (${fmtPct(summary.product.plannerStartRate)} of landings)
 - Completed plans: **${summary.product.plannerCompletions}** (${fmtPct(summary.product.completionRate)} of starts)
 - Directions opens: **${summary.product.directions}** (${fmtPct(summary.product.directionsRate)} of landings)
+
+## Publisher referral flywheel
+
+${summary.publisherSignals.length
+  ? summary.publisherSignals
+      .map(
+        (item) =>
+          `- **${item.source}** — ${item.landings} landings · ${item.plannerStarts} planner starts · ${item.plannerCompletions} completions · ${item.dayPlans} day builds · ${item.directions} directions`,
+      )
+      .join("\n")
+  : "- No measured publisher referrals yet."}
 
 ## Live opportunity engagement
 
