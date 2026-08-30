@@ -139,6 +139,6 @@ export default function PublisherKitPage() {
         This publisher kit is intentionally not a search landing page. Its purpose is distribution,
         useful referrals, and transparent attribution to the canonical Michigan Outdoors Now planner.
       </p>
-    </main>
+    </div>
   );
 }
