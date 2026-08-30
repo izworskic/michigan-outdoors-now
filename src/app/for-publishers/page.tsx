@@ -43,7 +43,7 @@ const panelStyle = {
 
 export default function PublisherKitPage() {
   return (
-    <main style={pageStyle}>
+    <div style={pageStyle}>
       <p style={{ fontSize: 12, fontWeight: 800, letterSpacing: ".12em", color: "#60766f" }}>
         FREE PUBLISHER RESOURCE
       </p>
