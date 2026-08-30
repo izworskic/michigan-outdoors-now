@@ -15,9 +15,9 @@ test("publisher kit remains noindex and ships a static attribution backlink", as
   assert.match(page, /index:\s*false/);
   assert.match(page, /follow:\s*true/);
   assert.match(page, /data-michigan-outdoors-widget/);
-  assert.match(page, /Michigan Outdoors Now by Chris Izworski/);
-  assert.match(page, /utm_medium=referral/);
-  assert.match(page, /michigan_outdoors_now_attribution/);
+  assert.match(page, /href="\\\$\{baseUrl\}\\\/">Michigan Outdoors Now<\\\/a>/);
+  assert.match(page, /https:\\/\\/chrisizworski\\.com\\/chris-izworski\\//);
+  assert.doesNotMatch(page, /href="\\\$\{baseUrl\}\\\/?\\?utm_/);
 });
 
 test("publisher widget is noindex and only emits tagged outbound links", async () => {
@@ -27,6 +27,7 @@ test("publisher widget is noindex and only emits tagged outbound links", async (
   assert.match(widget, /Access-Control-Allow-Origin": "\*"/);
   assert.match(widget, /michigan_outdoors_now_embed/);
   assert.match(widget, /michigan_outdoors_now_attribution/);
+  assert.match(widget, /chrisizworski\\.com\\/chris-izworski\\//);
   assert.match(widget, /data-michigan-outdoors-widget/);
   assert.doesNotMatch(widget, /navigator\.geolocation/);
   assert.doesNotMatch(widget, /document\.cookie/);
