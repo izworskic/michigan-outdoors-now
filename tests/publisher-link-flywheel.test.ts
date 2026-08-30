@@ -9,28 +9,28 @@ async function source(relativePath: string) {
   return readFile(path.join(root, relativePath), "utf8");
 }
 
-test("publisher kit remains noindex and ships a static attribution backlink", async () => {
+test("publisher kit remains noindex and ships clean static attribution backlinks", async () => {
   const page = await source("src/app/for-publishers/page.tsx");
 
   assert.match(page, /index:\s*false/);
   assert.match(page, /follow:\s*true/);
-  assert.match(page, /data-michigan-outdoors-widget/);
-  assert.match(page, /href="\\\$\{baseUrl\}\\\/">Michigan Outdoors Now<\\\/a>/);
-  assert.match(page, /https:\\/\\/chrisizworski\\.com\\/chris-izworski\\//);
-  assert.doesNotMatch(page, /href="\\\$\{baseUrl\}\\\/?\\?utm_/);
+  assert.ok(page.includes("data-michigan-outdoors-widget"));
+  assert.ok(page.includes('<a href="${baseUrl}/">Michigan Outdoors Now</a>'));
+  assert.ok(page.includes('href="https://chrisizworski.com/chris-izworski/"'));
+  assert.ok(!page.includes('href="${baseUrl}/?utm_'));
 });
 
-test("publisher widget is noindex and only emits tagged outbound links", async () => {
+test("publisher widget is noindex and emits tagged outbound links", async () => {
   const widget = await source("src/app/widget.js/route.ts");
 
-  assert.match(widget, /X-Robots-Tag": "noindex, nofollow, noarchive"/);
-  assert.match(widget, /Access-Control-Allow-Origin": "\*"/);
-  assert.match(widget, /michigan_outdoors_now_embed/);
-  assert.match(widget, /michigan_outdoors_now_attribution/);
-  assert.match(widget, /chrisizworski\\.com\\/chris-izworski\\//);
-  assert.match(widget, /data-michigan-outdoors-widget/);
-  assert.doesNotMatch(widget, /navigator\.geolocation/);
-  assert.doesNotMatch(widget, /document\.cookie/);
+  assert.ok(widget.includes('"X-Robots-Tag": "noindex, nofollow, noarchive"'));
+  assert.ok(widget.includes('"Access-Control-Allow-Origin": "*"'));
+  assert.ok(widget.includes("michigan_outdoors_now_embed"));
+  assert.ok(widget.includes("michigan_outdoors_now_attribution"));
+  assert.ok(widget.includes("chrisizworski.com/chris-izworski/"));
+  assert.ok(widget.includes("data-michigan-outdoors-widget"));
+  assert.ok(!widget.includes("navigator.geolocation"));
+  assert.ok(!widget.includes("document.cookie"));
 });
 
 test("publisher referral attribution persists into existing growth events", async () => {
@@ -38,19 +38,19 @@ test("publisher referral attribution persists into existing growth events", asyn
   const contract = await source("src/lib/growth-contract.ts");
   const tracker = await source("src/components/publisher-referral-tracker.tsx");
 
-  assert.match(contract, /publisher_referral_landed/);
-  assert.match(analytics, /sessionStorage/);
-  assert.match(analytics, /referral_source/);
-  assert.match(analytics, /referral_campaign/);
-  assert.match(tracker, /publisher_referral_landed/);
+  assert.ok(contract.includes("publisher_referral_landed"));
+  assert.ok(analytics.includes("sessionStorage"));
+  assert.ok(analytics.includes("referral_source"));
+  assert.ok(analytics.includes("referral_campaign"));
+  assert.ok(tracker.includes("publisher_referral_landed"));
 });
 
 test("publisher operating plan requires quality placements and measurable outcomes", async () => {
   const docs = await source("docs/PUBLISHER_LINK_FLYWHEEL.md");
 
-  assert.match(docs, /5 legitimate new referring domains/);
-  assert.match(docs, /3 live publisher widget placements/);
-  assert.match(docs, /30 publisher-referred planner starts/);
-  assert.match(docs, /paid-link networks/);
+  assert.ok(docs.includes("5 legitimate new referring domains"));
+  assert.ok(docs.includes("3 live publisher widget placements"));
+  assert.ok(docs.includes("30 publisher-referred planner starts"));
+  assert.ok(docs.includes("paid-link networks"));
   assert.match(docs, /product-value signal/i);
 });
