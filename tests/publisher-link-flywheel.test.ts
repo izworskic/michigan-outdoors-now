@@ -45,6 +45,16 @@ test("publisher referral attribution persists into existing growth events", asyn
   assert.ok(tracker.includes("publisher_referral_landed"));
 });
 
+test("weekly growth intelligence exposes publisher funnel winners", async () => {
+  const fetcher = await source("scripts/fetch-vercel-product-events.mjs");
+  const brief = await source("scripts/build-growth-brief.ts");
+
+  assert.ok(fetcher.includes("publisherSignals"));
+  assert.ok(fetcher.includes("eventData/referral_source"));
+  assert.ok(brief.includes("Publisher referral flywheel"));
+  assert.ok(brief.includes("publisherSignals"));
+});
+
 test("publisher operating plan requires quality placements and measurable outcomes", async () => {
   const docs = await source("docs/PUBLISHER_LINK_FLYWHEEL.md");
 
