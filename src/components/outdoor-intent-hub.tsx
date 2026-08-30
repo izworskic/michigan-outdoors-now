@@ -228,24 +228,16 @@ function whyLine(plan: Plan) {
   return useful.slice(0, 1).join(" ") || plan.destination.summary;
 }
 
-type OutdoorIntentHubProps = {
-  initialWish?: string;
-  initialDriveHours?: number;
-};
-
-export function OutdoorIntentHub({
-  initialWish = "",
-  initialDriveHours = pulls[0].driveHours,
-}: OutdoorIntentHubProps = {}) {
+export function OutdoorIntentHub() {
   const [origin, setOrigin] = useState("");
   const [originCoordinates, setOriginCoordinates] = useState<PlannerRequest["originCoordinates"]>();
   const [userLocation, setUserLocation] = useState<PlannerRequest["originCoordinates"]>();
   const [originStatus, setOriginStatus] = useState<"idle" | "resolving" | "resolved" | "error">("idle");
   const [originFeedback, setOriginFeedback] = useState("Choose a Michigan city or ZIP, or use your location.");
   const [pull, setPull] = useState<Pull>(pulls[0]);
-  const [driveHours, setDriveHours] = useState(initialDriveHours);
+  const [driveHours, setDriveHours] = useState(pulls[0].driveHours);
   const [plans, setPlans] = useState<PlannerResponse | null>(null);
-  const [wish, setWish] = useState(initialWish);
+  const [wish, setWish] = useState("");
   const [discovery, setDiscovery] = useState<DiscoveryResponse | null>(null);
   const [discoveryRange, setDiscoveryRange] = useState<{ minDriveHours: number; maxDriveHours: number } | null>(null);
   const [discovering, setDiscovering] = useState(false);
