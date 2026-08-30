@@ -167,6 +167,57 @@ async function aggregateTotalEvent({
   return rows.reduce((sum, row) => sum + Number(row.count ?? 0), 0);
 }
 
+
+async function aggregatePublisherEvent({
+  token,
+  teamId,
+  projectId,
+  eventName,
+  since,
+  until,
+}) {
+  const params = new URLSearchParams({
+    teamId,
+    projectId,
+    since,
+    until,
+    by: "eventData/referral_source",
+    filter: `eventName eq '${eventName}'`,
+  });
+  const response = await fetch(
+    `https://api.vercel.com/v1/query/web-analytics/events/aggregate?${params}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(
+      `Vercel Web Analytics query failed for publisher ${eventName}: ${response.status} ${detail.slice(0, 300)}`,
+    );
+  }
+
+  const payload = await response.json();
+  const rows = Array.isArray(payload.data) ? payload.data : [];
+  return rows
+    .map((row) => ({
+      source:
+        typeof row.eventData === "string"
+          ? row.eventData
+          : typeof row.value === "string"
+            ? row.value
+            : typeof row.key === "string"
+              ? row.key
+              : "",
+      count: Number(row.count ?? 0),
+    }))
+    .filter((row) => row.source && Number.isFinite(row.count));
+}
+
 const token = process.env.VERCEL_ANALYTICS_TOKEN?.trim() || process.env.VERCEL_TOKEN?.trim();
 const teamId = process.env.VERCEL_ANALYTICS_TEAM_ID?.trim() || process.env.VERCEL_TEAM_ID?.trim();
 const projectId =
@@ -276,6 +327,43 @@ for (const eventName of myOutdoorsEventNames) {
   });
 }
 
+
+const publisherEventMap = {
+  publisher_referral_landed: "landings",
+  planner_started: "plannerStarts",
+  planner_completed: "plannerCompletions",
+  day_plan_built: "dayPlans",
+  directions_opened: "directions",
+  outbound_map_opened: "directions",
+};
+const publisherBySource = new Map();
+for (const [eventName, field] of Object.entries(publisherEventMap)) {
+  const aggregates = await aggregatePublisherEvent({
+    token,
+    teamId,
+    projectId,
+    eventName,
+    since,
+    until,
+  });
+
+  for (const aggregate of aggregates) {
+    const existing = publisherBySource.get(aggregate.source) ?? {
+      source: aggregate.source,
+      landings: 0,
+      plannerStarts: 0,
+      plannerCompletions: 0,
+      dayPlans: 0,
+      directions: 0,
+    };
+    existing[field] += aggregate.count;
+    publisherBySource.set(aggregate.source, existing);
+  }
+}
+const publisherSignals = [...publisherBySource.values()].sort(
+  (a, b) => b.plannerStarts - a.plannerStarts || b.landings - a.landings,
+);
+
 const payload = {
   version: 1,
   kind: "product-funnel-normalized",
@@ -289,10 +377,11 @@ const payload = {
     projectId,
     teamId,
     surface: "location_intent",
-    events: [...Object.keys(eventMap), "opportunity_opened", "opportunity_verify_opened", ...myOutdoorsEventNames],
+    events: [...new Set([...Object.keys(eventMap), ...Object.keys(publisherEventMap), "opportunity_opened", "opportunity_verify_opened", ...myOutdoorsEventNames])],
   },
   opportunitySignals,
   myOutdoorsSignals,
+  publisherSignals,
   rows: [...byPage.values()].sort((a, b) => a.pageKey.localeCompare(b.pageKey)),
 };
 

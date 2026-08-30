@@ -60,6 +60,7 @@ export const growthEventNames = [
   "my_outdoors_changes_seen",
   "my_outdoors_change_opened",
   "my_outdoors_change_verify_opened",
+  "publisher_referral_landed",
 ] as const;
 
 export type GrowthEventName = (typeof growthEventNames)[number];
