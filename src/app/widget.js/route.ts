@@ -129,7 +129,7 @@ const widgetScript = String.raw`(() => {
 
     const author = document.createElement("a");
     author.href =
-      "https://chrisizworski.com/?utm_source=" +
+      "https://chrisizworski.com/chris-izworski/?utm_source=" +
       encodeURIComponent(source) +
       "&utm_medium=referral&utm_campaign=michigan_outdoors_now_attribution";
     author.target = "_blank";
