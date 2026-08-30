@@ -19,9 +19,8 @@ const embedCode = `<div
   data-origin="bay-city"
   data-source="YOUR_SITE"
 >
-  <a href="${baseUrl}/?utm_source=YOUR_SITE&utm_medium=referral&utm_campaign=michigan_outdoors_now_attribution">
-    Michigan Outdoors Now by Chris Izworski
-  </a>
+  <a href="${baseUrl}/">Michigan Outdoors Now</a>
+  by <a href="https://chrisizworski.com/chris-izworski/">Chris Izworski</a>
 </div>
 <script async src="${baseUrl}/widget.js"></script>`;
 
