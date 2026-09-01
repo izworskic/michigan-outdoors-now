@@ -2230,6 +2230,30 @@ export function OutdoorIntentHub() {
                       )}
                     </article>
 
+                    {activeTrailProfile && (
+                      <article className={/older DNR|older .*description/i.test(activeTrailProfile.sourceNote) ? "has-caution" : ""}>
+                        <span>
+                          {/older DNR|older .*description/i.test(activeTrailProfile.sourceNote)
+                            ? "Source drift"
+                            : "Official route source"}
+                        </span>
+                        <strong>
+                          {/older DNR|older .*description/i.test(activeTrailProfile.sourceNote)
+                            ? "Current land-manager mileage wins"
+                            : activeTrailProfile.sourceLabel}
+                        </strong>
+                        <small>{activeTrailProfile.sourceNote}</small>
+                        <a
+                          className="canvas-trailhead-link"
+                          href={activeTrailProfile.sourceUrl}
+                          target="_blank"
+                          rel="noopener"
+                        >
+                          Open current route source →
+                        </a>
+                      </article>
+                    )}
+
                     <article>
                       <span>Route profile</span>
                       <strong>
