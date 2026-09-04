@@ -8,6 +8,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./globals.css";
 import "./atlas.css";
 
+const GA_MEASUREMENT_ID = "G-Y5D2V2W7HN";
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
@@ -68,6 +70,20 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
 
   return (
     <html lang="en">
+      <head>
+        {/* Google tag (gtag.js) */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_MEASUREMENT_ID}');
+            `,
+          }}
+        />
+      </head>
       <body>
         <a className="skip-link" href="#main-content">Skip to main content</a>
         <header className="site-header">
