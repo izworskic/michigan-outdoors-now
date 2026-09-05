@@ -9,6 +9,7 @@ import "./globals.css";
 import "./atlas.css";
 
 const GA_MEASUREMENT_ID = "G-Y5D2V2W7HN";
+const ADSENSE_PUBLISHER_ID = "ca-pub-8222782620788075";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -71,6 +72,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
+        <meta name="google-adsense-account" content={ADSENSE_PUBLISHER_ID} />
         {/* Google tag (gtag.js) */}
         <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`} />
         <script
