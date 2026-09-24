@@ -31,6 +31,18 @@ async function main() {
   const css = files["src/app/atlas.css"];
   const runtime = files["scripts/runtime-check.mjs"];
 
+  const curatedIndex = discoverRoute.indexOf("const curated = curatedDiscoveryPlaces");
+  const sequentialDiscoveryIndex = discoverRoute.indexOf("const elements = await fetchOverpass");
+  const parallelDiscoveryIndex = discoverRoute.indexOf("const [elements, authoritativeState] = await Promise.all");
+  const discoveryIndex = sequentialDiscoveryIndex >= 0 ? sequentialDiscoveryIndex : parallelDiscoveryIndex;
+  const preservesFastDiscovery =
+    discoverRoute.includes("Promise.any(attempts)") &&
+    discoverRoute.includes("1_600") &&
+    curatedIndex >= 0 &&
+    discoveryIndex > curatedIndex &&
+    (sequentialDiscoveryIndex >= 0 ||
+      (parallelDiscoveryIndex >= 0 && discoverRoute.includes("fetchOverpass(overpassQuery")));
+
   const checks: Record<string, boolean> = {
     typedOriginResolution:
       originRoute.includes("resolveMichiganOrigin") &&
@@ -48,11 +60,7 @@ async function main() {
       hub.includes('setOriginFeedback("Starting from your current location")') &&
       hub.includes("setOriginCoordinates(coordinates)") &&
       hub.includes("setUserLocation(coordinates)"),
-    fastDiscoveryFallback:
-      discoverRoute.includes("Promise.any(attempts)") &&
-      discoverRoute.includes("1_600") &&
-      discoverRoute.indexOf("const curated = curatedDiscoveryPlaces") <
-        discoverRoute.indexOf("const elements = await fetchOverpass"),
+    fastDiscoveryFallback: preservesFastDiscovery,
     searchDoesNotAutoOpenSheet:
       !hub.includes("setActiveDiscoveryId(result.places[0]") &&
       hub.includes('setActiveDiscoveryId("");'),
