@@ -51,7 +51,7 @@ export type DiscoveryPlace = {
   travelSource?: "routed" | "estimated";
   score: number;
   why: string;
-  source: "OpenStreetMap" | "Michigan Outdoors Now";
+  source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR";
   sourceUrl: string;
   directionsUrl: string;
   website?: string;
@@ -70,7 +70,15 @@ export type DiscoveryResponse = {
   generatedAt: string;
   status: "live" | "fallback";
   mode?: "search" | "surprise";
+  breadth?: "focused" | "regional";
   sourceNote: string;
+  universe?: {
+    discoveredCount: number;
+    resultLimit: number;
+    routedCount: number;
+    sourceCounts: Record<string, number>;
+    sourceStatus: Array<{ id: string; label: string; status: "live" | "unavailable"; count: number }>;
+  };
 };
 
 type CategoryDefinition = {
@@ -92,8 +100,8 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
     id: "viewpoint",
     label: "Viewpoint",
-    selectors: ['nwr["tourism"="viewpoint"]'],
-    keywords: ["view", "viewpoint", "overlook", "scenic", "vista", "bluff", "cliff"],
+    selectors: ['nwr["tourism"="viewpoint"]', 'nwr["man_made"="observation_tower"]'],
+    keywords: ["view", "viewpoint", "overlook", "scenic", "vista", "bluff", "cliff", "observation tower"],
     activities: ["hiking", "scenic", "birding"],
   },
   {
@@ -113,7 +121,12 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
     id: "park",
     label: "Natural area",
-    selectors: ['nwr["leisure"="nature_reserve"]', 'nwr["boundary"="protected_area"]'],
+    selectors: [
+      'nwr["leisure"="nature_reserve"]',
+      'nwr["leisure"="park"]',
+      'nwr["boundary"="protected_area"]',
+      'nwr["boundary"="national_park"]',
+    ],
     keywords: ["park", "forest", "woods", "nature", "preserve", "reserve", "wild", "remote", "backcountry"],
     activities: ["hiking", "birding", "scenic"],
   },
@@ -134,15 +147,15 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
     id: "fishing",
     label: "Fishing access",
-    selectors: ['nwr["leisure"="fishing"]'],
+    selectors: ['nwr["leisure"="fishing"]', 'nwr["sport"="fishing"]'],
     keywords: ["fish", "fishing", "trout", "brook trout", "river", "stream", "creek"],
     activities: ["fishing"],
   },
   {
     id: "paddling",
     label: "Paddling access",
-    selectors: ['nwr["canoe"="put_in"]', 'nwr["waterway"="access_point"]'],
-    keywords: ["paddle", "paddling", "canoe", "kayak", "put in", "put-in"],
+    selectors: ['nwr["canoe"="put_in"]', 'nwr["waterway"="access_point"]', 'nwr["leisure"="slipway"]'],
+    keywords: ["paddle", "paddling", "canoe", "kayak", "put in", "put-in", "boat launch"],
     activities: ["paddling"],
   },
   {
@@ -170,7 +183,7 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
 
 const ACTIVITY_RULES: Array<[ActivityId, string[]]> = [
   ["hiking", ["hike", "hiking", "trail", "walk", "woods", "forest", "waterfall", "overlook"]],
-  ["paddling", ["paddle", "paddling", "canoe", "kayak", "put in", "put-in"]],
+  ["paddling", ["paddle", "paddling", "canoe", "kayak", "put in", "put-in", "boat launch"]],
   ["fishing", ["fish", "fishing", "trout", "brookie", "brook trout", "river", "stream", "creek"]],
   ["beaches", ["beach", "swim", "sand", "shore", "shoreline"]],
   ["birding", ["bird", "birding", "birds", "waterfowl", "migration", "wildlife", "refuge"]],
@@ -265,7 +278,11 @@ export function interpretOutdoorQuery(query: string): DiscoveryIntent {
 export function overpassSelectorsFor(intent: DiscoveryIntent) {
   return unique(
     intent.categories.flatMap((category) => categoryDefinition(category).selectors),
-  ).slice(0, 10);
+  ).slice(0, 12);
+}
+
+export function regionalOverpassSelectors() {
+  return unique(CATEGORY_DEFINITIONS.flatMap((definition) => definition.selectors)).slice(0, 24);
 }
 
 export function discoveryRadiusMeters(maxDriveHours: number) {
@@ -279,13 +296,13 @@ export function categoryLabel(category: DiscoveryCategory) {
 
 export function categoryFromTags(tags: Record<string, string | undefined>): DiscoveryCategory {
   if (tags.natural === "waterfall") return "waterfall";
-  if (tags.tourism === "viewpoint") return "viewpoint";
+  if (tags.tourism === "viewpoint" || tags.man_made === "observation_tower") return "viewpoint";
   if (tags.natural === "beach") return "beach";
   if (tags.tourism === "camp_site" || tags.tourism === "caravan_site") return "campground";
   if (tags.highway === "trailhead") return "trailhead";
   if (tags.man_made === "lighthouse") return "lighthouse";
-  if (tags.leisure === "fishing") return "fishing";
-  if (tags.canoe === "put_in" || tags.waterway === "access_point") return "paddling";
+  if (tags.leisure === "fishing" || tags.sport === "fishing") return "fishing";
+  if (tags.canoe === "put_in" || tags.waterway === "access_point" || tags.leisure === "slipway") return "paddling";
   if (tags.tourism === "picnic_site" || tags.leisure === "picnic_table") return "picnic";
   if (tags.natural === "cave_entrance") return "cave";
   if (tags.leisure === "nature_reserve") return "wildlife";

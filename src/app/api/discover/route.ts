@@ -8,10 +8,12 @@ import {
   interpretOutdoorQuery,
   isDiscoveryCandidateInRange,
   overpassSelectorsFor,
+  regionalOverpassSelectors,
   scoreDiscoveryCandidate,
   type DiscoveryPlace,
   type DiscoveryResponse,
 } from "../../../lib/discovery";
+import { fetchAuthoritativeDiscoveryPlaces } from "../../../lib/authoritative-discovery";
 import { resolveMichiganOrigin } from "../../../lib/live-data";
 import { applyRoutedTravel, fetchRoutedTravel } from "../../../lib/route-intelligence";
 import { isPlausibleMichiganCoordinate } from "../../../lib/planner";
@@ -33,6 +35,8 @@ type DiscoverRequest = {
   maxDriveHours: number;
   minDriveHours?: number;
   surpriseMode?: boolean;
+  breadth?: "focused" | "regional";
+  maxResults?: number;
   excludePlaceIds?: string[];
   preferences?: {
     kids?: boolean;
@@ -87,6 +91,11 @@ function isDiscoverRequest(value: unknown): value is DiscoverRequest {
         request.minDriveHours >= 0 &&
         request.minDriveHours < (request.maxDriveHours as number))) &&
     (request.surpriseMode === undefined || typeof request.surpriseMode === "boolean") &&
+    (request.breadth === undefined || request.breadth === "focused" || request.breadth === "regional") &&
+    (request.maxResults === undefined ||
+      (Number.isInteger(request.maxResults) &&
+        (request.maxResults as number) >= 10 &&
+        (request.maxResults as number) <= 80)) &&
     (request.excludePlaceIds === undefined ||
       (Array.isArray(request.excludePlaceIds) &&
         request.excludePlaceIds.length <= 50 &&
@@ -120,10 +129,10 @@ function buildOverpassQuery(
   return `[out:json][timeout:20];(${clauses.join("")});out center tags qt;`;
 }
 
-async function fetchOverpass(query: string, disabled = false) {
+async function fetchOverpass(query: string, disabled = false, timeoutMs = 1_600) {
   if (disabled) return null;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1_600);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
     const response = await fetch(endpoint, {
@@ -186,6 +195,7 @@ function osmPlaces(
     maxDriveHours: number;
     minDriveHours: number;
     intent: ReturnType<typeof interpretOutdoorQuery>;
+    regional: boolean;
   },
 ): DiscoveryPlace[] {
   const seen = new Set<string>();
@@ -212,6 +222,7 @@ function osmPlaces(
 
     const category = categoryFromTags(tags);
     const categoryAccepted =
+      args.regional ||
       args.intent.categories.includes(category) ||
       (category === "wildlife" && args.intent.categories.includes("park")) ||
       (category === "park" && args.intent.categories.includes("wildlife"));
@@ -287,7 +298,7 @@ function surpriseRank(place: DiscoveryPlace) {
   )
     ? 26
     : 0;
-  const curatedCredibility = place.curatedPlaceId ? 10 : 3;
+  const sourceCredibility = place.curatedPlaceId ? 10 : place.source === "Michigan DNR" ? 8 : 3;
   const discoveryBonus = ["wildlife", "cave", "viewpoint", "waterfall", "paddling"].includes(
     place.category,
   )
@@ -295,7 +306,7 @@ function surpriseRank(place: DiscoveryPlace) {
     : 0;
   const enoughDriveToFeelDifferent = place.driveHours >= 0.6 ? 3 : 0;
 
-  return place.score + curatedCredibility + discoveryBonus + enoughDriveToFeelDifferent - householdPenalty;
+  return place.score + sourceCredibility + discoveryBonus + enoughDriveToFeelDifferent - householdPenalty;
 }
 
 function surprisePlaces(places: DiscoveryPlace[]) {
@@ -308,21 +319,95 @@ function surprisePlaces(places: DiscoveryPlace[]) {
   );
 }
 
-function mergePlaces(live: DiscoveryPlace[], curated: DiscoveryPlace[]) {
-  const all = [...live, ...curated].sort(
+function normalizedPlaceName(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function sourcePriority(place: DiscoveryPlace) {
+  if (place.curatedPlaceId) return 8;
+  if (place.source === "Michigan DNR") return 6;
+  if (place.source === "OpenStreetMap") return 1;
+  return 4;
+}
+
+function mergePlaces(groups: DiscoveryPlace[][], limit: number) {
+  const all = groups.flat().sort(
     (a, b) =>
-      b.score - a.score ||
+      b.score + sourcePriority(b) - (a.score + sourcePriority(a)) ||
       a.driveHours - b.driveHours ||
       a.name.localeCompare(b.name),
   );
 
   const seen = new Set<string>();
   return all.filter((place) => {
-    const key = place.name.toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (seen.has(key)) return false;
+    const key = normalizedPlaceName(place.name);
+    if (!key || seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, 40);
+  }).slice(0, limit);
+}
+
+function driveBand(place: DiscoveryPlace) {
+  if (place.driveHours <= 0.5) return "0-30";
+  if (place.driveHours <= 1) return "30-60";
+  if (place.driveHours <= 1.5) return "60-90";
+  if (place.driveHours <= 2.25) return "90-135";
+  return "far";
+}
+
+function regionalDiversityOrder(places: DiscoveryPlace[]) {
+  const remaining = [...places];
+  const result: DiscoveryPlace[] = [];
+  const categoryCounts = new Map<string, number>();
+  const areaCounts = new Map<string, number>();
+  const driveCounts = new Map<string, number>();
+  const sourceCounts = new Map<string, number>();
+
+  while (remaining.length) {
+    let bestIndex = 0;
+    let bestValue = Number.NEGATIVE_INFINITY;
+
+    remaining.forEach((place, index) => {
+      const areaKey = place.area.toLowerCase() === "michigan" ? "" : place.area.toLowerCase();
+      const categoryCount = categoryCounts.get(place.category) ?? 0;
+      const areaCount = areaKey ? areaCounts.get(areaKey) ?? 0 : 0;
+      const driveCount = driveCounts.get(driveBand(place)) ?? 0;
+      const sourceCount = sourceCounts.get(place.source) ?? 0;
+      const value =
+        place.score +
+        sourcePriority(place) -
+        categoryCount * 5 -
+        areaCount * 3 -
+        driveCount * 2 -
+        sourceCount * 0.6;
+
+      if (
+        value > bestValue ||
+        (value === bestValue && place.score > remaining[bestIndex].score) ||
+        (value === bestValue && place.score === remaining[bestIndex].score && place.name.localeCompare(remaining[bestIndex].name) < 0)
+      ) {
+        bestValue = value;
+        bestIndex = index;
+      }
+    });
+
+    const [chosen] = remaining.splice(bestIndex, 1);
+    result.push(chosen);
+    const areaKey = chosen.area.toLowerCase() === "michigan" ? "" : chosen.area.toLowerCase();
+    categoryCounts.set(chosen.category, (categoryCounts.get(chosen.category) ?? 0) + 1);
+    if (areaKey) areaCounts.set(areaKey, (areaCounts.get(areaKey) ?? 0) + 1);
+    driveCounts.set(driveBand(chosen), (driveCounts.get(driveBand(chosen)) ?? 0) + 1);
+    sourceCounts.set(chosen.source, (sourceCounts.get(chosen.source) ?? 0) + 1);
+  }
+
+  return result;
+}
+
+function countSources(places: DiscoveryPlace[]) {
+  return places.reduce<Record<string, number>>((counts, place) => {
+    counts[place.source] = (counts[place.source] ?? 0) + 1;
+    return counts;
+  }, {});
 }
 
 export async function POST(request: Request) {
@@ -372,10 +457,13 @@ export async function POST(request: Request) {
     intent.traits = [...new Set([...intent.traits, ...preferenceTraits])];
     intent.summary = `${intent.summary} · verified for ${preferenceTraits.map((trait) => trait.replace("-", " ")).join(", ")} fit`;
   }
-  const minDriveHours = Math.max(0, body.minDriveHours ?? 0);
 
-  // Curated results are the guaranteed first layer. Public POI enrichment is
-  // optional and strictly time-bounded so a useful response never waits on it.
+  const minDriveHours = Math.max(0, body.minDriveHours ?? 0);
+  const breadth = body.breadth ?? "focused";
+  const regional = breadth === "regional";
+  const resultLimit = body.maxResults ?? (regional ? 60 : 40);
+  const strictPreferenceMode = preferenceTraits.length > 0;
+
   const curated = curatedDiscoveryPlaces({
     destinations,
     intent,
@@ -384,15 +472,27 @@ export async function POST(request: Request) {
     maxDriveHours: body.maxDriveHours,
   }).filter((place) => place.driveHours + 0.05 >= minDriveHours);
 
-  const selectors = overpassSelectorsFor(intent);
+  const selectors = regional ? regionalOverpassSelectors() : overpassSelectorsFor(intent);
   const overpassQuery = buildOverpassQuery(
     selectors,
     discoveryRadiusMeters(body.maxDriveHours),
     origin.latitude,
     origin.longitude,
   );
-  const strictPreferenceMode = preferenceTraits.length > 0;
-  const elements = await fetchOverpass(overpassQuery, strictPreferenceMode);
+
+  const [elements, authoritativeState] = await Promise.all([
+    fetchOverpass(overpassQuery, strictPreferenceMode, regional ? 3_500 : 1_600),
+    regional && !strictPreferenceMode
+      ? fetchAuthoritativeDiscoveryPlaces({
+          originLatitude: origin.latitude,
+          originLongitude: origin.longitude,
+          maxDriveHours: body.maxDriveHours,
+          minDriveHours,
+          intent,
+        })
+      : Promise.resolve({ places: [] as DiscoveryPlace[], sources: [] }),
+  ]);
+
   const live = elements
     ? osmPlaces(elements, {
         originLatitude: origin.latitude,
@@ -400,60 +500,88 @@ export async function POST(request: Request) {
         maxDriveHours: body.maxDriveHours,
         minDriveHours,
         intent,
+        regional,
       })
     : [];
 
+  const authoritative = authoritativeState.places;
+
   const excludedIds = new Set(body.excludePlaceIds ?? []);
-  const mergedPlaces = mergePlaces(live, curated).filter((place) => !excludedIds.has(place.id));
+  const mergeLimit = Math.min(120, Math.max(resultLimit + 30, regional ? 90 : 50));
+  const mergedPlaces = mergePlaces([curated, authoritative, live], mergeLimit)
+    .filter((place) => !excludedIds.has(place.id));
+  const preRoutePlaces = regional ? regionalDiversityOrder(mergedPlaces) : mergedPlaces;
+
   const routedTravel = await fetchRoutedTravel({
     originLatitude: origin.latitude,
     originLongitude: origin.longitude,
-    places: mergedPlaces,
-    maxPlaces: 20,
+    places: preRoutePlaces,
+    maxPlaces: Math.min(30, resultLimit),
   });
-  const routedPlaces = applyRoutedTravel(mergedPlaces, routedTravel)
+  const routedPlaces = applyRoutedTravel(preRoutePlaces, routedTravel)
     .filter(
       (place) =>
         place.driveHours <= body.maxDriveHours + 0.08 &&
         place.driveHours + 0.05 >= minDriveHours,
     );
-  const places = body.surpriseMode
-    ? surprisePlaces(routedPlaces)
-    : routedPlaces.sort(
-        (a, b) =>
-          b.score - a.score ||
-          a.driveHours - b.driveHours ||
-          a.name.localeCompare(b.name),
-      );
 
+  const orderedPlaces = body.surpriseMode
+    ? surprisePlaces(routedPlaces)
+    : regional
+      ? regionalDiversityOrder(routedPlaces)
+      : routedPlaces.sort(
+          (a, b) =>
+            b.score - a.score ||
+            a.driveHours - b.driveHours ||
+            a.name.localeCompare(b.name),
+        );
+  const places = orderedPlaces.slice(0, resultLimit);
+
+  const authoritativeLive = authoritativeState.sources.some((source) => source.status === "live");
   const response: DiscoveryResponse = {
     origin,
     query: body.query.trim(),
     intent,
     places,
     generatedAt: new Date().toISOString(),
-    status: elements ? "live" : "fallback",
+    status: elements || authoritativeLive ? "live" : "fallback",
     mode: body.surpriseMode ? "surprise" : "search",
+    breadth,
     sourceNote: strictPreferenceMode
       ? `Results are limited to Michigan Outdoors Now destinations with verified household/access attributes for the saved preferences. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`
-      : elements
-        ? `Fast mapped-place enrichment from OpenStreetMap contributors is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
-        : `Results are from the curated Michigan Outdoors Now destination set. Live mapped-place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
+      : regional
+        ? `Regional discovery blends Michigan DNR parks, wildlife lands, campgrounds, boating/fishing access and trail systems with Michigan Outdoors Now curated places and time-bounded OpenStreetMap enrichment. It returns a broad deterministic candidate set before downstream tools apply live-condition and safety gates. ${routedTravel.size ? "The leading candidates include best-effort routed driving times; remaining places retain planning estimates." : "Drive times remain planning estimates."}`
+        : elements
+          ? `Fast OpenStreetMap enrichment is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
+          : `Results are from the curated Michigan Outdoors Now destination set. External place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
+    universe: {
+      discoveredCount: mergedPlaces.length,
+      resultLimit,
+      routedCount: routedTravel.size,
+      sourceCounts: countSources(mergedPlaces),
+      sourceStatus: authoritativeState.sources,
+    },
   };
 
   console.info(
     JSON.stringify({
       event: "semantic_discovery_completed",
+      breadth,
       maxDriveHours: body.maxDriveHours,
       minDriveHours,
+      resultLimit,
       categoryCount: intent.categories.length,
       activityCount: intent.activities.length,
       livePlaceCount: live.length,
       curatedPlaceCount: curated.length,
+      authoritativePlaceCount: authoritative.length,
+      universePlaceCount: mergedPlaces.length,
       returnedPlaceCount: places.length,
       routedPlaceCount: routedTravel.size,
       surpriseMode: Boolean(body.surpriseMode),
       excludedPlaceCount: excludedIds.size,
+      sourceCounts: response.universe?.sourceCounts,
+      sourceStatus: authoritativeState.sources,
       status: response.status,
     }),
   );
