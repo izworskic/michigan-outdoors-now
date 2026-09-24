@@ -403,14 +403,6 @@ function regionalDiversityOrder(places: DiscoveryPlace[]) {
   return result;
 }
 
-function categoryRelevant(place: DiscoveryPlace, categories: string[]) {
-  return (
-    categories.includes(place.category) ||
-    (place.category === "wildlife" && categories.includes("park")) ||
-    (place.category === "park" && categories.includes("wildlife"))
-  );
-}
-
 function countSources(places: DiscoveryPlace[]) {
   return places.reduce<Record<string, number>>((counts, place) => {
     counts[place.source] = (counts[place.source] ?? 0) + 1;
@@ -490,15 +482,15 @@ export async function POST(request: Request) {
 
   const [elements, authoritativeState] = await Promise.all([
     fetchOverpass(overpassQuery, strictPreferenceMode, regional ? 3_500 : 1_600),
-    strictPreferenceMode
-      ? Promise.resolve({ places: [] as DiscoveryPlace[], sources: [] })
-      : fetchAuthoritativeDiscoveryPlaces({
+    regional && !strictPreferenceMode
+      ? fetchAuthoritativeDiscoveryPlaces({
           originLatitude: origin.latitude,
           originLongitude: origin.longitude,
           maxDriveHours: body.maxDriveHours,
           minDriveHours,
           intent,
-        }),
+        })
+      : Promise.resolve({ places: [] as DiscoveryPlace[], sources: [] }),
   ]);
 
   const live = elements
@@ -512,9 +504,7 @@ export async function POST(request: Request) {
       })
     : [];
 
-  const authoritative = regional
-    ? authoritativeState.places
-    : authoritativeState.places.filter((place) => categoryRelevant(place, intent.categories));
+  const authoritative = authoritativeState.places;
 
   const excludedIds = new Set(body.excludePlaceIds ?? []);
   const mergeLimit = Math.min(120, Math.max(resultLimit + 30, regional ? 90 : 50));
@@ -561,8 +551,8 @@ export async function POST(request: Request) {
       ? `Results are limited to Michigan Outdoors Now destinations with verified household/access attributes for the saved preferences. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`
       : regional
         ? `Regional discovery blends Michigan DNR parks, wildlife lands, campgrounds, boating/fishing access and trail systems with Michigan Outdoors Now curated places and time-bounded OpenStreetMap enrichment. It returns a broad deterministic candidate set before downstream tools apply live-condition and safety gates. ${routedTravel.size ? "The leading candidates include best-effort routed driving times; remaining places retain planning estimates." : "Drive times remain planning estimates."}`
-        : elements || authoritativeLive
-          ? `Authoritative Michigan DNR place layers and fast OpenStreetMap enrichment are blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
+        : elements
+          ? `Fast OpenStreetMap enrichment is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
           : `Results are from the curated Michigan Outdoors Now destination set. External place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
     universe: {
       discoveredCount: mergedPlaces.length,
