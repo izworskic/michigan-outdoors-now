@@ -80,11 +80,6 @@ type GeoJsonCollection = {
 
 type AuthoritativeSourceDefinition = (typeof authoritativeDiscoverySources)[number];
 
-function finite(value: unknown) {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-}
-
 function cleanText(value: unknown, max = 180) {
   return typeof value === "string"
     ? value.replace(/[<>\u0000-\u001f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max)
