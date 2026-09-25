@@ -4,6 +4,8 @@ import {
   authoritativeDiscoverySources,
   buildAuthoritativeQuery,
   federalDiscoverySourceIds,
+  padusLocalOpenWhere,
+  protectedLandDiscoverySourceIds,
 } from "../src/lib/authoritative-discovery";
 import {
   categoryFromTags,
@@ -98,4 +100,16 @@ test("expanded mapped tags classify swimming, lookouts, docks, portages and picn
   assert.equal(categoryFromTags({ waterway: "canoe_portage" }), "paddling");
   assert.equal(categoryFromTags({ amenity: "boat_rental" }), "paddling");
   assert.equal(categoryFromTags({ amenity: "shelter", shelter_type: "picnic_shelter" }), "picnic");
+});
+
+
+test("PAD-US expansion is limited to visitable local/regional/nonprofit fee lands", () => {
+  const ids = new Set(protectedLandDiscoverySourceIds);
+  assert.ok(ids.has("padus-local-open"));
+  assert.match(padusLocalOpenWhere, /State_Nm='MI'/);
+  assert.match(padusLocalOpenWhere, /Mang_Type IN \('LOC','DIST','NGO'\)/);
+  assert.match(padusLocalOpenWhere, /Pub_Access='OA'/);
+  assert.match(padusLocalOpenWhere, /FeatClass='Fee'/);
+  assert.doesNotMatch(padusLocalOpenWhere, /PVT/);
+  assert.doesNotMatch(padusLocalOpenWhere, /Easement/);
 });
