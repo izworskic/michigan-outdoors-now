@@ -298,7 +298,11 @@ function surpriseRank(place: DiscoveryPlace) {
   )
     ? 26
     : 0;
-  const sourceCredibility = place.curatedPlaceId ? 10 : place.source === "Michigan DNR" ? 8 : 3;
+  const sourceCredibility = place.curatedPlaceId
+    ? 10
+    : place.source === "Michigan DNR" || place.source === "U.S. Forest Service" || place.source === "National Park Service"
+      ? 8
+      : 3;
   const discoveryBonus = ["wildlife", "cave", "viewpoint", "waterfall", "paddling"].includes(
     place.category,
   )
@@ -325,7 +329,7 @@ function normalizedPlaceName(value: string) {
 
 function sourcePriority(place: DiscoveryPlace) {
   if (place.curatedPlaceId) return 8;
-  if (place.source === "Michigan DNR") return 6;
+  if (place.source === "Michigan DNR" || place.source === "U.S. Forest Service" || place.source === "National Park Service") return 6;
   if (place.source === "OpenStreetMap") return 1;
   return 4;
 }
@@ -482,7 +486,7 @@ export async function POST(request: Request) {
 
   const [elements, authoritativeState] = await Promise.all([
     fetchOverpass(overpassQuery, strictPreferenceMode, regional ? 3_500 : 1_600),
-    regional && !strictPreferenceMode
+    !strictPreferenceMode
       ? fetchAuthoritativeDiscoveryPlaces({
           originLatitude: origin.latitude,
           originLongitude: origin.longitude,
@@ -550,10 +554,12 @@ export async function POST(request: Request) {
     sourceNote: strictPreferenceMode
       ? `Results are limited to Michigan Outdoors Now destinations with verified household/access attributes for the saved preferences. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`
       : regional
-        ? `Regional discovery blends Michigan DNR parks, wildlife lands, campgrounds, boating/fishing access and trail systems with Michigan Outdoors Now curated places and time-bounded OpenStreetMap enrichment. It returns a broad deterministic candidate set before downstream tools apply live-condition and safety gates. ${routedTravel.size ? "The leading candidates include best-effort routed driving times; remaining places retain planning estimates." : "Drive times remain planning estimates."}`
+        ? `Regional discovery blends Michigan DNR parks, wildlife lands, campgrounds, boating/fishing access and trail systems, U.S. Forest Service recreation sites, National Park Service units, Michigan Outdoors Now curated places, and time-bounded OpenStreetMap enrichment. It returns a broad deterministic candidate set before live-condition and safety gates. ${routedTravel.size ? "The leading candidates include best-effort routed driving times; remaining places retain planning estimates." : "Drive times remain planning estimates."}`
         : elements
-          ? `Fast OpenStreetMap enrichment is blended with Michigan Outdoors Now curated destinations. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
-          : `Results are from the curated Michigan Outdoors Now destination set. External place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
+          ? `Fast OpenStreetMap enrichment is blended with Michigan Outdoors Now plus authoritative Michigan DNR, U.S. Forest Service, and National Park Service inventories. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM; unrouted places fall back to planning estimates." : "Routing did not answer inside the fast budget, so drive times remain planning estimates."}`
+          : authoritativeLive
+            ? `Results blend Michigan Outdoors Now with authoritative Michigan DNR, U.S. Forest Service, and National Park Service inventories. OpenStreetMap enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`
+            : `Results are from the curated Michigan Outdoors Now destination set. External place enrichment did not answer inside the fast-search budget. ${routedTravel.size ? "Top results include best-effort routed driving times from OSRM." : "Drive times remain planning estimates."}`,
     universe: {
       discoveredCount: mergedPlaces.length,
       resultLimit,

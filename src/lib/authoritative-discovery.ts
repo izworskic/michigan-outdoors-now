@@ -9,6 +9,8 @@ import {
 
 const DNR_OPEN_DATA = "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/ArcGIS/rest/services";
 const DNR_TRAILS = "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21/query";
+const USFS_RECREATION = "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_RecreationOpportunities_01/MapServer/0/query";
+const NPS_BOUNDARIES = "https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/National_Park_Service_Boundaries/FeatureServer/0/query";
 
 export const authoritativeDiscoverySources = [
   {
@@ -55,7 +57,7 @@ export const authoritativeDiscoverySources = [
   },
 ] as const;
 
-export type AuthoritativeSourceId = (typeof authoritativeDiscoverySources)[number]["id"] | "dnr-trails";
+export type AuthoritativeSourceId = (typeof authoritativeDiscoverySources)[number]["id"] | "dnr-trails" | "usfs-recreation" | "nps-units";
 
 export type AuthoritativeDiscoveryState = {
   places: DiscoveryPlace[];
@@ -444,6 +446,237 @@ async function fetchNearbyTrailSystems(args: {
   }
 }
 
+function safeFederalWebsite(value: unknown) {
+  const raw = cleanText(value, 500);
+  if (!raw) return undefined;
+  try {
+    const parsed = new URL(raw);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function usfsCategory(properties: Record<string, unknown>): DiscoveryCategory {
+  const text = [
+    properties.markeractivity,
+    properties.markeractivitygroup,
+    properties.markertype,
+    properties.recareaname,
+  ]
+    .map((value) => cleanText(value, 160).toLowerCase())
+    .filter(Boolean)
+    .join(" ");
+
+  if (/camp|cabins?|overnight/.test(text)) return "campground";
+  if (/fish|angling/.test(text)) return "fishing";
+  if (/canoe|kayak|boat|paddl|water access|river access|launch/.test(text)) return "paddling";
+  if (/beach|swim/.test(text)) return "beach";
+  if (/bird|wildlife|watchable wildlife/.test(text)) return "wildlife";
+  if (/trail|hiking|backpack|snowshoe|cross.country|ski/.test(text)) return "trailhead";
+  if (/lookout|view|scenic/.test(text)) return "viewpoint";
+  return "park";
+}
+
+async function fetchUsfsRecreation(args: {
+  originLatitude: number;
+  originLongitude: number;
+  maxDriveHours: number;
+  minDriveHours: number;
+  intent: DiscoveryIntent;
+}) {
+  const params = new URLSearchParams({
+    where: "1=1",
+    outFields: "objectid,recareaid,recareaname,longitude,latitude,recareaurl,forestname,markertype,markeractivity,markeractivitygroup,openstatus,open_season_start,open_season_end",
+    returnGeometry: "true",
+    outSR: "4326",
+    inSR: "4326",
+    geometryType: "esriGeometryEnvelope",
+    spatialRel: "esriSpatialRelIntersects",
+    geometry: envelopeFor(args.originLatitude, args.originLongitude, args.maxDriveHours).join(","),
+    resultRecordCount: "1400",
+    f: "geojson",
+  });
+
+  try {
+    const response = await fetch(`${USFS_RECREATION}?${params.toString()}`, {
+      headers: { Accept: "application/geo+json, application/json" },
+      signal: AbortSignal.timeout(3_400),
+      next: { revalidate: 1800 },
+    });
+    if (!response.ok) throw new Error(`usfs-recreation returned ${response.status}`);
+    const payload = (await response.json()) as GeoJsonCollection;
+    if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+      throw new Error("usfs-recreation returned invalid GeoJSON");
+    }
+
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of payload.features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = cleanText(properties.recareaname, 180);
+      if (!center || !name) continue;
+      if (!isDiscoveryCandidateInRange({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+      })) continue;
+
+      const openStatus = cleanText(properties.openstatus, 80);
+      if (/^closed$/i.test(openStatus) || /temporarily closed/i.test(openStatus)) continue;
+
+      const category = usfsCategory(properties);
+      const website = safeFederalWebsite(properties.recareaurl);
+      const metrics = scoreDiscoveryCandidate({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+        category,
+        intent: args.intent,
+        name,
+        website,
+      });
+      if (metrics.driveHours + 0.05 < args.minDriveHours) continue;
+
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+
+      const forest = cleanText(properties.forestname, 140) || "U.S. Forest Service";
+      const recAreaId = typeof properties.recareaid === "number"
+        ? String(properties.recareaid)
+        : cleanText(properties.recareaid, 60);
+      const objectId = typeof properties.objectid === "number"
+        ? String(properties.objectid)
+        : cleanText(properties.objectid, 60);
+      const statusNote = openStatus ? ` Source status: ${openStatus}.` : "";
+
+      places.push({
+        id: `usfs:${recAreaId || objectId || sourceKey(name)}`,
+        name,
+        area: forest,
+        latitude: center.latitude,
+        longitude: center.longitude,
+        category,
+        categoryLabel: categoryLabel(category),
+        distanceMiles: metrics.distanceMiles,
+        driveHours: metrics.driveHours,
+        score: Math.min(99, metrics.score + 7),
+        why: `U.S. Forest Service recreation data places this ${categoryLabel(category).toLowerCase()} in ${forest}.${statusNote}`,
+        source: "U.S. Forest Service",
+        sourceUrl: USFS_RECREATION.replace(/\/query$/, ""),
+        directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${center.latitude.toFixed(6)},${center.longitude.toFixed(6)}`,
+        ...(website ? { website } : {}),
+      });
+    }
+
+    return { id: "usfs-recreation" as const, label: "U.S. Forest Service recreation sites", status: "live" as const, places };
+  } catch {
+    return { id: "usfs-recreation" as const, label: "U.S. Forest Service recreation sites", status: "unavailable" as const, places: [] as DiscoveryPlace[] };
+  }
+}
+
+async function fetchNpsUnits(args: {
+  originLatitude: number;
+  originLongitude: number;
+  maxDriveHours: number;
+  minDriveHours: number;
+  intent: DiscoveryIntent;
+}) {
+  const params = new URLSearchParams({
+    where: "STATE='MI'",
+    outFields: "FID,UNIT_CODE,UNIT_NAME,STATE,UNIT_TYPE,PARKNAME",
+    returnGeometry: "true",
+    outSR: "4326",
+    inSR: "4326",
+    geometryType: "esriGeometryEnvelope",
+    spatialRel: "esriSpatialRelIntersects",
+    geometry: envelopeFor(args.originLatitude, args.originLongitude, args.maxDriveHours).join(","),
+    resultRecordCount: "250",
+    f: "geojson",
+  });
+
+  try {
+    const response = await fetch(`${NPS_BOUNDARIES}?${params.toString()}`, {
+      headers: { Accept: "application/geo+json, application/json" },
+      signal: AbortSignal.timeout(3_400),
+      next: { revalidate: 21600 },
+    });
+    if (!response.ok) throw new Error(`nps-units returned ${response.status}`);
+    const payload = (await response.json()) as GeoJsonCollection;
+    if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+      throw new Error("nps-units returned invalid GeoJSON");
+    }
+
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of payload.features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = cleanText(properties.UNIT_NAME ?? properties.PARKNAME, 180);
+      if (!center || !name) continue;
+      if (!isDiscoveryCandidateInRange({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+      })) continue;
+
+      const category: DiscoveryCategory = "park";
+      const unitCode = cleanText(properties.UNIT_CODE, 20).toLowerCase();
+      const website = /^[a-z0-9]{4,8}$/.test(unitCode)
+        ? `https://www.nps.gov/${unitCode}/index.htm`
+        : "https://www.nps.gov/state/mi/index.htm";
+      const metrics = scoreDiscoveryCandidate({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+        category,
+        intent: args.intent,
+        name,
+        website,
+      });
+      if (metrics.driveHours + 0.05 < args.minDriveHours) continue;
+
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+
+      const unitType = cleanText(properties.UNIT_TYPE, 100) || "National Park Service";
+      const fid = typeof properties.FID === "number" ? String(properties.FID) : cleanText(properties.FID, 40);
+      places.push({
+        id: `nps:${unitCode || fid || sourceKey(name)}`,
+        name,
+        area: unitType,
+        latitude: center.latitude,
+        longitude: center.longitude,
+        category,
+        categoryLabel: categoryLabel(category),
+        distanceMiles: metrics.distanceMiles,
+        driveHours: metrics.driveHours,
+        score: Math.min(99, metrics.score + 7),
+        why: `National Park Service boundary data places this federal outdoor unit inside the requested Michigan travel range.`,
+        source: "National Park Service",
+        sourceUrl: NPS_BOUNDARIES.replace(/\/query$/, ""),
+        directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${center.latitude.toFixed(6)},${center.longitude.toFixed(6)}`,
+        website,
+      });
+    }
+
+    return { id: "nps-units" as const, label: "National Park Service units", status: "live" as const, places };
+  } catch {
+    return { id: "nps-units" as const, label: "National Park Service units", status: "unavailable" as const, places: [] as DiscoveryPlace[] };
+  }
+}
+
 export async function fetchAuthoritativeDiscoveryPlaces(args: {
   originLatitude: number;
   originLongitude: number;
@@ -454,6 +687,8 @@ export async function fetchAuthoritativeDiscoveryPlaces(args: {
   const results = await Promise.all([
     ...authoritativeDiscoverySources.map((source) => fetchSource(source, args)),
     fetchNearbyTrailSystems(args),
+    fetchUsfsRecreation(args),
+    fetchNpsUnits(args),
   ]);
 
   return {

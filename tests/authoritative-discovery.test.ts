@@ -57,6 +57,10 @@ test("regional OSM enrichment spans high-value outdoor place types without user-
   assert.match(joined, /slipway/);
   assert.match(joined, /observation_tower/);
   assert.match(joined, /lighthouse/);
+  assert.match(joined, /marina/);
+  assert.match(joined, /man_made.*pier/);
+  assert.match(joined, /harbour/);
+  assert.match(joined, /bird_hide/);
   assert.ok(selectors.every((selector) => selector.startsWith("nwr[")));
   assert.ok(selectors.every((selector) => !selector.includes(";")));
 });
@@ -64,6 +68,9 @@ test("regional OSM enrichment spans high-value outdoor place types without user-
 test("new mapped tags classify into useful existing decision categories", () => {
   assert.equal(categoryFromTags({ man_made: "observation_tower" }), "viewpoint");
   assert.equal(categoryFromTags({ leisure: "slipway" }), "paddling");
+  assert.equal(categoryFromTags({ leisure: "marina" }), "paddling");
+  assert.equal(categoryFromTags({ man_made: "pier" }), "paddling");
+  assert.equal(categoryFromTags({ leisure: "bird_hide" }), "wildlife");
   assert.equal(categoryFromTags({ sport: "fishing" }), "fishing");
   assert.equal(categoryFromTags({ leisure: "park" }), "park");
 });
