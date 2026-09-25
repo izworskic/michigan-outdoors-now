@@ -300,7 +300,7 @@ async function fetchSource(
       }),
       {
         headers: { Accept: "application/geo+json, application/json" },
-        signal: AbortSignal.timeout(3_200),
+        signal: AbortSignal.timeout(1_250),
         next: { revalidate: 1800 },
       },
     );
@@ -371,7 +371,7 @@ async function fetchNearbyTrailSystems(args: {
   try {
     const response = await fetch(`${DNR_TRAILS}?${params.toString()}`, {
       headers: { Accept: "application/geo+json, application/json" },
-      signal: AbortSignal.timeout(3_200),
+      signal: AbortSignal.timeout(1_250),
       next: { revalidate: 1800 },
     });
     if (!response.ok) throw new Error(`dnr-trails returned ${response.status}`);
@@ -501,7 +501,7 @@ async function fetchUsfsRecreation(args: {
   try {
     const response = await fetch(`${USFS_RECREATION}?${params.toString()}`, {
       headers: { Accept: "application/geo+json, application/json" },
-      signal: AbortSignal.timeout(3_400),
+      signal: AbortSignal.timeout(1_250),
       next: { revalidate: 1800 },
     });
     if (!response.ok) throw new Error(`usfs-recreation returned ${response.status}`);
@@ -604,7 +604,7 @@ async function fetchNpsUnits(args: {
   try {
     const response = await fetch(`${NPS_BOUNDARIES}?${params.toString()}`, {
       headers: { Accept: "application/geo+json, application/json" },
-      signal: AbortSignal.timeout(3_400),
+      signal: AbortSignal.timeout(1_250),
       next: { revalidate: 21600 },
     });
     if (!response.ok) throw new Error(`nps-units returned ${response.status}`);
