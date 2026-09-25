@@ -1,0 +1,44 @@
+name: Verify production place depth
+
+on:
+  push:
+    branches: [verify/place-depth-production]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: verify/place-depth-production
+      - name: Smoke public place depth endpoint
+        run: |
+          set -euo pipefail
+          curl -sS -D /tmp/headers.txt -o /tmp/body.json \
+            -X POST 'https://michiganoutdoorsnow.chrisizworski.com/api/place-depth' \
+            -H 'Content-Type: application/json' \
+            --data '{"latitude":43.6674,"longitude":-83.9057,"placeName":"Bay City State Park"}'
+          cat /tmp/headers.txt
+          cat /tmp/body.json
+          grep -qi '^x-robots-tag:.*noindex' /tmp/headers.txt
+          grep -qi '^cache-control:.*no-store' /tmp/headers.txt
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const payload = JSON.parse(fs.readFileSync('/tmp/body.json', 'utf8'));
+          if (!['live', 'unavailable'].includes(payload.status)) throw new Error(`unexpected status ${payload.status}`);
+          if (!Array.isArray(payload.points)) throw new Error('points is not an array');
+          console.log(JSON.stringify({ status: payload.status, count: payload.points.length, sample: payload.points.slice(0, 5) }, null, 2));
+          NODE
+      - name: Remove temporary smoke workflow
+        run: |
+          rm .github/workflows/verify-place-depth-production.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove production smoke workflow"
+          git push origin HEAD:verify/place-depth-production
