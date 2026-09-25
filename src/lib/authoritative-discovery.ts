@@ -6,6 +6,10 @@ import {
   type DiscoveryIntent,
   type DiscoveryPlace,
 } from "./discovery";
+import {
+  fetchLocalAuthorityDiscoveryPlaces,
+  localAuthorityDiscoverySourceIds,
+} from "./local-authority-discovery";
 
 const DNR_OPEN_DATA = "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/ArcGIS/rest/services";
 const DNR_TRAILS = "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21/query";
@@ -68,7 +72,8 @@ export type AuthoritativeSourceId =
   | (typeof authoritativeDiscoverySources)[number]["id"]
   | "dnr-trails"
   | (typeof federalDiscoverySourceIds)[number]
-  | (typeof protectedLandDiscoverySourceIds)[number];
+  | (typeof protectedLandDiscoverySourceIds)[number]
+  | (typeof localAuthorityDiscoverySourceIds)[number];
 
 export type AuthoritativeDiscoveryState = {
   places: DiscoveryPlace[];
@@ -1029,15 +1034,19 @@ export async function fetchAuthoritativeDiscoveryPlaces(args: {
   minDriveHours: number;
   intent: DiscoveryIntent;
 }): Promise<AuthoritativeDiscoveryState> {
-  const results = await Promise.all([
-    ...authoritativeDiscoverySources.map((source) => fetchSource(source, args)),
-    fetchNearbyTrailSystems(args),
-    fetchUsfsRecreation(args),
-    fetchUsfsTrailSystems(args),
-    fetchNpsUnits(args),
-    fetchFwsRefuges(args),
-    fetchPadusLocalOpen(args),
+  const [coreResults, localAuthorityResults] = await Promise.all([
+    Promise.all([
+      ...authoritativeDiscoverySources.map((source) => fetchSource(source, args)),
+      fetchNearbyTrailSystems(args),
+      fetchUsfsRecreation(args),
+      fetchUsfsTrailSystems(args),
+      fetchNpsUnits(args),
+      fetchFwsRefuges(args),
+      fetchPadusLocalOpen(args),
+    ]),
+    fetchLocalAuthorityDiscoveryPlaces(args),
   ]);
+  const results = [...coreResults, ...localAuthorityResults];
 
   return {
     places: results.flatMap((result) => result.places),
