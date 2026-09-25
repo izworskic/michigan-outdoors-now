@@ -26,6 +26,7 @@ import {
 import type { ActivityId, DateChoice, Plan, PlannerRequest, PlannerResponse, SpecialistSignal } from "../lib/types";
 import { MichiganDestinationMap, type MapFocusPoint, type MapViewport } from "./michigan-destination-map";
 import { MyOutdoorsDrawer } from "./my-outdoors-drawer";
+import { PlaceDepthPanel } from "./place-depth-panel";
 
 type PullId = "best" | "water" | "trail" | "river" | "dark" | "long" | "weekend";
 
@@ -2436,6 +2437,21 @@ export function OutdoorIntentHub() {
                   </div>
                 </details>
               </section>
+
+              <PlaceDepthPanel
+                place={activeDiscovery}
+                discoveryPlaces={discovery?.places ?? []}
+                boatLaunches={boatLaunches}
+                onOpenDiscovery={activateDiscovery}
+                onFocusPoint={(point) =>
+                  setFocusPoint({
+                    key: `place-depth-${point.key}-${Date.now()}`,
+                    latitude: point.latitude,
+                    longitude: point.longitude,
+                    zoom: point.zoom ?? 12.2,
+                  })
+                }
+              />
 
               <div className="canvas-sheet-actions">
                 <button type="button" className="canvas-commit-action" onClick={openDeparture}>

@@ -166,7 +166,7 @@ export function PlaceDepthPanel({
   const hasDepth = trailheads.length || viewpoints.length || nearbyLaunches.length || mappedWaterAccess.length || companions.length;
 
   function focusDepthPoint(point: PlaceDepthPoint) {
-    trackGrowthEvent("place_depth_map_focus", depthGrowthContext, {
+    trackGrowthEvent("outbound_map_opened", depthGrowthContext, {
       kind: point.kind,
       source: "openstreetmap",
     });
@@ -228,7 +228,7 @@ export function PlaceDepthPanel({
                     <button
                       type="button"
                       onClick={() => {
-                        trackGrowthEvent("place_depth_map_focus", depthGrowthContext, {
+                        trackGrowthEvent("outbound_map_opened", depthGrowthContext, {
                           kind: "launch",
                           source: "qualified-launch-layer",
                         });
@@ -253,7 +253,7 @@ export function PlaceDepthPanel({
                 </article>
               ))}
               {mappedWaterAccess
-                .filter((point) => nearbyLaunches.length === 0)
+                .filter(() => nearbyLaunches.length === 0)
                 .map((point) => (
                   <article key={point.id}>
                     <div>
@@ -303,7 +303,7 @@ export function PlaceDepthPanel({
                     <button
                       type="button"
                       onClick={() => {
-                        trackGrowthEvent("place_depth_companion_opened", depthGrowthContext, {
+                        trackGrowthEvent("semantic_result_opened", depthGrowthContext, {
                           fromCategory: place.category,
                           toCategory: candidate.category,
                         });
