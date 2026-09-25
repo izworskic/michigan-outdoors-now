@@ -2069,7 +2069,7 @@ export function OutdoorIntentHub() {
               <div className="canvas-now">
                 <span>{activeDiscovery.categoryLabel}</span>
                 <strong>{discovery?.intent.summary}</strong>
-                <small>{activeDiscovery.source === "OpenStreetMap" ? "Live mapped place from OpenStreetMap contributors." : "Curated Michigan Outdoors Now destination."}</small>
+                <small>{activeDiscovery.curatedPlaceId ? "Curated Michigan Outdoors Now destination with full planning depth." : activeDiscovery.source === "OpenStreetMap" ? "Live mapped place from OpenStreetMap contributors." : `${activeDiscovery.source} mapped source. Verify current access, hours and local rules before departure.`}</small>
               </div>
               {activeTrailProfiles.length > 1 && (
                 <section className="canvas-trail-chooser" aria-label="Choose a trail">
