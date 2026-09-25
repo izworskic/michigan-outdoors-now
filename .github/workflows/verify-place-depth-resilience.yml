@@ -1,0 +1,52 @@
+name: Verify place-depth resilience
+
+on:
+  push:
+    branches: [feature/place-depth-resilience]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/place-depth-resilience
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify branch logic and live enrichment
+        run: |
+          npm run lint
+          node --import tsx --input-type=module <<'NODE'
+          import { fetchPlaceDepth } from './src/lib/place-depth.ts';
+          const samples = [
+            ['Bay City State Park', 43.6674, -83.9057],
+            ['Hartwick Pines State Park', 44.7468, -84.6636],
+            ['Tawas Point State Park', 44.2566, -83.4492],
+          ];
+          let live = 0;
+          for (const [placeName, latitude, longitude] of samples) {
+            const started = performance.now();
+            const result = await fetchPlaceDepth({ placeName, latitude, longitude });
+            const elapsed = Math.round(performance.now() - started);
+            console.log(JSON.stringify({ placeName, elapsed, status: result.status, count: result.points.length, sample: result.points.slice(0, 4) }, null, 2));
+            if (elapsed > 3000) throw new Error(`${placeName} exceeded 3s branch budget`);
+            if (result.status === 'live') live += 1;
+          }
+          if (live < 1) throw new Error('All sampled Overpass enrichments were unavailable');
+          NODE
+      - name: Remove temporary workflow
+        run: |
+          rm .github/workflows/verify-place-depth-resilience.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Remove place-depth resilience verifier"
+          git push origin HEAD:feature/place-depth-resilience
