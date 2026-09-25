@@ -1,0 +1,325 @@
+name: Expand deterministic outdoor location inventory
+
+on:
+  push:
+    branches:
+      - feature/more-outdoor-locations
+    paths:
+      - .github/workflows/expand-more-locations.yml
+
+permissions:
+  contents: write
+
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/more-outdoor-locations
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Add more authoritative and mapped outdoor places
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          p = Path('src/lib/discovery.ts')
+          s = p.read_text()
+          s = s.replace(
+            'source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR" | "U.S. Forest Service" | "National Park Service";',
+            'source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR" | "U.S. Forest Service" | "National Park Service" | "U.S. Fish & Wildlife Service";'
+          )
+          s = s.replace(
+            "selectors: ['nwr[\"tourism\"=\"viewpoint\"]', 'nwr[\"man_made\"=\"observation_tower\"]'],",
+            "selectors: ['nwr[\"tourism\"=\"viewpoint\"]', 'nwr[\"man_made\"=\"observation_tower\"]', 'nwr[\"man_made\"=\"tower\"][\"tower:type\"=\"observation\"]', 'nwr[\"natural\"=\"cliff\"][\"name\"]'],"
+          )
+          s = s.replace(
+            "selectors: ['nwr[\"natural\"=\"beach\"]'],",
+            "selectors: ['nwr[\"natural\"=\"beach\"]', 'nwr[\"leisure\"=\"swimming_area\"]'],"
+          )
+          s = s.replace(
+            "      'nwr[\"boundary\"=\"national_park\"]',\n    ],",
+            "      'nwr[\"boundary\"=\"national_park\"]',\n      'nwr[\"tourism\"=\"information\"][\"information\"=\"visitor_centre\"]',\n    ],"
+          )
+          s = s.replace(
+            "      'nwr[\"harbour\"]',\n    ],",
+            "      'nwr[\"harbour\"]',\n      'nwr[\"waterway\"=\"dock\"][\"name\"]',\n      'nwr[\"waterway\"=\"canoe_portage\"]',\n      'nwr[\"amenity\"=\"boat_rental\"]',\n    ],"
+          )
+          s = s.replace(
+            "selectors: ['nwr[\"tourism\"=\"picnic_site\"]', 'nwr[\"leisure\"=\"picnic_table\"]'],",
+            "selectors: ['nwr[\"tourism\"=\"picnic_site\"]', 'nwr[\"leisure\"=\"picnic_table\"]', 'nwr[\"amenity\"=\"shelter\"][\"shelter_type\"=\"picnic_shelter\"]'],"
+          )
+          s = s.replace(
+            'if (tags.tourism === "viewpoint" || tags.man_made === "observation_tower") return "viewpoint";',
+            'if (tags.tourism === "viewpoint" || tags.man_made === "observation_tower" || (tags.man_made === "tower" && tags["tower:type"] === "observation") || tags.natural === "cliff") return "viewpoint";'
+          )
+          s = s.replace(
+            'if (tags.natural === "beach") return "beach";',
+            'if (tags.natural === "beach" || tags.leisure === "swimming_area") return "beach";'
+          )
+          s = s.replace(
+            '    tags.man_made === "pier" ||\n    Boolean(tags.harbour)',
+            '    tags.man_made === "pier" ||\n    tags.waterway === "dock" ||\n    tags.waterway === "canoe_portage" ||\n    tags.amenity === "boat_rental" ||\n    Boolean(tags.harbour)'
+          )
+          s = s.replace(
+            'if (tags.tourism === "picnic_site" || tags.leisure === "picnic_table") return "picnic";',
+            'if (tags.tourism === "picnic_site" || tags.leisure === "picnic_table" || (tags.amenity === "shelter" && tags.shelter_type === "picnic_shelter")) return "picnic";'
+          )
+          p.write_text(s)
+
+          p = Path('src/lib/authoritative-discovery.ts')
+          s = p.read_text()
+          s = s.replace(
+            'const NPS_BOUNDARIES = "https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/National_Park_Service_Boundaries/FeatureServer/0/query";',
+            'const NPS_BOUNDARIES = "https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/National_Park_Service_Boundaries/FeatureServer/0/query";\nconst USFS_TRAILS = "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublishWithDataStatus_01/MapServer/0/query";\nconst FWS_BOUNDARIES = "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/National_Wildlife_Refuge_System_Boundaries/FeatureServer/0/query";'
+          )
+          old = 'export type AuthoritativeSourceId = (typeof authoritativeDiscoverySources)[number]["id"] | "dnr-trails" | "usfs-recreation" | "nps-units";'
+          new = 'export const federalDiscoverySourceIds = ["usfs-recreation", "usfs-trails", "nps-units", "fws-refuges"] as const;\n\nexport type AuthoritativeSourceId = (typeof authoritativeDiscoverySources)[number]["id"] | "dnr-trails" | (typeof federalDiscoverySourceIds)[number];'
+          s = s.replace(old, new)
+
+          insert_before = 'async function fetchNpsUnits(args: {'
+          functions = r'''
+async function fetchUsfsTrailSystems(args: {
+  originLatitude: number;
+  originLongitude: number;
+  maxDriveHours: number;
+  minDriveHours: number;
+  intent: DiscoveryIntent;
+}) {
+  const params = new URLSearchParams({
+    where: "trail_name IS NOT NULL",
+    outFields: "objectid,trail_name,trail_type,trail_cn,segment_length,admin_org,managing_org,trail_class,accessibility_status,trail_surface,special_mgmt_area",
+    returnGeometry: "true",
+    outSR: "4326",
+    inSR: "4326",
+    geometryType: "esriGeometryEnvelope",
+    spatialRel: "esriSpatialRelIntersects",
+    geometry: envelopeFor(args.originLatitude, args.originLongitude, args.maxDriveHours).join(","),
+    resultRecordCount: "1800",
+    f: "geojson",
+  });
+
+  try {
+    const response = await fetch(`${USFS_TRAILS}?${params.toString()}`, {
+      headers: { Accept: "application/geo+json, application/json" },
+      signal: AbortSignal.timeout(1_100),
+      next: { revalidate: 1800 },
+    });
+    if (!response.ok) throw new Error(`usfs-trails returned ${response.status}`);
+    const payload = (await response.json()) as GeoJsonCollection;
+    if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+      throw new Error("usfs-trails returned invalid GeoJSON");
+    }
+
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of payload.features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = cleanText(properties.trail_name, 180);
+      if (!center || !name) continue;
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      if (!isDiscoveryCandidateInRange({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+      })) continue;
+
+      const category: DiscoveryCategory = "trailhead";
+      const metrics = scoreDiscoveryCandidate({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+        category,
+        intent: args.intent,
+        name,
+        website: "https://www.fs.usda.gov/visit/maps",
+      });
+      if (metrics.driveHours + 0.05 < args.minDriveHours) continue;
+      seen.add(key);
+
+      const specialArea = cleanText(properties.special_mgmt_area, 120);
+      const surface = cleanText(properties.trail_surface, 80);
+      const accessibility = cleanText(properties.accessibility_status, 80);
+      const detail = [surface ? `Surface: ${surface}.` : "", accessibility ? `Accessibility: ${accessibility}.` : ""].filter(Boolean).join(" ");
+      places.push({
+        id: `usfs:trail:${cleanText(properties.trail_cn, 50) || sourceKey(name)}`,
+        name,
+        area: specialArea || "National Forest System",
+        latitude: center.latitude,
+        longitude: center.longitude,
+        category,
+        categoryLabel: categoryLabel(category),
+        distanceMiles: metrics.distanceMiles,
+        driveHours: metrics.driveHours,
+        score: Math.min(99, metrics.score + 6),
+        why: `U.S. Forest Service trail data maps this named National Forest System trail inside the requested travel range.${detail ? ` ${detail}` : ""}`,
+        source: "U.S. Forest Service",
+        sourceUrl: USFS_TRAILS.replace(/\/query$/, ""),
+        directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${center.latitude.toFixed(6)},${center.longitude.toFixed(6)}`,
+        website: "https://www.fs.usda.gov/visit/maps",
+      });
+    }
+
+    return { id: "usfs-trails" as const, label: "U.S. Forest Service trail systems", status: "live" as const, places };
+  } catch {
+    return { id: "usfs-trails" as const, label: "U.S. Forest Service trail systems", status: "unavailable" as const, places: [] as DiscoveryPlace[] };
+  }
+}
+
+async function fetchFwsRefuges(args: {
+  originLatitude: number;
+  originLongitude: number;
+  maxDriveHours: number;
+  minDriveHours: number;
+  intent: DiscoveryIntent;
+}) {
+  const params = new URLSearchParams({
+    where: "1=1",
+    outFields: "OBJECTID,ORGNAME,ORGCODE,LIT,RSL_TYPE,FWSREGION",
+    returnGeometry: "true",
+    outSR: "4326",
+    inSR: "4326",
+    geometryType: "esriGeometryEnvelope",
+    spatialRel: "esriSpatialRelIntersects",
+    geometry: envelopeFor(args.originLatitude, args.originLongitude, args.maxDriveHours).join(","),
+    resultRecordCount: "500",
+    f: "geojson",
+  });
+
+  try {
+    const response = await fetch(`${FWS_BOUNDARIES}?${params.toString()}`, {
+      headers: { Accept: "application/geo+json, application/json" },
+      signal: AbortSignal.timeout(1_100),
+      next: { revalidate: 21600 },
+    });
+    if (!response.ok) throw new Error(`fws-refuges returned ${response.status}`);
+    const payload = (await response.json()) as GeoJsonCollection;
+    if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+      throw new Error("fws-refuges returned invalid GeoJSON");
+    }
+
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of payload.features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = cleanText(properties.ORGNAME, 180);
+      const type = cleanText(properties.RSL_TYPE, 20).toUpperCase();
+      if (!center || !name || type === "AS") continue;
+      if (!isDiscoveryCandidateInRange({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+      })) continue;
+
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      const category: DiscoveryCategory = /hatchery|fish/i.test(name) ? "fishing" : "wildlife";
+      const website = `https://www.fws.gov/search?search=${encodeURIComponent(name)}`;
+      const metrics = scoreDiscoveryCandidate({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+        category,
+        intent: args.intent,
+        name,
+        website,
+      });
+      if (metrics.driveHours + 0.05 < args.minDriveHours) continue;
+      seen.add(key);
+
+      const objectId = cleanText(properties.OBJECTID, 40);
+      places.push({
+        id: `fws:${objectId || sourceKey(name)}`,
+        name,
+        area: "U.S. Fish & Wildlife Service",
+        latitude: center.latitude,
+        longitude: center.longitude,
+        category,
+        categoryLabel: categoryLabel(category),
+        distanceMiles: metrics.distanceMiles,
+        driveHours: metrics.driveHours,
+        score: Math.min(99, metrics.score + 6),
+        why: `U.S. Fish & Wildlife Service boundary data identifies this refuge, hatchery or conservation area in the requested travel range. Public access varies by unit, so verify the official unit page before entering.`,
+        source: "U.S. Fish & Wildlife Service",
+        sourceUrl: FWS_BOUNDARIES.replace(/\/query$/, ""),
+        directionsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`,
+        website,
+      });
+    }
+
+    return { id: "fws-refuges" as const, label: "U.S. Fish & Wildlife Service refuges and conservation areas", status: "live" as const, places };
+  } catch {
+    return { id: "fws-refuges" as const, label: "U.S. Fish & Wildlife Service refuges and conservation areas", status: "unavailable" as const, places: [] as DiscoveryPlace[] };
+  }
+}
+
+'''
+          if insert_before not in s:
+            raise SystemExit('NPS insertion anchor missing')
+          s = s.replace(insert_before, functions + insert_before, 1)
+          s = s.replace(
+            '    fetchUsfsRecreation(args),\n    fetchNpsUnits(args),',
+            '    fetchUsfsRecreation(args),\n    fetchUsfsTrailSystems(args),\n    fetchNpsUnits(args),\n    fetchFwsRefuges(args),'
+          )
+          p.write_text(s)
+
+          p = Path('src/app/api/discover/route.ts')
+          s = p.read_text()
+          s = s.replace(
+            'place.source === "Michigan DNR" || place.source === "U.S. Forest Service" || place.source === "National Park Service"',
+            'place.source === "Michigan DNR" || place.source === "U.S. Forest Service" || place.source === "National Park Service" || place.source === "U.S. Fish & Wildlife Service"'
+          )
+          s = s.replace(
+            'Michigan DNR parks, wildlife lands, campgrounds, boating/fishing access and trail systems, U.S. Forest Service recreation sites, National Park Service units, Michigan Outdoors Now curated places',
+            'Michigan DNR parks, wildlife lands, campgrounds, boating/fishing access and trail systems, U.S. Forest Service recreation sites and trail systems, National Park Service units, U.S. Fish & Wildlife Service refuges/conservation areas, Michigan Outdoors Now curated places'
+          )
+          s = s.replace(
+            'authoritative Michigan DNR, U.S. Forest Service, and National Park Service inventories',
+            'authoritative Michigan DNR, U.S. Forest Service, National Park Service, and U.S. Fish & Wildlife Service inventories'
+          )
+          p.write_text(s)
+
+          p = Path('tests/authoritative-discovery.test.ts')
+          s = p.read_text()
+          s = s.replace(
+            '  buildAuthoritativeQuery,\n} from "../src/lib/authoritative-discovery";',
+            '  buildAuthoritativeQuery,\n  federalDiscoverySourceIds,\n} from "../src/lib/authoritative-discovery";'
+          )
+          s += '''\n\ntest("federal discovery includes forest trails and wildlife refuge systems", () => {\n  const ids = new Set(federalDiscoverySourceIds);\n  assert.ok(ids.has("usfs-recreation"));\n  assert.ok(ids.has("usfs-trails"));\n  assert.ok(ids.has("nps-units"));\n  assert.ok(ids.has("fws-refuges"));\n});\n\ntest("expanded mapped tags classify swimming, lookouts, docks, portages and picnic shelters", () => {\n  const selectors = regionalOverpassSelectors().join(" ");\n  assert.match(selectors, /swimming_area/);\n  assert.match(selectors, /tower:type/);\n  assert.match(selectors, /visitor_centre/);\n  assert.match(selectors, /canoe_portage/);\n  assert.match(selectors, /picnic_shelter/);\n  assert.equal(categoryFromTags({ leisure: "swimming_area" }), "beach");\n  assert.equal(categoryFromTags({ man_made: "tower", "tower:type": "observation" }), "viewpoint");\n  assert.equal(categoryFromTags({ waterway: "dock" }), "paddling");\n  assert.equal(categoryFromTags({ waterway: "canoe_portage" }), "paddling");\n  assert.equal(categoryFromTags({ amenity: "boat_rental" }), "paddling");\n  assert.equal(categoryFromTags({ amenity: "shelter", shelter_type: "picnic_shelter" }), "picnic");\n});\n'''
+          p.write_text(s)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm run test
+      - name: Production build
+        run: npm run build
+      - name: Runtime gate
+        run: npm run check:runtime
+      - name: Commit verified expansion
+        shell: bash
+        run: |
+          rm .github/workflows/expand-more-locations.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/discovery.ts src/lib/authoritative-discovery.ts src/app/api/discover/route.ts tests/authoritative-discovery.test.ts .github/workflows/expand-more-locations.yml
+          git commit -m "Add more deterministic outdoor location sources"
+          git push origin HEAD:feature/more-outdoor-locations
