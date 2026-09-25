@@ -2305,22 +2305,6 @@ export function OutdoorIntentHub() {
                       </small>
                     </article>
 
-
-
-                    <article>
-                      <span>Official amenities nearby</span>
-                      <strong>
-                        {placeIntelligence.amenities.length > 0
-                          ? placeIntelligence.amenities.slice(0, 3).map((amenity) => amenity.label).join(" · ")
-                          : "No DNR recreation amenity points returned nearby"}
-                      </strong>
-                      <small>
-                        {placeIntelligence.amenities.length > 0
-                          ? `${placeIntelligence.amenities.length} official DNR asset point${placeIntelligence.amenities.length === 1 ? "" : "s"} within about 2.5 miles.${placeIntelligence.amenities[0].condition ? ` Nearest condition: ${placeIntelligence.amenities[0].condition}.` : " Verify seasonal availability before departure."}`
-                          : "Official DNR recreation-asset layer checked within about 2.5 miles."}
-                      </small>
-                    </article>
-
                     {activeTrailProfile && (activeTrailProfile.access || activeTrailheadAction) && (
                       <article>
                         <span>Trailhead / route start</span>

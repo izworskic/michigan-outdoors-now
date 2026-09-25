@@ -12,9 +12,6 @@ const OVERPASS_ENDPOINTS = [
   "https://overpass.kumi.systems/api/interpreter",
 ];
 
-const DNR_RECREATION_AMENITIES_SERVICE =
-  "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRReferenceAssetsOPENDATA/FeatureServer/7/query";
-
 export type PointWeatherIntelligence = {
   temperature: number | null;
   high: number | null;
@@ -95,14 +92,6 @@ export type AccessIntelligence = {
   source: "Michigan DNR Trails Open Data";
 };
 
-export type RecreationAmenityIntelligence = {
-  label: string;
-  detail: string | null;
-  condition: string | null;
-  managedBy: string | null;
-  nearestMiles: number;
-};
-
 export type PlaceIntelligence = {
   generatedAt: string;
   weather: PointWeatherIntelligence | null;
@@ -112,7 +101,6 @@ export type PlaceIntelligence = {
   goSignal: GoSignal;
   elevation: ElevationIntelligence | null;
   access: AccessIntelligence;
-  amenities: RecreationAmenityIntelligence[];
   confidenceNote: string;
 };
 
@@ -483,48 +471,6 @@ function summarizeAccess(
     ],
     source: "Michigan DNR Trails Open Data",
   };
-}
-
-
-export function summarizeDnrAmenities(
-  features: UniverseGeoJsonFeature[],
-  latitude: number,
-  longitude: number,
-): RecreationAmenityIntelligence[] {
-  const seen = new Set<string>();
-  const items: RecreationAmenityIntelligence[] = [];
-
-  for (const feature of features) {
-    const nearestMiles = nearestFeatureMiles(feature, latitude, longitude);
-    if (!Number.isFinite(nearestMiles) || nearestMiles > 2.5) continue;
-    const properties = feature.properties as unknown as Record<string, unknown>;
-    const text = (value: unknown, max = 120) =>
-      typeof value === "string" ? value.replace(/\s+/g, " ").trim().slice(0, max) : "";
-    const detailType = text(properties.ASSETDETAILTYPE);
-    const description = text(properties.DESCRIP, 180);
-    const functionName = text(properties.FUNCTION_);
-    const assetType = text(properties.ASSETTYPE);
-    const label = detailType || description || functionName || assetType;
-    if (!label || /^recreation amenity$/i.test(label)) continue;
-    const managedBy = text(properties.MAINTBY) || text(properties.ADMINBY) || null;
-    const conditionRaw = text(properties.CONDITION);
-    const condition = conditionRaw && !/^(unknown|n\/a|none)$/i.test(conditionRaw) ? conditionRaw : null;
-    const surface = text(properties.SURFMATERIAL);
-    const key = `${label.toLowerCase()}|${managedBy?.toLowerCase() ?? ""}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    items.push({
-      label,
-      detail: surface ? `Surface: ${surface}` : description && description !== label ? description : null,
-      condition,
-      managedBy,
-      nearestMiles: Number(nearestMiles.toFixed(1)),
-    });
-  }
-
-  return items
-    .sort((a, b) => a.nearestMiles - b.nearestMiles || a.label.localeCompare(b.label))
-    .slice(0, 8);
 }
 
 function buildOverpassTrailQuery(latitude: number, longitude: number) {
@@ -1121,21 +1067,13 @@ export async function fetchPlaceIntelligence(args: {
     "1=1",
     "OBJECTID,TrailNamePrimary,PublicComments,PRDTrailUnit,SegmentLengthMiles",
   );
-  const amenityUrl = buildDnrSpatialQuery(
-    DNR_RECREATION_AMENITIES_SERVICE,
-    args.latitude,
-    args.longitude,
-    "ASSETTYPE='Recreation Amenity'",
-    "OBJECTID,ASSETTYPE,ASSETDETAILTYPE,DESCRIP,CONDITION,ADMINBY,MAINTBY,FUNCTION_,SURFMATERIAL",
-  );
 
-  const [weatherResult, trailResult, closureResult, rerouteResult, amenityResult, osmResult] =
+  const [weatherResult, trailResult, closureResult, rerouteResult, osmResult] =
     await Promise.allSettled([
       fetchPointWeather(args.latitude, args.longitude),
       fetchGeoJson(trailUrl),
       fetchGeoJson(closureUrl),
       fetchGeoJson(rerouteUrl),
-      fetchGeoJson(amenityUrl),
       fetchOsmTrailElements(args.latitude, args.longitude),
     ]);
 
@@ -1150,10 +1088,6 @@ export async function fetchPlaceIntelligence(args: {
   const reroutes =
     rerouteResult.status === "fulfilled"
       ? rerouteResult.value
-      : ({ type: "FeatureCollection", features: [] } as UniverseGeoJson);
-  const amenitiesGeoJson =
-    amenityResult.status === "fulfilled"
-      ? amenityResult.value
       : ({ type: "FeatureCollection", features: [] } as UniverseGeoJson);
   const osmElements = osmResult.status === "fulfilled" ? osmResult.value : [];
 
@@ -1178,8 +1112,7 @@ export async function fetchPlaceIntelligence(args: {
     goSignal: deriveGoSignal({ weather, access, trailTruth }),
     elevation,
     access,
-    amenities: summarizeDnrAmenities(amenitiesGeoJson.features, args.latitude, args.longitude),
     confidenceNote:
-      "Current weather, recent rain, daylight and air quality come from Open-Meteo. Nearby official trail, access-change and recreation-amenity data come from Michigan DNR. Trail Truth resolves the nearest mapped OSM hiking relation when one is available: tagged route distance is strongest, relation-member geometry is the fallback, and sampled ascent is explicitly estimated. Official land-manager maps and notices remain the final source for route choice, closures, amenity availability and seasonal rules.",
+      "Current weather, recent rain, daylight and air quality come from Open-Meteo. Nearby official trail and access-change data come from Michigan DNR. Trail Truth resolves the nearest mapped OSM hiking relation when one is available: tagged route distance is strongest, relation-member geometry is the fallback, and sampled ascent is explicitly estimated. Official land-manager maps and notices remain the final source for route choice, closures and seasonal rules.",
   };
 }
