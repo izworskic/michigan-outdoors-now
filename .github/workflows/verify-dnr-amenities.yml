@@ -18,22 +18,39 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Query known DNR recreation sites
+      - name: Diagnose raw DNR amenity query
         run: |
-          node --import tsx --input-type=module <<'NODE'
-          import { fetchPlaceIntelligence } from './src/lib/place-intelligence.ts';
-          const sites = [
-            ['Bay City State Park', 43.6674, -83.9057],
-            ['Rifle River Recreation Area', 44.3923, -84.0199],
-            ['Hartwick Pines State Park', 44.7468, -84.6636],
-            ['Tawas Point State Park', 44.2566, -83.4492],
-          ];
-          let total = 0;
-          for (const [name, latitude, longitude] of sites) {
-            const intel = await fetchPlaceIntelligence({ latitude, longitude });
-            console.log(JSON.stringify({ name, count: intel.amenities.length, amenities: intel.amenities.slice(0, 8) }, null, 2));
-            total += intel.amenities.length;
+          node --input-type=module <<'NODE'
+          const base = 'https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRReferenceAssetsOPENDATA/FeatureServer/7/query';
+          async function query(params) {
+            const url = `${base}?${new URLSearchParams(params)}`;
+            const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            const text = await response.text();
+            console.log('STATUS', response.status, url);
+            console.log(text.slice(0, 6000));
           }
-          if (total < 1) throw new Error('DNR recreation amenity layer returned zero amenities across known DNR recreation sites');
-          console.log(`Verified ${total} nearby DNR amenity records across sampled recreation sites.`);
+          await query({
+            where: "ASSETTYPE='Recreation Amenity'",
+            outFields: 'OBJECTID,ASSETTYPE,ASSETDETAILTYPE,ADMINBY,MAINTBY,ESRIGNSS_LATITUDE,ESRIGNSS_LONGITUDE',
+            returnGeometry: 'true',
+            outSR: '4326',
+            resultRecordCount: '5',
+            f: 'json',
+          });
+          const lat = 44.7468, lon = -84.6636, miles = 5;
+          const latSpan = miles / 69;
+          const lonSpan = miles / Math.max(20, 69 * Math.cos((lat * Math.PI) / 180));
+          const bounds = [lon-lonSpan, lat-latSpan, lon+lonSpan, lat+latSpan];
+          await query({
+            where: "ASSETTYPE='Recreation Amenity'",
+            geometry: bounds.map(v => v.toFixed(5)).join(','),
+            geometryType: 'esriGeometryEnvelope',
+            inSR: '4326',
+            spatialRel: 'esriSpatialRelIntersects',
+            outFields: 'OBJECTID,ASSETTYPE,ASSETDETAILTYPE,ADMINBY,MAINTBY,ESRIGNSS_LATITUDE,ESRIGNSS_LONGITUDE',
+            returnGeometry: 'true',
+            outSR: '4326',
+            resultRecordCount: '20',
+            f: 'geojson',
+          });
           NODE
