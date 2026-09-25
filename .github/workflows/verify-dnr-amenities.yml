@@ -1,0 +1,39 @@
+name: Verify live DNR recreation amenities
+
+on:
+  push:
+    branches: [feature/conservation-amenities]
+
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/conservation-amenities
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Query known DNR recreation sites
+        run: |
+          node --import tsx --input-type=module <<'NODE'
+          import { fetchPlaceIntelligence } from './src/lib/place-intelligence.ts';
+          const sites = [
+            ['Bay City State Park', 43.6674, -83.9057],
+            ['Rifle River Recreation Area', 44.3923, -84.0199],
+            ['Hartwick Pines State Park', 44.7468, -84.6636],
+            ['Tawas Point State Park', 44.2566, -83.4492],
+          ];
+          let total = 0;
+          for (const [name, latitude, longitude] of sites) {
+            const intel = await fetchPlaceIntelligence({ latitude, longitude });
+            console.log(JSON.stringify({ name, count: intel.amenities.length, amenities: intel.amenities.slice(0, 8) }, null, 2));
+            total += intel.amenities.length;
+          }
+          if (total < 1) throw new Error('DNR recreation amenity layer returned zero amenities across known DNR recreation sites');
+          console.log(`Verified ${total} nearby DNR amenity records across sampled recreation sites.`);
+          NODE
