@@ -21,6 +21,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Repair literal template markers in one-time patcher
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('scripts/apply-place-source-expansion.mjs')
+          content = path.read_text()
+          content = content.replace('fetch(\\`${USFS_RECREATION}?', 'fetch(\\`\\${USFS_RECREATION}?')
+          content = content.replace('fetch(\\`${NPS_BOUNDARIES}?', 'fetch(\\`\\${NPS_BOUNDARIES}?')
+          path.write_text(content)
+          PY
       - name: Apply source expansion
         run: node scripts/apply-place-source-expansion.mjs
       - name: Finish expanded map tag classification
