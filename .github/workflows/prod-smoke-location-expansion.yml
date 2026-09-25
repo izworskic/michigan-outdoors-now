@@ -1,0 +1,77 @@
+name: Production smoke - expanded outdoor locations
+
+on:
+  push:
+    branches:
+      - feature/expand-outdoor-locations
+
+permissions:
+  contents: write
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/expand-outdoor-locations
+          fetch-depth: 0
+      - name: Verify production discovery sources and mapped result payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          ok=0
+          for attempt in 1 2 3; do
+            echo "Production smoke attempt ${attempt}"
+            curl --fail-with-body --silent --show-error --max-time 12 \
+              -X POST 'https://michiganoutdoorsnow.chrisizworski.com/api/discover' \
+              -H 'content-type: application/json' \
+              --data '{"origin":"Munising, MI","originCoordinates":{"latitude":46.4111,"longitude":-86.6479},"query":"forest camping hiking and scenic places","maxDriveHours":3,"breadth":"focused","maxResults":30}' \
+              > /tmp/discovery.json || true
+            if node <<'NODE'
+          const fs = require('node:fs');
+          const raw = fs.existsSync('/tmp/discovery.json') ? fs.readFileSync('/tmp/discovery.json', 'utf8') : '';
+          if (!raw.trim()) process.exit(1);
+          const payload = JSON.parse(raw);
+          const statuses = payload.universe?.sourceStatus ?? [];
+          const usfs = statuses.find((item) => item.id === 'usfs-recreation');
+          const nps = statuses.find((item) => item.id === 'nps-units');
+          const federalPlaces = (payload.places ?? []).filter((place) =>
+            place.source === 'U.S. Forest Service' || place.source === 'National Park Service'
+          );
+          console.log(JSON.stringify({
+            status: payload.status,
+            sourceCounts: payload.universe?.sourceCounts,
+            usfs,
+            nps,
+            federalPlaces: federalPlaces.slice(0, 8).map((place) => ({
+              name: place.name,
+              source: place.source,
+              category: place.category,
+              area: place.area,
+            })),
+            returnedPlaces: payload.places?.length ?? 0,
+          }, null, 2));
+          if (!Array.isArray(payload.places) || !payload.places.length) process.exit(2);
+          if (!usfs || !nps) process.exit(3);
+          if (usfs.status !== 'live' || usfs.count < 1) process.exit(4);
+          if (nps.status !== 'live' || nps.count < 1) process.exit(5);
+          if (!federalPlaces.length) process.exit(6);
+          NODE
+            then
+              ok=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ok" -eq 1
+      - name: Remove temporary smoke workflow
+        if: success()
+        shell: bash
+        run: |
+          rm .github/workflows/prod-smoke-location-expansion.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/prod-smoke-location-expansion.yml
+          git commit -m "Remove production location smoke workflow"
+          git push origin HEAD:feature/expand-outdoor-locations
