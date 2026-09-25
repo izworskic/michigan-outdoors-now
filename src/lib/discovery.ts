@@ -51,7 +51,7 @@ export type DiscoveryPlace = {
   travelSource?: "routed" | "estimated";
   score: number;
   why: string;
-  source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR";
+  source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR" | "U.S. Forest Service" | "National Park Service";
   sourceUrl: string;
   directionsUrl: string;
   website?: string;
@@ -127,7 +127,7 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
       'nwr["boundary"="protected_area"]',
       'nwr["boundary"="national_park"]',
     ],
-    keywords: ["park", "forest", "woods", "nature", "preserve", "reserve", "wild", "remote", "backcountry"],
+    keywords: ["park", "county park", "metropark", "forest", "woods", "nature", "preserve", "reserve", "conservancy", "sanctuary", "wild", "remote", "backcountry"],
     activities: ["hiking", "birding", "scenic"],
   },
   {
@@ -154,15 +154,26 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
     id: "paddling",
     label: "Paddling access",
-    selectors: ['nwr["canoe"="put_in"]', 'nwr["waterway"="access_point"]', 'nwr["leisure"="slipway"]'],
-    keywords: ["paddle", "paddling", "canoe", "kayak", "put in", "put-in", "boat launch"],
+    selectors: [
+      'nwr["canoe"="put_in"]',
+      'nwr["waterway"="access_point"]',
+      'nwr["leisure"="slipway"]',
+      'nwr["leisure"="marina"]',
+      'nwr["man_made"="pier"]',
+      'nwr["harbour"]',
+    ],
+    keywords: ["paddle", "paddling", "canoe", "kayak", "put in", "put-in", "boat launch", "river access", "water access", "harbor", "harbour", "marina", "pier", "dock"],
     activities: ["paddling"],
   },
   {
     id: "wildlife",
     label: "Wildlife area",
-    selectors: ['nwr["leisure"="nature_reserve"]'],
-    keywords: ["wildlife", "bird", "birding", "birds", "waterfowl", "migration", "refuge"],
+    selectors: [
+      'nwr["leisure"="nature_reserve"]',
+      'nwr["leisure"="bird_hide"]',
+      'nwr["boundary"="protected_area"]',
+    ],
+    keywords: ["wildlife", "bird", "birding", "birds", "waterfowl", "migration", "refuge", "sanctuary", "conservancy", "bird hide"],
     activities: ["birding", "hiking", "scenic"],
   },
   {
@@ -183,10 +194,10 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
 
 const ACTIVITY_RULES: Array<[ActivityId, string[]]> = [
   ["hiking", ["hike", "hiking", "trail", "walk", "woods", "forest", "waterfall", "overlook"]],
-  ["paddling", ["paddle", "paddling", "canoe", "kayak", "put in", "put-in", "boat launch"]],
+  ["paddling", ["paddle", "paddling", "canoe", "kayak", "put in", "put-in", "boat launch", "river access", "water access", "harbor", "harbour", "marina", "pier", "dock"]],
   ["fishing", ["fish", "fishing", "trout", "brookie", "brook trout", "river", "stream", "creek"]],
   ["beaches", ["beach", "swim", "sand", "shore", "shoreline"]],
-  ["birding", ["bird", "birding", "birds", "waterfowl", "migration", "wildlife", "refuge"]],
+  ["birding", ["bird", "birding", "birds", "waterfowl", "migration", "wildlife", "refuge", "sanctuary", "conservancy", "bird hide"]],
   ["freighters", ["freighter", "freighters", "ship", "ships", "shipping"]],
   ["scenic", ["scenic", "view", "viewpoint", "overlook", "vista", "waterfall", "lighthouse", "sunset"]],
   ["dark-sky", ["dark sky", "stars", "stargazing", "aurora", "northern lights", "night sky"]],
@@ -302,10 +313,17 @@ export function categoryFromTags(tags: Record<string, string | undefined>): Disc
   if (tags.highway === "trailhead") return "trailhead";
   if (tags.man_made === "lighthouse") return "lighthouse";
   if (tags.leisure === "fishing" || tags.sport === "fishing") return "fishing";
-  if (tags.canoe === "put_in" || tags.waterway === "access_point" || tags.leisure === "slipway") return "paddling";
+  if (
+    tags.canoe === "put_in" ||
+    tags.waterway === "access_point" ||
+    tags.leisure === "slipway" ||
+    tags.leisure === "marina" ||
+    tags.man_made === "pier" ||
+    Boolean(tags.harbour)
+  ) return "paddling";
   if (tags.tourism === "picnic_site" || tags.leisure === "picnic_table") return "picnic";
   if (tags.natural === "cave_entrance") return "cave";
-  if (tags.leisure === "nature_reserve") return "wildlife";
+  if (tags.leisure === "nature_reserve" || tags.leisure === "bird_hide") return "wildlife";
   return "park";
 }
 
