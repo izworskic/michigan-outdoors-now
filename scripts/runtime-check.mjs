@@ -193,6 +193,7 @@ try {
   assert.equal(placeIntelligencePayload.access.source, "Michigan DNR Trails Open Data");
   assert.ok(Number.isInteger(placeIntelligencePayload.access.closureCount));
   assert.ok(Number.isInteger(placeIntelligencePayload.access.rerouteCount));
+  assert.ok(Array.isArray(placeIntelligencePayload.amenities));
   assert.match(placeIntelligencePayload.confidenceNote, /Open-Meteo|Michigan DNR/);
   assert.ok(["good", "mixed", "poor", "unknown"].includes(placeIntelligencePayload.goSignal?.status));
   if (placeIntelligencePayload.trailTruth) {

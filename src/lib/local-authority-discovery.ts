@@ -15,12 +15,18 @@ const KENT_PARKS =
   "https://gis.kentcountymi.gov/agisprod/rest/services/BaseMap/MapServer/6/query";
 const KENT_TRAILS =
   "https://gis.kentcountymi.gov/agisprod/rest/services/OpenData/Transportation_Layers/MapServer/0/query";
+const WASHTENAW_PARKS =
+  "https://services2.arcgis.com/xRI3cTw3hPVoEJP0/ArcGIS/rest/services/WCPARCFacilities_Response/FeatureServer/1/query";
+const TNC_LANDS =
+  "https://services.arcgis.com/F7DSX1DSNSiWmOqh/ArcGIS/rest/services/TNC_Lands_Public_Layer/FeatureServer/0/query";
 
 export const localAuthorityDiscoverySourceIds = [
   "hcma-parks",
   "oakland-recreation",
   "kent-parks",
   "kent-trails",
+  "washtenaw-parks",
+  "tnc-open-access",
 ] as const;
 
 export type LocalAuthorityDiscoverySourceId =
@@ -195,6 +201,8 @@ function candidateName(properties: Record<string, unknown>) {
     "ParkName",
     "PARK_NAME",
     "Park",
+    "SHORTNAME",
+    "PUBLIC_NA",
     "TRAIL_NAME",
     "TrailName",
     "Facility",
@@ -491,11 +499,109 @@ async function fetchKentTrails(args: FetchArgs): Promise<LocalAuthorityDiscovery
   }
 }
 
+
+async function fetchWashtenawParks(args: FetchArgs): Promise<LocalAuthorityDiscoveryResult> {
+  try {
+    const features = await fetchGeoJson(args, {
+      url: WASHTENAW_PARKS,
+      where: "FEATURECODE IN ('Park','Preserve','Recreation Area','Natural Area')",
+      outFields: "OBJECTID,NAME,SHORTNAME,FEATURECODE,AGENCY,response,response_maintenance,response_napp",
+      resultRecordCount: 1000,
+    });
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = candidateName(properties);
+      if (!center || !name) continue;
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      const featureCode = cleanText(properties.FEATURECODE, 80);
+      const agency = cleanText(properties.AGENCY, 100) || "Washtenaw County Parks & Recreation";
+      const detailText = [properties.response, properties.response_maintenance, properties.response_napp]
+        .map((value) => cleanText(value, 140))
+        .join(" ");
+      const category = /preserve|natural/i.test(featureCode)
+        ? "wildlife"
+        : categoryFromText(`${featureCode} ${detailText}`);
+      const place = scoredPlace(args, {
+        id: `washtenaw:${cleanText(properties.OBJECTID, 50) || sourceKey(name)}`,
+        name,
+        area: agency,
+        center,
+        category,
+        source: "Washtenaw County",
+        sourceUrl: WASHTENAW_PARKS,
+        website: "https://www.washtenaw.org/recreation",
+        why: `Washtenaw County Parks & Recreation's own GIS identifies this ${featureCode ? featureCode.toLowerCase() : categoryLabel(category).toLowerCase()} in the requested travel range. Check the county site for current hours, facility status and preserve rules.`,
+        nameSearchDirections: true,
+      });
+      if (!place) continue;
+      seen.add(key);
+      places.push(place);
+    }
+    return { id: "washtenaw-parks", label: "Washtenaw County parks and preserves", status: "live", places };
+  } catch {
+    return { id: "washtenaw-parks", label: "Washtenaw County parks and preserves", status: "unavailable", places: [] };
+  }
+}
+
+async function fetchTncOpenAccess(args: FetchArgs): Promise<LocalAuthorityDiscoveryResult> {
+  try {
+    const features = await fetchGeoJson(args, {
+      url: TNC_LANDS,
+      where: "STATE='MI' AND PUB_ACCESS='Open Access' AND PUBLIC_NA IS NOT NULL AND MAP_SYM<>'Transfer'",
+      outFields: "OBJECTID,MAP_SYM,PUBLIC_NA,PUB_ACCESS,STATE,FEE_OWNER,GIS_ACRES,DESIGNAT",
+      resultRecordCount: 1000,
+      timeoutMs: 1_250,
+    });
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = candidateName(properties);
+      if (!center || !name) continue;
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      const access = cleanText(properties.PUB_ACCESS, 40);
+      if (access !== "Open Access") continue;
+      const interest = cleanText(properties.MAP_SYM, 80);
+      if (/transfer/i.test(interest)) continue;
+      const owner = cleanText(properties.FEE_OWNER, 120) || "The Nature Conservancy";
+      const acresRaw = properties.GIS_ACRES;
+      const acres = typeof acresRaw === "number" && acresRaw > 0 ? Math.round(acresRaw) : null;
+      const place = scoredPlace(args, {
+        id: `tnc:${cleanText(properties.OBJECTID, 50) || sourceKey(name)}`,
+        name,
+        area: owner,
+        center,
+        category: "wildlife",
+        source: "The Nature Conservancy",
+        sourceUrl: TNC_LANDS,
+        website: "https://www.nature.org/en-us/about-us/where-we-work/united-states/michigan/",
+        why: `The Nature Conservancy's public lands dataset explicitly marks this Michigan property as Open Access.${acres ? ` About ${acres.toLocaleString("en-US")} protected acres are mapped.` : ""} Verify preserve-specific hours, trail rules and seasonal restrictions before visiting.`,
+        scoreBonus: 10,
+        nameSearchDirections: true,
+      });
+      if (!place) continue;
+      seen.add(key);
+      places.push(place);
+    }
+    return { id: "tnc-open-access", label: "The Nature Conservancy Michigan open-access lands", status: "live", places };
+  } catch {
+    return { id: "tnc-open-access", label: "The Nature Conservancy Michigan open-access lands", status: "unavailable", places: [] };
+  }
+}
+
 export async function fetchLocalAuthorityDiscoveryPlaces(args: FetchArgs) {
   return Promise.all([
     fetchHcmaParks(args),
     fetchOaklandRecreation(args),
     fetchKentParks(args),
     fetchKentTrails(args),
+    fetchWashtenawParks(args),
+    fetchTncOpenAccess(args),
   ]);
 }

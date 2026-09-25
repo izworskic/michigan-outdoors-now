@@ -2069,7 +2069,7 @@ export function OutdoorIntentHub() {
               <div className="canvas-now">
                 <span>{activeDiscovery.categoryLabel}</span>
                 <strong>{discovery?.intent.summary}</strong>
-                <small>{activeDiscovery.source === "OpenStreetMap" ? "Live mapped place from OpenStreetMap contributors." : "Curated Michigan Outdoors Now destination."}</small>
+                <small>{activeDiscovery.curatedPlaceId ? "Curated Michigan Outdoors Now destination with full planning depth." : activeDiscovery.source === "OpenStreetMap" ? "Live mapped place from OpenStreetMap contributors." : `${activeDiscovery.source} mapped source. Verify current access, hours and local rules before departure.`}</small>
               </div>
               {activeTrailProfiles.length > 1 && (
                 <section className="canvas-trail-chooser" aria-label="Choose a trail">
@@ -2302,6 +2302,22 @@ export function OutdoorIntentHub() {
                         {placeIntelligence.access.notes[0] ??
                           activeTrailProfile?.access?.parking ??
                           "Official DNR access-change layer checked within about 5 miles."}
+                      </small>
+                    </article>
+
+
+
+                    <article>
+                      <span>Official amenities nearby</span>
+                      <strong>
+                        {placeIntelligence.amenities.length > 0
+                          ? placeIntelligence.amenities.slice(0, 3).map((amenity) => amenity.label).join(" · ")
+                          : "No DNR recreation amenity points returned nearby"}
+                      </strong>
+                      <small>
+                        {placeIntelligence.amenities.length > 0
+                          ? `${placeIntelligence.amenities.length} official DNR asset point${placeIntelligence.amenities.length === 1 ? "" : "s"} within about 2.5 miles.${placeIntelligence.amenities[0].condition ? ` Nearest condition: ${placeIntelligence.amenities[0].condition}.` : " Verify seasonal availability before departure."}`
+                          : "Official DNR recreation-asset layer checked within about 2.5 miles."}
                       </small>
                     </article>
 

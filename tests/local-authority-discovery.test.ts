@@ -5,12 +5,14 @@ import {
   localAuthorityDiscoverySourceIds,
 } from "../src/lib/local-authority-discovery";
 
-test("local authority expansion includes the first large direct Michigan systems", () => {
+test("local authority expansion includes large direct Michigan systems and open-access conservation lands", () => {
   const ids = new Set(localAuthorityDiscoverySourceIds);
   assert.ok(ids.has("hcma-parks"));
   assert.ok(ids.has("oakland-recreation"));
   assert.ok(ids.has("kent-parks"));
   assert.ok(ids.has("kent-trails"));
+  assert.ok(ids.has("washtenaw-parks"));
+  assert.ok(ids.has("tnc-open-access"));
 });
 
 test("local authority GIS queries stay geographically bounded and return WGS84 GeoJSON", () => {
