@@ -1,0 +1,47 @@
+name: Smoke direct local authority GIS
+
+on:
+  push:
+    branches: [feature/local-authority-gis]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/local-authority-gis
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Query direct GIS adapters
+        run: |
+          node --import tsx --input-type=module <<'NODE'
+          import { interpretOutdoorQuery } from './src/lib/discovery.ts';
+          import { fetchLocalAuthorityDiscoveryPlaces } from './src/lib/local-authority-discovery.ts';
+          const intent = interpretOutdoorQuery('parks trails fishing swimming');
+          const origins = [
+            { name: 'Detroit', latitude: 42.3314, longitude: -83.0458 },
+            { name: 'Grand Rapids', latitude: 42.9634, longitude: -85.6681 },
+          ];
+          let total = 0;
+          for (const origin of origins) {
+            const results = await fetchLocalAuthorityDiscoveryPlaces({
+              originLatitude: origin.latitude,
+              originLongitude: origin.longitude,
+              maxDriveHours: 2,
+              minDriveHours: 0,
+              intent,
+            });
+            const summary = results.map((r) => ({ id: r.id, status: r.status, count: r.places.length, sample: r.places.slice(0,3).map((p) => p.name) }));
+            console.log(`LOCAL_GIS_SMOKE ${origin.name} ${JSON.stringify(summary)}`);
+            total += results.reduce((sum, r) => sum + r.places.length, 0);
+          }
+          console.log(`LOCAL_GIS_TOTAL ${total}`);
+          if (total < 1) throw new Error('Direct local-authority GIS adapters returned zero places');
+          NODE
