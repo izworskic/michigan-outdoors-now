@@ -30,13 +30,22 @@ jobs:
           python .github/scripts/apply-conservation-amenities.py
           python - <<'PY'
           from pathlib import Path
-          path = Path("tests/recreation-amenities.test.ts")
-          text = path.read_text()
-          old = "] as any;"
-          new = '] as unknown as import("../src/lib/outdoor-universe").UniverseGeoJsonFeature[];'
-          if text.count(old) != 1:
-              raise SystemExit(f"Expected one generated test cast, found {text.count(old)}")
-          path.write_text(text.replace(old, new, 1))
+
+          test_path = Path("tests/recreation-amenities.test.ts")
+          test_text = test_path.read_text()
+          old_cast = "] as any;"
+          new_cast = '] as unknown as import("../src/lib/outdoor-universe").UniverseGeoJsonFeature[];'
+          if test_text.count(old_cast) != 1:
+              raise SystemExit(f"Expected one generated test cast, found {test_text.count(old_cast)}")
+          test_path.write_text(test_text.replace(old_cast, new_cast, 1))
+
+          hub_path = Path("src/components/outdoor-intent-hub.tsx")
+          hub_text = hub_path.read_text()
+          old_provenance = '<small>{activeDiscovery.curatedPlaceId ? "Curated Michigan Outdoors Now destination with full planning depth." : `${activeDiscovery.source} mapped source. Verify current access, hours and local rules before departure.`}</small>'
+          new_provenance = '<small>{activeDiscovery.curatedPlaceId ? "Curated Michigan Outdoors Now destination with full planning depth." : activeDiscovery.source === "OpenStreetMap" ? "Live mapped place from OpenStreetMap contributors." : `${activeDiscovery.source} mapped source. Verify current access, hours and local rules before departure.`}</small>'
+          if hub_text.count(old_provenance) != 1:
+              raise SystemExit(f"Expected one generated provenance line, found {hub_text.count(old_provenance)}")
+          hub_path.write_text(hub_text.replace(old_provenance, new_provenance, 1))
           PY
 
       - name: Install dependencies
