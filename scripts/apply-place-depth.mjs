@@ -25,6 +25,16 @@ component = replaceOnce(
 );
 fs.writeFileSync(componentPath, component);
 
+const depthPanelPath = "src/components/place-depth-panel.tsx";
+let depthPanel = fs.readFileSync(depthPanelPath, "utf8");
+depthPanel = replaceOnce(
+  depthPanel,
+  ".filter((point) => nearbyLaunches.length === 0)",
+  ".filter(() => nearbyLaunches.length === 0)",
+  "unused mapped water access filter parameter",
+);
+fs.writeFileSync(depthPanelPath, depthPanel);
+
 const runtimePath = "scripts/runtime-check.mjs";
 let runtime = fs.readFileSync(runtimePath, "utf8");
 runtime = replaceOnce(
