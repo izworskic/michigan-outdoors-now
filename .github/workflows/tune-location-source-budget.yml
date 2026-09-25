@@ -1,0 +1,57 @@
+name: Tune location source budget
+
+on:
+  push:
+    branches:
+      - feature/expand-outdoor-locations
+
+permissions:
+  contents: write
+
+jobs:
+  tune:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/expand-outdoor-locations
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Bound authoritative source latency
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          path = Path('src/lib/authoritative-discovery.ts')
+          content = path.read_text()
+          expected_3200 = content.count('AbortSignal.timeout(3_200)')
+          expected_3400 = content.count('AbortSignal.timeout(3_400)')
+          if expected_3200 != 2 or expected_3400 != 2:
+              raise SystemExit(f'unexpected timeout targets: 3200={expected_3200}, 3400={expected_3400}')
+          content = content.replace('AbortSignal.timeout(3_200)', 'AbortSignal.timeout(1_250)')
+          content = content.replace('AbortSignal.timeout(3_400)', 'AbortSignal.timeout(1_250)')
+          path.write_text(content)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Runtime budget check
+        run: npm run check:runtime
+      - name: Commit verified latency fix
+        shell: bash
+        run: |
+          rm .github/workflows/tune-location-source-budget.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/authoritative-discovery.ts .github/workflows/tune-location-source-budget.yml
+          git commit -m "Keep expanded discovery inside interaction budget"
+          git push origin HEAD:feature/expand-outdoor-locations
