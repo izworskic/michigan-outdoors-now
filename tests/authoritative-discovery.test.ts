@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   authoritativeDiscoverySources,
   buildAuthoritativeQuery,
+  federalDiscoverySourceIds,
 } from "../src/lib/authoritative-discovery";
 import {
   categoryFromTags,
@@ -73,4 +74,28 @@ test("new mapped tags classify into useful existing decision categories", () => 
   assert.equal(categoryFromTags({ leisure: "bird_hide" }), "wildlife");
   assert.equal(categoryFromTags({ sport: "fishing" }), "fishing");
   assert.equal(categoryFromTags({ leisure: "park" }), "park");
+});
+
+
+test("federal discovery includes forest trails and wildlife refuge systems", () => {
+  const ids = new Set(federalDiscoverySourceIds);
+  assert.ok(ids.has("usfs-recreation"));
+  assert.ok(ids.has("usfs-trails"));
+  assert.ok(ids.has("nps-units"));
+  assert.ok(ids.has("fws-refuges"));
+});
+
+test("expanded mapped tags classify swimming, lookouts, docks, portages and picnic shelters", () => {
+  const selectors = regionalOverpassSelectors().join(" ");
+  assert.match(selectors, /swimming_area/);
+  assert.match(selectors, /tower:type/);
+  assert.match(selectors, /visitor_centre/);
+  assert.match(selectors, /canoe_portage/);
+  assert.match(selectors, /picnic_shelter/);
+  assert.equal(categoryFromTags({ leisure: "swimming_area" }), "beach");
+  assert.equal(categoryFromTags({ man_made: "tower", "tower:type": "observation" }), "viewpoint");
+  assert.equal(categoryFromTags({ waterway: "dock" }), "paddling");
+  assert.equal(categoryFromTags({ waterway: "canoe_portage" }), "paddling");
+  assert.equal(categoryFromTags({ amenity: "boat_rental" }), "paddling");
+  assert.equal(categoryFromTags({ amenity: "shelter", shelter_type: "picnic_shelter" }), "picnic");
 });

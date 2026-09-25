@@ -11,6 +11,8 @@ const DNR_OPEN_DATA = "https://services3.arcgis.com/Jdnp1TjADvSDxMAX/ArcGIS/rest
 const DNR_TRAILS = "https://gisagoegle.state.mi.us/arcgis/rest/services/DNR/DNRTrailsOPENDATA/FeatureServer/21/query";
 const USFS_RECREATION = "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_RecreationOpportunities_01/MapServer/0/query";
 const NPS_BOUNDARIES = "https://services1.arcgis.com/fBc8EJBxQRMcHlei/ArcGIS/rest/services/National_Park_Service_Boundaries/FeatureServer/0/query";
+const USFS_TRAILS = "https://apps.fs.usda.gov/arcx/rest/services/EDW/EDW_TrailNFSPublishWithDataStatus_01/MapServer/0/query";
+const FWS_BOUNDARIES = "https://services.arcgis.com/QVENGdaPbd4LUkLV/arcgis/rest/services/National_Wildlife_Refuge_System_Boundaries/FeatureServer/0/query";
 
 export const authoritativeDiscoverySources = [
   {
@@ -57,7 +59,9 @@ export const authoritativeDiscoverySources = [
   },
 ] as const;
 
-export type AuthoritativeSourceId = (typeof authoritativeDiscoverySources)[number]["id"] | "dnr-trails" | "usfs-recreation" | "nps-units";
+export const federalDiscoverySourceIds = ["usfs-recreation", "usfs-trails", "nps-units", "fws-refuges"] as const;
+
+export type AuthoritativeSourceId = (typeof authoritativeDiscoverySources)[number]["id"] | "dnr-trails" | (typeof federalDiscoverySourceIds)[number];
 
 export type AuthoritativeDiscoveryState = {
   places: DiscoveryPlace[];
@@ -581,6 +585,191 @@ async function fetchUsfsRecreation(args: {
   }
 }
 
+async function fetchUsfsTrailSystems(args: {
+  originLatitude: number;
+  originLongitude: number;
+  maxDriveHours: number;
+  minDriveHours: number;
+  intent: DiscoveryIntent;
+}) {
+  const params = new URLSearchParams({
+    where: "trail_name IS NOT NULL",
+    outFields: "objectid,trail_name,trail_type,trail_cn,segment_length,admin_org,managing_org,trail_class,accessibility_status,trail_surface,special_mgmt_area",
+    returnGeometry: "true",
+    outSR: "4326",
+    inSR: "4326",
+    geometryType: "esriGeometryEnvelope",
+    spatialRel: "esriSpatialRelIntersects",
+    geometry: envelopeFor(args.originLatitude, args.originLongitude, args.maxDriveHours).join(","),
+    resultRecordCount: "1800",
+    f: "geojson",
+  });
+
+  try {
+    const response = await fetch(`${USFS_TRAILS}?${params.toString()}`, {
+      headers: { Accept: "application/geo+json, application/json" },
+      signal: AbortSignal.timeout(1_100),
+      next: { revalidate: 1800 },
+    });
+    if (!response.ok) throw new Error(`usfs-trails returned ${response.status}`);
+    const payload = (await response.json()) as GeoJsonCollection;
+    if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+      throw new Error("usfs-trails returned invalid GeoJSON");
+    }
+
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of payload.features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = cleanText(properties.trail_name, 180);
+      if (!center || !name) continue;
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      if (!isDiscoveryCandidateInRange({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+      })) continue;
+
+      const category: DiscoveryCategory = "trailhead";
+      const metrics = scoreDiscoveryCandidate({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+        category,
+        intent: args.intent,
+        name,
+        website: "https://www.fs.usda.gov/visit/maps",
+      });
+      if (metrics.driveHours + 0.05 < args.minDriveHours) continue;
+      seen.add(key);
+
+      const specialArea = cleanText(properties.special_mgmt_area, 120);
+      const surface = cleanText(properties.trail_surface, 80);
+      const accessibility = cleanText(properties.accessibility_status, 80);
+      const detail = [surface ? `Surface: ${surface}.` : "", accessibility ? `Accessibility: ${accessibility}.` : ""].filter(Boolean).join(" ");
+      places.push({
+        id: `usfs:trail:${cleanText(properties.trail_cn, 50) || sourceKey(name)}`,
+        name,
+        area: specialArea || "National Forest System",
+        latitude: center.latitude,
+        longitude: center.longitude,
+        category,
+        categoryLabel: categoryLabel(category),
+        distanceMiles: metrics.distanceMiles,
+        driveHours: metrics.driveHours,
+        score: Math.min(99, metrics.score + 6),
+        why: `U.S. Forest Service trail data maps this named National Forest System trail inside the requested travel range.${detail ? ` ${detail}` : ""}`,
+        source: "U.S. Forest Service",
+        sourceUrl: USFS_TRAILS.replace(/\/query$/, ""),
+        directionsUrl: `https://www.google.com/maps/dir/?api=1&destination=${center.latitude.toFixed(6)},${center.longitude.toFixed(6)}`,
+        website: "https://www.fs.usda.gov/visit/maps",
+      });
+    }
+
+    return { id: "usfs-trails" as const, label: "U.S. Forest Service trail systems", status: "live" as const, places };
+  } catch {
+    return { id: "usfs-trails" as const, label: "U.S. Forest Service trail systems", status: "unavailable" as const, places: [] as DiscoveryPlace[] };
+  }
+}
+
+async function fetchFwsRefuges(args: {
+  originLatitude: number;
+  originLongitude: number;
+  maxDriveHours: number;
+  minDriveHours: number;
+  intent: DiscoveryIntent;
+}) {
+  const params = new URLSearchParams({
+    where: "1=1",
+    outFields: "OBJECTID,ORGNAME,ORGCODE,LIT,RSL_TYPE,FWSREGION",
+    returnGeometry: "true",
+    outSR: "4326",
+    inSR: "4326",
+    geometryType: "esriGeometryEnvelope",
+    spatialRel: "esriSpatialRelIntersects",
+    geometry: envelopeFor(args.originLatitude, args.originLongitude, args.maxDriveHours).join(","),
+    resultRecordCount: "500",
+    f: "geojson",
+  });
+
+  try {
+    const response = await fetch(`${FWS_BOUNDARIES}?${params.toString()}`, {
+      headers: { Accept: "application/geo+json, application/json" },
+      signal: AbortSignal.timeout(1_100),
+      next: { revalidate: 21600 },
+    });
+    if (!response.ok) throw new Error(`fws-refuges returned ${response.status}`);
+    const payload = (await response.json()) as GeoJsonCollection;
+    if (payload.type !== "FeatureCollection" || !Array.isArray(payload.features)) {
+      throw new Error("fws-refuges returned invalid GeoJSON");
+    }
+
+    const seen = new Set<string>();
+    const places: DiscoveryPlace[] = [];
+    for (const feature of payload.features) {
+      const properties = feature.properties ?? {};
+      const center = featureCenter(feature);
+      const name = cleanText(properties.ORGNAME, 180);
+      const type = cleanText(properties.RSL_TYPE, 20).toUpperCase();
+      if (!center || !name || type === "AS") continue;
+      if (!isDiscoveryCandidateInRange({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+      })) continue;
+
+      const key = normalized(name);
+      if (!key || seen.has(key)) continue;
+      const category: DiscoveryCategory = /hatchery|fish/i.test(name) ? "fishing" : "wildlife";
+      const website = `https://www.fws.gov/search?search=${encodeURIComponent(name)}`;
+      const metrics = scoreDiscoveryCandidate({
+        latitude: center.latitude,
+        longitude: center.longitude,
+        originLatitude: args.originLatitude,
+        originLongitude: args.originLongitude,
+        maxDriveHours: args.maxDriveHours,
+        category,
+        intent: args.intent,
+        name,
+        website,
+      });
+      if (metrics.driveHours + 0.05 < args.minDriveHours) continue;
+      seen.add(key);
+
+      const objectId = cleanText(properties.OBJECTID, 40);
+      places.push({
+        id: `fws:${objectId || sourceKey(name)}`,
+        name,
+        area: "U.S. Fish & Wildlife Service",
+        latitude: center.latitude,
+        longitude: center.longitude,
+        category,
+        categoryLabel: categoryLabel(category),
+        distanceMiles: metrics.distanceMiles,
+        driveHours: metrics.driveHours,
+        score: Math.min(99, metrics.score + 6),
+        why: "U.S. Fish & Wildlife Service boundary data identifies this refuge, hatchery or conservation area in the requested travel range. Public access varies by unit, so verify the official unit page before entering.",
+        source: "U.S. Fish & Wildlife Service",
+        sourceUrl: FWS_BOUNDARIES.replace(/\/query$/, ""),
+        directionsUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`,
+        website,
+      });
+    }
+
+    return { id: "fws-refuges" as const, label: "U.S. Fish & Wildlife Service refuges and conservation areas", status: "live" as const, places };
+  } catch {
+    return { id: "fws-refuges" as const, label: "U.S. Fish & Wildlife Service refuges and conservation areas", status: "unavailable" as const, places: [] as DiscoveryPlace[] };
+  }
+}
+
 async function fetchNpsUnits(args: {
   originLatitude: number;
   originLongitude: number;
@@ -688,7 +877,9 @@ export async function fetchAuthoritativeDiscoveryPlaces(args: {
     ...authoritativeDiscoverySources.map((source) => fetchSource(source, args)),
     fetchNearbyTrailSystems(args),
     fetchUsfsRecreation(args),
+    fetchUsfsTrailSystems(args),
     fetchNpsUnits(args),
+    fetchFwsRefuges(args),
   ]);
 
   return {

@@ -51,7 +51,7 @@ export type DiscoveryPlace = {
   travelSource?: "routed" | "estimated";
   score: number;
   why: string;
-  source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR" | "U.S. Forest Service" | "National Park Service";
+  source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR" | "U.S. Forest Service" | "National Park Service" | "U.S. Fish & Wildlife Service";
   sourceUrl: string;
   directionsUrl: string;
   website?: string;
@@ -100,14 +100,14 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
     id: "viewpoint",
     label: "Viewpoint",
-    selectors: ['nwr["tourism"="viewpoint"]', 'nwr["man_made"="observation_tower"]'],
+    selectors: ['nwr["tourism"="viewpoint"]', 'nwr["man_made"="observation_tower"]', 'nwr["man_made"="tower"]["tower:type"="observation"]', 'nwr["natural"="cliff"]["name"]'],
     keywords: ["view", "viewpoint", "overlook", "scenic", "vista", "bluff", "cliff", "observation tower"],
     activities: ["hiking", "scenic", "birding"],
   },
   {
     id: "beach",
     label: "Beach",
-    selectors: ['nwr["natural"="beach"]'],
+    selectors: ['nwr["natural"="beach"]', 'nwr["leisure"="swimming_area"]'],
     keywords: ["beach", "shore", "shoreline", "sand", "swim", "lake michigan", "lake huron", "lake superior"],
     activities: ["beaches", "paddling", "scenic"],
   },
@@ -126,6 +126,7 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
       'nwr["leisure"="park"]',
       'nwr["boundary"="protected_area"]',
       'nwr["boundary"="national_park"]',
+      'nwr["tourism"="information"]["information"="visitor_centre"]',
     ],
     keywords: ["park", "county park", "metropark", "forest", "woods", "nature", "preserve", "reserve", "conservancy", "sanctuary", "wild", "remote", "backcountry"],
     activities: ["hiking", "birding", "scenic"],
@@ -161,6 +162,9 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
       'nwr["leisure"="marina"]',
       'nwr["man_made"="pier"]',
       'nwr["harbour"]',
+      'nwr["waterway"="dock"]["name"]',
+      'nwr["waterway"="canoe_portage"]',
+      'nwr["amenity"="boat_rental"]',
     ],
     keywords: ["paddle", "paddling", "canoe", "kayak", "put in", "put-in", "boat launch", "river access", "water access", "harbor", "harbour", "marina", "pier", "dock"],
     activities: ["paddling"],
@@ -179,7 +183,7 @@ const CATEGORY_DEFINITIONS: CategoryDefinition[] = [
   {
     id: "picnic",
     label: "Picnic site",
-    selectors: ['nwr["tourism"="picnic_site"]', 'nwr["leisure"="picnic_table"]'],
+    selectors: ['nwr["tourism"="picnic_site"]', 'nwr["leisure"="picnic_table"]', 'nwr["amenity"="shelter"]["shelter_type"="picnic_shelter"]'],
     keywords: ["picnic", "lunch outside", "easy stop"],
     activities: ["scenic"],
   },
@@ -293,7 +297,7 @@ export function overpassSelectorsFor(intent: DiscoveryIntent) {
 }
 
 export function regionalOverpassSelectors() {
-  return unique(CATEGORY_DEFINITIONS.flatMap((definition) => definition.selectors)).slice(0, 24);
+  return unique(CATEGORY_DEFINITIONS.flatMap((definition) => definition.selectors)).slice(0, 36);
 }
 
 export function discoveryRadiusMeters(maxDriveHours: number) {
@@ -307,8 +311,8 @@ export function categoryLabel(category: DiscoveryCategory) {
 
 export function categoryFromTags(tags: Record<string, string | undefined>): DiscoveryCategory {
   if (tags.natural === "waterfall") return "waterfall";
-  if (tags.tourism === "viewpoint" || tags.man_made === "observation_tower") return "viewpoint";
-  if (tags.natural === "beach") return "beach";
+  if (tags.tourism === "viewpoint" || tags.man_made === "observation_tower" || (tags.man_made === "tower" && tags["tower:type"] === "observation") || tags.natural === "cliff") return "viewpoint";
+  if (tags.natural === "beach" || tags.leisure === "swimming_area") return "beach";
   if (tags.tourism === "camp_site" || tags.tourism === "caravan_site") return "campground";
   if (tags.highway === "trailhead") return "trailhead";
   if (tags.man_made === "lighthouse") return "lighthouse";
@@ -319,9 +323,12 @@ export function categoryFromTags(tags: Record<string, string | undefined>): Disc
     tags.leisure === "slipway" ||
     tags.leisure === "marina" ||
     tags.man_made === "pier" ||
+    tags.waterway === "dock" ||
+    tags.waterway === "canoe_portage" ||
+    tags.amenity === "boat_rental" ||
     Boolean(tags.harbour)
   ) return "paddling";
-  if (tags.tourism === "picnic_site" || tags.leisure === "picnic_table") return "picnic";
+  if (tags.tourism === "picnic_site" || tags.leisure === "picnic_table" || (tags.amenity === "shelter" && tags.shelter_type === "picnic_shelter")) return "picnic";
   if (tags.natural === "cave_entrance") return "cave";
   if (tags.leisure === "nature_reserve" || tags.leisure === "bird_hide") return "wildlife";
   return "park";
