@@ -160,29 +160,37 @@ export function summarizePlaceDepthElements(args: {
 
 async function fetchOverpassElements(latitude: number, longitude: number) {
   const query = buildPlaceDepthOverpassQuery(latitude, longitude);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 1_800);
 
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          Accept: "application/json",
-          "User-Agent": "MichiganOutdoorsNow/1.0 (https://michiganoutdoorsnow.chrisizworski.com/)",
-        },
-        body: new URLSearchParams({ data: query }).toString(),
-        signal: AbortSignal.timeout(1_300),
-        cache: "no-store",
-      });
-      if (!response.ok) continue;
-      const payload = (await response.json()) as { elements?: OsmElement[] };
-      if (Array.isArray(payload.elements)) return payload.elements;
-    } catch {
-      // Try the second public endpoint. Place depth is enrichment, never a hard dependency.
-    }
+  const attempts = OVERPASS_ENDPOINTS.map(async (endpoint) => {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+        Accept: "application/json",
+        "User-Agent": "MichiganOutdoorsNow/1.0 (https://michiganoutdoorsnow.chrisizworski.com/)",
+      },
+      body: new URLSearchParams({ data: query }).toString(),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    if (!response.ok) throw new Error("Overpass place-depth metadata unavailable");
+    const payload = (await response.json()) as { elements?: OsmElement[] };
+    if (!Array.isArray(payload.elements)) throw new Error("No OSM place-depth elements");
+    return payload.elements;
+  });
+
+  try {
+    const elements = await Promise.any(attempts);
+    controller.abort();
+    return elements;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+    controller.abort();
   }
-
-  return null;
 }
 
 export async function fetchPlaceDepth(args: {
