@@ -204,6 +204,26 @@ try {
     }
   }
 
+  const placeDepthStarted = performance.now();
+  const placeDepthResponse = await fetch(`${origin}/api/place-depth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      latitude: confidenceTarget.latitude,
+      longitude: confidenceTarget.longitude,
+      placeName: confidenceTarget.name,
+    }),
+    signal: AbortSignal.timeout(5_000),
+  });
+  const placeDepthElapsed = performance.now() - placeDepthStarted;
+  assert.equal(placeDepthResponse.status, 200);
+  assert.ok(placeDepthElapsed <= 4_000, `place depth exceeded 4 second enrichment budget: ${Math.round(placeDepthElapsed)}ms`);
+  assert.match(placeDepthResponse.headers.get("cache-control") ?? "", /no-store/);
+  assert.match(placeDepthResponse.headers.get("x-robots-tag") ?? "", /noindex/);
+  const placeDepthPayload = await placeDepthResponse.json();
+  assert.ok(["live", "unavailable"].includes(placeDepthPayload.status));
+  assert.ok(Array.isArray(placeDepthPayload.points));
+
   const dayPlanResponse = await fetch(`${origin}/api/day-plan`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
