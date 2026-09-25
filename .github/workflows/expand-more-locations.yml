@@ -6,6 +6,8 @@ on:
       - feature/more-outdoor-locations
     paths:
       - .github/workflows/expand-more-locations.yml
+      - scripts/expand-more-locations.py
+  workflow_dispatch:
 
 permissions:
   contents: write
