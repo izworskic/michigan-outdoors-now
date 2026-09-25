@@ -1,0 +1,89 @@
+name: Conservation and amenity expansion
+
+on:
+  push:
+    branches: [feature/conservation-amenities]
+
+permissions:
+  contents: write
+
+jobs:
+  expand:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/conservation-amenities
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Apply noteworthy expansion
+        run: python .github/scripts/apply-conservation-amenities.py
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Deterministic tests
+        run: npm run test
+
+      - name: Production build
+        run: npm run build
+
+      - name: Runtime gate
+        run: npm run check:runtime
+
+      - name: Live source smoke
+        run: |
+          node --import tsx --input-type=module <<'NODE'
+          import { interpretOutdoorQuery } from './src/lib/discovery.ts';
+          import { fetchLocalAuthorityDiscoveryPlaces } from './src/lib/local-authority-discovery.ts';
+          import { fetchPlaceIntelligence } from './src/lib/place-intelligence.ts';
+
+          const intent = interpretOutdoorQuery('quiet nature preserves hiking parks');
+          const local = await fetchLocalAuthorityDiscoveryPlaces({
+            originLatitude: 42.2808,
+            originLongitude: -83.7430,
+            maxDriveHours: 3,
+            minDriveHours: 0,
+            intent,
+          });
+          const summary = local.map((source) => ({ id: source.id, status: source.status, count: source.places.length }));
+          console.log(JSON.stringify(summary, null, 2));
+          const washtenaw = local.find((source) => source.id === 'washtenaw-parks');
+          const tnc = local.find((source) => source.id === 'tnc-open-access');
+          if (!washtenaw || washtenaw.status !== 'live' || washtenaw.places.length < 1) {
+            throw new Error('Washtenaw direct GIS did not return a live place set');
+          }
+          if (!tnc || tnc.status !== 'live') {
+            throw new Error('TNC open-access source did not answer live');
+          }
+
+          const intel = await fetchPlaceIntelligence({ latitude: 44.3148, longitude: -85.6024 });
+          console.log(JSON.stringify({ amenityCount: intel.amenities.length, amenities: intel.amenities.slice(0, 5) }, null, 2));
+          if (!Array.isArray(intel.amenities)) throw new Error('DNR amenities missing from place intelligence');
+          NODE
+
+      - name: Commit clean verified app changes
+        run: |
+          rm -f .github/scripts/apply-conservation-amenities.py
+          rm -f .github/workflows/conservation-amenities.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No application changes to commit"
+          else
+            git commit -m "Expand conservation discovery and DNR amenity context"
+            git push origin HEAD:feature/conservation-amenities
+          fi
