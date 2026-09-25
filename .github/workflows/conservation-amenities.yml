@@ -26,7 +26,18 @@ jobs:
           cache: npm
 
       - name: Apply noteworthy expansion
-        run: python .github/scripts/apply-conservation-amenities.py
+        run: |
+          python .github/scripts/apply-conservation-amenities.py
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("tests/recreation-amenities.test.ts")
+          text = path.read_text()
+          old = "] as any;"
+          new = '] as unknown as import("../src/lib/outdoor-universe").UniverseGeoJsonFeature[];'
+          if text.count(old) != 1:
+              raise SystemExit(f"Expected one generated test cast, found {text.count(old)}")
+          path.write_text(text.replace(old, new, 1))
+          PY
 
       - name: Install dependencies
         run: npm ci
