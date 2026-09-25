@@ -45,8 +45,21 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Deterministic tests
-        run: npm run test
+      - name: Targeted expansion tests
+        run: node --import tsx --test tests/local-authority-discovery.test.ts tests/recreation-amenities.test.ts
+
+      - name: Full deterministic tests
+        run: |
+          set +e
+          npm run test > /tmp/tests.log 2>&1
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "--- concise failure markers ---"
+            grep -n -E "not ok|AssertionError|ERR_ASSERTION|failureType|error:" /tmp/tests.log | tail -100 || true
+            echo "--- final test output ---"
+            tail -180 /tmp/tests.log
+          fi
+          exit "$status"
 
       - name: Production build
         run: npm run build
