@@ -51,7 +51,7 @@ export type DiscoveryPlace = {
   travelSource?: "routed" | "estimated";
   score: number;
   why: string;
-  source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR" | "U.S. Forest Service" | "National Park Service" | "U.S. Fish & Wildlife Service" | "USGS PAD-US";
+  source: "OpenStreetMap" | "Michigan Outdoors Now" | "Michigan DNR" | "U.S. Forest Service" | "National Park Service" | "U.S. Fish & Wildlife Service" | "USGS PAD-US" | "Huron-Clinton Metroparks" | "Oakland County" | "Kent County";
   sourceUrl: string;
   directionsUrl: string;
   website?: string;
