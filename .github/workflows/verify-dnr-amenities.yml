@@ -18,39 +18,44 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Diagnose raw DNR amenity query
+      - name: Diagnose DNR amenity inventory
         run: |
           node --input-type=module <<'NODE'
           const base = 'https://services3.arcgis.com/Jdnp1TjADvSDxMAX/arcgis/rest/services/DNRReferenceAssetsOPENDATA/FeatureServer/7/query';
-          async function query(params) {
+          async function query(label, params) {
             const url = `${base}?${new URLSearchParams(params)}`;
             const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
             const text = await response.text();
-            console.log('STATUS', response.status, url);
-            console.log(text.slice(0, 6000));
+            console.log(`--- ${label} ---`);
+            console.log('STATUS', response.status);
+            console.log(text.slice(0, 12000));
           }
-          await query({
+          await query('GLOBAL COUNT', {
+            where: "ASSETTYPE='Recreation Amenity'",
+            returnCountOnly: 'true',
+            f: 'json',
+          });
+          await query('GLOBAL SAMPLE', {
             where: "ASSETTYPE='Recreation Amenity'",
             outFields: 'OBJECTID,ASSETTYPE,ASSETDETAILTYPE,ADMINBY,MAINTBY,ESRIGNSS_LATITUDE,ESRIGNSS_LONGITUDE',
             returnGeometry: 'true',
             outSR: '4326',
             resultRecordCount: '5',
-            f: 'json',
+            f: 'geojson',
           });
-          const lat = 44.7468, lon = -84.6636, miles = 5;
-          const latSpan = miles / 69;
-          const lonSpan = miles / Math.max(20, 69 * Math.cos((lat * Math.PI) / 180));
-          const bounds = [lon-lonSpan, lat-latSpan, lon+lonSpan, lat+latSpan];
-          await query({
-            where: "ASSETTYPE='Recreation Amenity'",
-            geometry: bounds.map(v => v.toFixed(5)).join(','),
-            geometryType: 'esriGeometryEnvelope',
-            inSR: '4326',
-            spatialRel: 'esriSpatialRelIntersects',
-            outFields: 'OBJECTID,ASSETTYPE,ASSETDETAILTYPE,ADMINBY,MAINTBY,ESRIGNSS_LATITUDE,ESRIGNSS_LONGITUDE',
+          const units = [
+            'Bay City State Recreation Area',
+            'Rifle River Recreation Area',
+            'Hartwick Pines State Park',
+            'Tawas Point State Park',
+          ];
+          const quoted = units.map(v => `'${v.replaceAll("'", "''")}'`).join(',');
+          await query('KNOWN UNITS', {
+            where: `ASSETTYPE='Recreation Amenity' AND (ADMINBY IN (${quoted}) OR MAINTBY IN (${quoted}))`,
+            outFields: 'OBJECTID,ASSETTYPE,ASSETDETAILTYPE,DESCRIP,CONDITION,ADMINBY,MAINTBY,ESRIGNSS_LATITUDE,ESRIGNSS_LONGITUDE',
             returnGeometry: 'true',
             outSR: '4326',
-            resultRecordCount: '20',
+            resultRecordCount: '50',
             f: 'geojson',
           });
           NODE
