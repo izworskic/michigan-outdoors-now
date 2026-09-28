@@ -1,4 +1,3 @@
-import Script from "next/script";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Analytics } from "@vercel/analytics/next";
@@ -126,7 +125,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(identityGraph) }} />
         <Analytics />
         <SpeedInsights />
-      <Script id="ci-network-ads-v1" src="https://chrisizworski.com/assets/network-ads-v1.js" strategy="afterInteractive" />
+      <script defer src="https://chrisizworski.com/assets/network-ads-v1.js"></script>
       </body>
     </html>
   );
