@@ -34,6 +34,8 @@ async function main() {
     map,
     liveTests,
     depthTests,
+    milestoneTests,
+    milestoneProfiles,
   ] = await Promise.all([
       readFile(new URL("src/lib/place-intelligence.ts", root), "utf8"),
       readFile(new URL("src/lib/route-intelligence.ts", root), "utf8"),
@@ -50,6 +52,8 @@ async function main() {
       readFile(new URL("src/components/michigan-destination-map.tsx", root), "utf8"),
       readFile(new URL("tests/trail-truth-live.test.ts", root), "utf8"),
       readFile(new URL("tests/trail-truth-depth.test.ts", root), "utf8"),
+      readFile(new URL("tests/trail-truth-150.test.ts", root), "utf8"),
+      readFile(new URL("src/data/trail-profile-150.ts", root), "utf8"),
     ]);
 
   const checks: Record<string, boolean> = {
@@ -114,11 +118,11 @@ async function main() {
       profiles.includes("isle-royale-mount-franklin") &&
       profiles.includes("wilderness-nct-segment") &&
       profiles.includes("presque-isle-anderton") &&
-      trailTruthCoverageSummary.profileCount >= 127 &&
-      trailTruthCoverageSummary.namedTrailheadCount >= 50 &&
+      trailTruthCoverageSummary.profileCount >= 150 &&
+      trailTruthCoverageSummary.namedTrailheadCount >= 65 &&
       trailTruthCoverageSummary.officialEntryPointCount >= 20 &&
       trailTruthCoverageSummary.multiRouteDestinationCount >= 23 &&
-      trailTruthCoverageSummary.deepDestinationCount >= 10 &&
+      trailTruthCoverageSummary.deepDestinationCount >= 12 &&
       trailTruthCoverageSummary.oneRouteDestinationCount <= 5 &&
       trailTruthCoverageSummary.shallowDestinationCount <= 11 &&
       trailTruthCoverageSummary.operationallyThinDestinationCount <= 1 &&
@@ -138,8 +142,12 @@ async function main() {
       tests.includes("Decision Board can build a routed multi-stop day") &&
       liveTests.includes("finish-before-dark logic subtracts travel time") &&
       liveTests.includes("official geometry separate from mapped fallback") &&
-      depthTests.includes("127-route threshold") &&
+      depthTests.includes("150-route threshold") &&
       depthTests.includes("official entry-point depth") &&
+      milestoneTests.includes("current Porkies map wins") &&
+      milestoneTests.includes("Isle Royale gains Windigo") &&
+      milestoneProfiles.includes("porkies-little-carp-river") &&
+      milestoneProfiles.includes("isle-royale-huginnin-cove-loop") &&
       depthTests.includes("large local trail catalogs stay compact") &&
       hub.includes("Show all ${activeTrailProfiles.length} verified routes"),
   };
