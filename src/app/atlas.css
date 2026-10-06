@@ -1220,6 +1220,11 @@ body{background:#f8f5ef;color:#243139}
   font:500 18px/1 Georgia,serif;
   letter-spacing:-.025em;
 }
+.canvas-brand h1{
+  margin:0;
+  font:500 18px/1 Georgia,serif;
+  letter-spacing:-.025em;
+}
 .canvas-origin{
   display:grid;
   grid-template-columns:minmax(0,1fr) auto auto;
@@ -1621,6 +1626,7 @@ body{background:#f8f5ef;color:#243139}
   }
   .canvas-brand span{font-size:7px}
   .canvas-brand strong{font-size:15px}
+  .canvas-brand h1{font-size:15px}
   .canvas-links>a{display:none}
   .canvas-links>details>summary{
     min-height:32px;
@@ -2611,6 +2617,9 @@ body{background:#f8f5ef;color:#243139}
   letter-spacing:.08em;
 }
 .has-discovery-results .canvas-brand strong{
+  display:none;
+}
+.has-discovery-results .canvas-brand h1{
   display:none;
 }
 .has-discovery-results .canvas-query-stack{

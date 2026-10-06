@@ -30,7 +30,7 @@ assert.match(home, /Michigan Outdoors Now/);
 assert.match(home, /Chris Izworski/);
 assert.match(home, /noindex/);
 assert.match(home, /application\/ld\+json/);
-assert.match(home, /Go find something\./);
+assert.match(home, /<h1>Plan a day outside<\/h1>/);
 assert.match(home, /What are you after\?/);
 assert.match(home, /Best now/);
 assert.match(home, /Water/);
