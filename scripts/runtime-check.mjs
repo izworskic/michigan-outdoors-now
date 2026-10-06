@@ -32,7 +32,7 @@ try {
   const homeHtml = await home.text();
   assert.match(homeHtml, /Michigan Outdoors Now/);
   assert.match(homeHtml, /Chris Izworski/);
-  assert.match(homeHtml, /Go find something\./);
+  assert.match(homeHtml, /<h1>Plan a day outside<\/h1>/);
   assert.match(homeHtml, /My Outdoors/);
   assert.match(homeHtml, /What are you after\?/);
   assert.match(homeHtml, /Best now/);

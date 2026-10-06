@@ -1358,7 +1358,7 @@ export function OutdoorIntentHub() {
       <header className="canvas-topbar">
         <div className="canvas-brand">
           <span>Michigan Outdoors Now</span>
-          <strong>Go find something.</strong>
+          <h1>Plan a day outside</h1>
         </div>
 
         <div className="canvas-query-stack">
