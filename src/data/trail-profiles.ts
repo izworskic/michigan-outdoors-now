@@ -1,3 +1,4 @@
+import { trailTruth150Batch } from "./trail-profile-150";
 import { hardSourceTrailDepthBatch } from "./trail-profile-hard-source-depth";
 import { shallowDestinationTrailBatch } from "./trail-profile-shallow-attack";
 import { trailProfileDepthBatch } from "./trail-profile-depth";
@@ -161,19 +162,20 @@ export const trailProfiles: TrailProfile[] = [
     name: "Escarpment Trail",
     destinationId: "porcupine-mountains",
     area: "Porcupine Mountains Wilderness State Park",
-    distanceMiles: 4.3,
+    distanceMiles: 3.7,
     routeKind: "point-to-point",
     difficulty: "challenging",
     terrain: "Escarpment ridge with large elevation changes and cliff-side vistas",
     features: ["Lake of the Clouds", "escarpment views", "old-growth forest"],
     tags: ["rugged"],
     sourceLabel: "Michigan DNR",
-    sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
-    sourceNote: "Michigan DNR lists 4.3 miles and calls the large elevation changes a challenge.",
+    sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/porcupine_mountains_map.pdf?rev=ea21f7c022dc46edbd24f96d40021739",
+    sourceNote: "The current Michigan DNR park map lists Escarpment Trail at 3.7 miles. An older DNR trail-description sheet lists 4.3 miles, so Trail Truth uses the current map for distance.",
     access: {
       trailhead: "Lake of the Clouds parking area to Government Peak Trailhead on M-107",
       parking: "The DNR route description names parking/trailhead access at both ends.",
       dogs: "Park backcountry guidance requires pets to be leashed.",
+      notes: ["Older DNR descriptive material lists 4.3 miles; current DNR map mileage is 3.7 miles."],
       sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
     },
   },
@@ -182,30 +184,38 @@ export const trailProfiles: TrailProfile[] = [
     name: "Lake Superior Trail",
     destinationId: "porcupine-mountains",
     area: "Porcupine Mountains Wilderness State Park",
-    distanceMiles: 17.1,
+    distanceMiles: 15.6,
     routeKind: "point-to-point",
     difficulty: "rugged",
     terrain: "Remote Lake Superior shoreline and wilderness forest",
     features: ["Lake Superior shoreline", "remote forest", "backcountry travel"],
     tags: ["long", "rugged", "full-day"],
     sourceLabel: "Michigan DNR",
-    sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
-    sourceNote: "Michigan DNR lists 17.1 miles and describes it as the park's longest and most challenging trail.",
+    sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/porcupine_mountains_map.pdf?rev=ea21f7c022dc46edbd24f96d40021739",
+    sourceNote: "The current Michigan DNR park map lists Lake Superior Trail at 15.6 miles. An older DNR trail-description sheet lists 17.1 miles; Trail Truth uses the current map for distance.",
+    access: {
+      notes: ["Older DNR descriptive material lists 17.1 miles; current DNR map mileage is 15.6 miles."],
+      sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
+    },
   },
   {
     id: "big-carp-river",
     name: "Big Carp River Trail",
     destinationId: "porcupine-mountains",
     area: "Porcupine Mountains Wilderness State Park",
-    distanceMiles: 9.6,
+    distanceMiles: 8,
     routeKind: "point-to-point",
     difficulty: "challenging",
     terrain: "Escarpment descent, river valley and old-growth forest",
     features: ["waterfalls", "old-growth forest", "Lake Superior"],
-    tags: ["long", "ten-mile", "waterfall", "full-day"],
+    tags: ["long", "waterfall", "full-day"],
     sourceLabel: "Michigan DNR",
-    sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
-    sourceNote: "Michigan DNR lists the full Big Carp River Trail at 9.6 miles.",
+    sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/porcupine_mountains_map.pdf?rev=ea21f7c022dc46edbd24f96d40021739",
+    sourceNote: "The current Michigan DNR park map lists Big Carp River Trail at 8 miles. An older DNR trail-description sheet lists 9.6 miles; Trail Truth uses the current map for distance.",
+    access: {
+      notes: ["Older DNR descriptive material lists 9.6 miles; current DNR map mileage is 8 miles."],
+      sourceUrl: "https://www.michigan.gov/recsearch/-/media/Project/Websites/recsearch/documents/MapsO-S/PMWSP-trail-descriptions.pdf",
+    },
   },
   {
     id: "summit-peak",
@@ -1273,6 +1283,7 @@ export const trailProfiles: TrailProfile[] = [
   ...trailProfileDepthBatch,
   ...shallowDestinationTrailBatch,
   ...hardSourceTrailDepthBatch,
+  ...trailTruth150Batch,
 ];
 
 export const trailProfileById = new Map(trailProfiles.map((profile) => [profile.id, profile]));

@@ -29,7 +29,7 @@ The selected-place sheet prefers an official route profile for those route facts
 
 ### Statewide coverage contract
 
-Trail Truth is now a statewide catalog rather than a small flagship sample. The release gate requires at least 70 verified route profiles, route-level coverage for at least 26 of the planner's hiking destination families, at least 80% destination-family coverage, unique profile IDs, positive mileage and explicit HTTPS provenance.
+Trail Truth is now a statewide catalog rather than a small flagship sample. The release gate requires at least 150 verified route profiles, route-level coverage for at least 26 of the planner's hiking destination families, at least 80% destination-family coverage, unique profile IDs, positive mileage and explicit HTTPS provenance.
 
 Uncovered hiking destinations must be documented. A gap can exist because an agency maps trails without publishing route mileage clearly enough for this product, or because the land manager explicitly says there are no designated trails. In either case, the catalog stays empty rather than inventing a route.
 
@@ -55,10 +55,10 @@ The public geometry feeds are evidence layers, not distance authorities. The lan
 
 Trail Truth depth is now measured as a product-quality property rather than raw record count.
 
-- The release gate requires at least **100 verified route profiles**.
-- At least **35 profiles** must carry a named trailhead/access label before geometry fallback is counted.
-- At least **15 destinations** must have more than one verified route.
-- At least **8 destinations** must have five or more verified routes.
+- The release gate requires at least **150 verified route profiles**.
+- At least **65 profiles** must carry a named trailhead/access label before geometry fallback is counted.
+- At least **23 destinations** must have more than one verified route.
+- At least **12 destinations** must have five or more verified routes.
 - Large local catalogs stay collapsed to the best six routes until the visitor explicitly expands them.
 - A verified profile trailhead remains the preferred navigation target. When that is absent, official land-manager route geometry may provide an explicitly labeled mapped route start. OpenStreetMap fallback starts remain labeled as mapped fallback and are never promoted to official trailheads.
 - New route records must retain positive published mileage, route shape, source label and an official source URL.
@@ -89,6 +89,16 @@ Trail Truth no longer equates "more records" with better truth. The remaining sh
 - **Current access caveats** remain explicit. Brown Bridge carries the city's April 23, 2026 Grasshopper Creek pedestrian-bridge closure notice and phased 2026 expansion access note.
 
 The release gate now tracks official entry-point count and `operationallyThinDestinationCount`: a one-route destination is only treated as truly thin when it also lacks at least two official entry points. This prevents agents from "fixing" shallow coverage by inventing route names.
+
+### Trail Truth 150 and source drift
+
+The 150-route milestone deliberately concentrates new depth in Porcupine Mountains Wilderness State Park and Isle Royale National Park rather than creating another thin search-page family.
+
+Porcupine Mountains also introduces an explicit **current-source-wins** rule. When two official DNR publications disagree on mileage, Trail Truth uses the newer/current park map for the route distance, preserves the older official value in the provenance note, and shows the discrepancy in the selected-route UI. Older descriptive material may still support terrain, route character, or access context; it does not override newer published mileage.
+
+The current DNR map is therefore authoritative for Escarpment Trail (3.7 miles), Lake Superior Trail (15.6 miles), and Big Carp River Trail (8 miles) even though the older DNR trail-description sheet lists 4.3, 17.1, and 9.6 miles respectively. Big Carp no longer qualifies for the approximately-ten-mile intent family; Little Carp River Trail at 10.7 miles now carries that current-map role.
+
+Isle Royale depth now spans Rock Harbor, Windigo, Greenstone Ridge, Hidden Lake and Passage Island. Access-dependent routes retain the access mode in the profile: a two-mile Lookout Louise route does not imply a two-mile walk from Rock Harbor, and Passage Island does not imply road/trailhead access from the main island.
 
 ### Current case
 

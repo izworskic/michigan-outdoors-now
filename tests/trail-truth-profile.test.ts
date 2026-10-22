@@ -12,7 +12,7 @@ test("long-hike discovery resolves to a named official route instead of only a d
   });
 
   assert.equal(profile?.id, "lake-superior-trail");
-  assert.equal(profile?.distanceMiles, 17.1);
+  assert.equal(profile?.distanceMiles, 15.6);
   assert.equal(profile?.sourceLabel, "Michigan DNR");
 });
 

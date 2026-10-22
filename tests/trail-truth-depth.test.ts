@@ -4,8 +4,8 @@ import test from "node:test";
 import { trailProfiles } from "../src/data/trail-profiles";
 import { trailTruthCoverageSummary } from "../src/data/trail-truth-coverage";
 
-test("Trail Truth depth catalog clears the 127-route threshold without duplicate ids", () => {
-  assert.ok(trailProfiles.length >= 127, `expected at least 127 Trail Truth profiles, got ${trailProfiles.length}`);
+test("Trail Truth depth catalog clears the 150-route threshold without duplicate ids", () => {
+  assert.ok(trailProfiles.length >= 150, `expected at least 150 Trail Truth profiles, got ${trailProfiles.length}`);
   assert.equal(new Set(trailProfiles.map((profile) => profile.id)).size, trailProfiles.length);
 });
 
@@ -41,11 +41,11 @@ test("catalog depth keeps source and route-shape discipline", () => {
 });
 
 test("depth metrics track named trailheads and genuinely deep destinations", () => {
-  assert.ok(trailTruthCoverageSummary.profileCount >= 127);
-  assert.ok(trailTruthCoverageSummary.namedTrailheadCount >= 50);
+  assert.ok(trailTruthCoverageSummary.profileCount >= 150);
+  assert.ok(trailTruthCoverageSummary.namedTrailheadCount >= 65);
   assert.ok(trailTruthCoverageSummary.officialEntryPointCount >= 20);
   assert.ok(trailTruthCoverageSummary.multiRouteDestinationCount >= 23);
-  assert.ok(trailTruthCoverageSummary.deepDestinationCount >= 10);
+  assert.ok(trailTruthCoverageSummary.deepDestinationCount >= 12);
   assert.ok(trailTruthCoverageSummary.oneRouteDestinationCount <= 5);
   assert.ok(trailTruthCoverageSummary.shallowDestinationCount <= 11);
   assert.ok(trailTruthCoverageSummary.operationallyThinDestinationCount <= 1);
