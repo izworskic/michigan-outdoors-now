@@ -227,3 +227,11 @@ test("structured planner distinguishes routed road travel from fallback estimate
   assert.match(planner, /road.*rough/);
   assert.doesNotMatch(planner, /Drive times are rough estimates, not live traffic/);
 });
+
+
+test("map loading and failure remain inside a stacking context beneath planning controls", async () => {
+  const css = await readFile(new URL("../src/app/atlas.css", import.meta.url), "utf8");
+  assert.match(css, /\.michigan-canvas-map\{[^}]*position:absolute;[^}]*z-index:0;/);
+  assert.match(css, /\.canvas-topbar\{[^}]*z-index:20;/);
+  assert.match(css, /\.canvas-pulls\{[^}]*z-index:18;/);
+});
