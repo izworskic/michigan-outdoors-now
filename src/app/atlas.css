@@ -1159,6 +1159,8 @@ body{background:#f8f5ef;color:#243139}
 .michigan-canvas-map{
   position:absolute;
   inset:0;
+  /* Keep map loading/failure layers below the independent planning controls. */
+  z-index:0;
 }
 .michigan-canvas-map .destination-map-frame,
 .michigan-canvas-map .destination-map{
